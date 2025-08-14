@@ -1,0 +1,23 @@
+@startuml
+title Occupation Aggregate (Occupation Context)
+
+package "Occupation Aggregate" {
+  class Occupation {
+    - occupationId: UUID
+    - parkingSpotId: String
+    - occupied: boolean
+    - detectedAt: OffsetDateTime
+    --
+    + markOccupied()
+    + markFree()
+  }
+
+  interface DomainEvent
+
+  class SpotOccupied implements DomainEvent
+  class SpotFreed implements DomainEvent
+
+  Occupation "1" ..> SpotOccupied : emits >
+  Occupation "1" ..> SpotFreed : emits >
+}
+@enduml

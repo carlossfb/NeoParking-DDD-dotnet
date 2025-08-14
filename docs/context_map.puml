@@ -1,0 +1,35 @@
+@startuml
+title Context Map
+
+package "Owner Context" <<boundedContext>> {
+  class Owner
+  class Vehicle
+}
+
+package "Ticketing Context" <<boundedContext>> {
+  class Ticket
+}
+
+package "Occupation Context" <<boundedContext>> {
+  class Occupation
+}
+
+package "Payment Context" <<boundedContext>> {
+  class Payment
+}
+
+package "IOT external Context" <<boundedContext>> {
+  class SensorIOT
+  class ServerIOT
+}
+
+ServerIOT "1" --> SensorIOT : owns
+
+Owner "1" --> Vehicle : owns
+
+' Dependências entre contextos
+Ticket --> Owner : [OHS] queries vehicle/owner info
+Owner --> Payment : [OHS] starts payment subscription
+Ticket --> Payment : [OHS] starts payment fee
+ServerIOT -> Occupation : [OHS/LP] Sends occupation status
+@enduml
