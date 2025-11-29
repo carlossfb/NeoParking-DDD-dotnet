@@ -1,4 +1,4 @@
-namespace src.infrastructure.dao
+namespace main.infrastructure.dao
 {
     public class VehicleDAO
     {

@@ -1,10 +1,10 @@
     using System.Linq;
-    using src.application.dto;
-    using src.domain.entity;
-    using src.domain.vo;
-    using src.infrastructure.dao;
+    using main.application.dto;
+    using main.domain.entity;
+    using main.domain.vo;
+    using main.infrastructure.dao;
 
-    namespace src.infrastructure.util
+    namespace main.infrastructure.util
     {
         internal static class ClientMapper
         {

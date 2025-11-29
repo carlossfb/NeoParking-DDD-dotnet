@@ -1,6 +1,6 @@
-using src.application.dto;
+using main.application.dto;
 
-namespace src.domain.ports
+namespace main.domain.ports
 {
     public interface IClientService
     {

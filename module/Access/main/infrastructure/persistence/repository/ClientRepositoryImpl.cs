@@ -1,9 +1,9 @@
-using src.domain.entity;
-using src.domain.ports;
-using src.infrastructure.util;
+using main.domain.entity;
+using main.domain.ports;
+using main.infrastructure.util;
 using Microsoft.EntityFrameworkCore;
 
-namespace src.infrastructure
+namespace main.infrastructure
 {
     public class ClientRepositoryImpl : IClientRepository 
     {

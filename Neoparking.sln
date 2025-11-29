@@ -7,9 +7,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "module", "module", "{742FC7
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Access", "Access", "{62B3F59D-C488-4FEF-93BA-9046A3809903}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Access", "module\Access\src\Access.csproj", "{2EBC0B0C-54EF-4226-BAE6-A4021AA7BDF7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Access", "Module\Access\main\Access.csproj", "{2EBC0B0C-54EF-4226-BAE6-A4021AA7BDF7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Access.Tests", "module\Access\test\Access.Tests.csproj", "{8C7EB6D2-A276-41EF-A39C-2E9DC7225C18}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Access.Tests", "Module\Access\test\Access.Tests.csproj", "{8C7EB6D2-A276-41EF-A39C-2E9DC7225C18}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Neoparking", "Neoparking\Neoparking.csproj", "{DC8CDEB5-B6B1-4DE7-8377-DA3B7598AE71}"
 EndProject

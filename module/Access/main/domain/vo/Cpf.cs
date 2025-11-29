@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using src.domain.exception;
+using main.domain.exception;
 using System.Text.RegularExpressions;
 
-namespace src.domain.vo
+namespace main.domain.vo
 {
     public sealed record Cpf
   {

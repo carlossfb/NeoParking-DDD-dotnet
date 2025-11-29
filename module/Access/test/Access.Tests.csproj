@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\Access.csproj" />
+    <ProjectReference Include="..\main\Access.csproj" />
   </ItemGroup>
 
 </Project>

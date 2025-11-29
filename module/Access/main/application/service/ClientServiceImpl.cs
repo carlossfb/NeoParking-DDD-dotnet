@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Xml;
-using src.application.dto;
-using src.domain.ports;
-using src.infrastructure.util;
+using main.application.dto;
+using main.domain.ports;
+using main.infrastructure.util;
 
-namespace src.application.service
+namespace main.application.service
 {
     public class ClientServiceImpl : IClientService
     {

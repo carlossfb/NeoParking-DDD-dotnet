@@ -1,7 +1,7 @@
-using src.domain.exception;
-using src.domain.vo;
+using main.domain.exception;
+using main.domain.vo;
 
-namespace src.domain.entity
+namespace main.domain.entity
 {
     public class Vehicle
     {

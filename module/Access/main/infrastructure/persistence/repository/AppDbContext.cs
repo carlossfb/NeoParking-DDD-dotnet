@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using src.infrastructure.dao;
+using main.infrastructure.dao;
 
-namespace src.infrastructure
+namespace main.infrastructure
 {
     public class AppDbContext : DbContext
     {
@@ -13,12 +13,12 @@ namespace src.infrastructure
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<ClientDAO>()
-            .HasMany(c => c.Vehicles)
-            .WithOne()
-            .HasForeignKey(v => v.ClientId)
-            .OnDelete(DeleteBehavior.Cascade);
-    }
+        {
+            modelBuilder.Entity<ClientDAO>()
+                .HasMany(c => c.Vehicles)
+                .WithOne()
+                .HasForeignKey(v => v.ClientId)
+                .OnDelete(DeleteBehavior.Cascade);
+        }
     }
 }

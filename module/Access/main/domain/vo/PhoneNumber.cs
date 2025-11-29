@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using PhoneNumbers;
-using src.domain.exception;
+using main.domain.exception;
 
-namespace src.domain.vo
+namespace main.domain.vo
 {
     public class PhoneNumber : IEquatable<PhoneNumber>
     {

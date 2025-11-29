@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using src.domain.entity;
+using main.domain.entity;
 
-namespace src.domain.ports
+namespace main.domain.ports
 {
     public interface IClientRepository
     {

@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using src.application.dto;
-using src.application.service;
-using src.domain.ports;
-using src.infrastructure;
+using main.application.dto;
+using main.application.service;
+using main.domain.ports;
+using main.infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 

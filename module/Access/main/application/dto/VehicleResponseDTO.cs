@@ -1,6 +1,6 @@
-using src.domain.vo;
+using main.domain.vo;
 
-namespace src.application.dto
+namespace main.application.dto
 {
     public sealed record VehicleResponseDTO(Guid Id, Plate Plate);
 }
