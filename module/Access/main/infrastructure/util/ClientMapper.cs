@@ -2,23 +2,23 @@
     using main.application.dto;
     using main.domain.entity;
     using main.domain.vo;
-    using main.infrastructure.dao;
+    using main.infrastructure.persistence.model;
 
     namespace main.infrastructure.util
     {
         internal static class ClientMapper
         {
-            // Domínio → DAO
-            public static ClientDAO DomainToDAO(Client client)
+            // Domínio → model
+            public static ClientModel DomainToModel(Client client)
             {
-                return new ClientDAO
+                return new ClientModel
                 {
                     Id = client.Id,
                     Name = client.Name,
                     PhoneNumber = client.PhoneNumber.ToString(),
                     Cpf = client.Cpf.ToString(),
                     Vehicles = client.Vehicles
-                        .Select(v => new VehicleDAO
+                        .Select(v => new VehicleModel
                         {
                             Id = v.Id,
                             Plate = v.Plate.Document,
@@ -28,16 +28,20 @@
                 };
             }
 
-            public static Client RequestDTOToDomain(ClientRequestDTO dto)
-            {
-                var client = Client.Create(
-                    dto.Name,
-                    PhoneNumber.Create(dto.PhoneNumber.ToString()),
-                    Cpf.Create(dto.Cpf.ToString())
-                );
+        public static Client RequestDTOToDomain(ClientRequestDTO dto)
+        {
+            var vehicles = dto.Vehicles?.Select(vDto => 
+                new Vehicle(Plate.Create(vDto.Plate), Guid.Empty)
+            ).ToList() ?? new List<Vehicle>();
 
-                return client;
-            }
+            return Client.Create(
+                dto.Name,
+                PhoneNumber.Create(dto.PhoneNumber.ToString()),
+                Cpf.Create(dto.Cpf.ToString()),
+                vehicles
+            );
+        }
+
 
             public static ClientResponseDTO DomainToResponseDTO(Client client)
             {
@@ -50,26 +54,27 @@
                 );
             }
 
-            public static Client DAOToDomain(ClientDAO dao)
+            public static Client ModelToDomain(ClientModel model)
             {
                 // Criar cliente com dados básicos
                 var client = Client.Create(
-                    dao.Name ?? string.Empty,
-                    PhoneNumber.Create(dao.PhoneNumber ?? string.Empty),
-                    Cpf.Create(dao.Cpf ?? string.Empty)
+                    model.Name ?? string.Empty,
+                    PhoneNumber.Create(model.PhoneNumber ?? string.Empty),
+                    Cpf.Create(model.Cpf ?? string.Empty)
                 );
 
                 // Setar o Id que veio do banco (usando reflection)
                 var idProperty = client.GetType().GetProperty("Id");
-                idProperty?.SetValue(client, dao.Id);
+                idProperty?.SetValue(client, model.Id);
 
                 // Adicionar veículos
-                if (dao.Vehicles != null)
+                if (model.Vehicles != null)
                 {
-                    foreach (var vehicleDao in dao.Vehicles)
+                    foreach (var VehicleModel in model.Vehicles)
                     {
-                        var plate = Plate.Create(vehicleDao.Plate ?? string.Empty);
-                        client.RegisterVehicle(plate);
+                        var plate = Plate.Create(VehicleModel.Plate ?? string.Empty);
+                        var clientId = VehicleModel.ClientId;
+                        client.RegisterVehicle(plate, clientId);
                     }
                 }
 

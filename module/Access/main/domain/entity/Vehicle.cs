@@ -7,11 +7,13 @@ namespace main.domain.entity
     {
         public Guid Id {get; private set;}
         public Plate Plate {get; private set;}
+        public Guid ClientId {get; private set;}
 
-        internal Vehicle(Plate plate)
+        internal Vehicle(Plate plate, Guid clientId)
         {
             Id = Guid.NewGuid();
-            Plate = plate ?? throw new DomainException("Plate is required");
+            Plate = plate;
+            ClientId = clientId;
         }
     }
 }

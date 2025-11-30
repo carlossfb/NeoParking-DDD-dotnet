@@ -1,9 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Xml;
 using main.application.dto;
+using main.domain.exception;
 using main.domain.ports;
 using main.infrastructure.util;
 
@@ -25,9 +21,14 @@ namespace main.application.service
             return ClientMapper.DomainToResponseDTO(client);
         }
 
-        public Task DeleteClientAsync(Guid clientId)
+        public async Task DeleteClientAsync(Guid clientId)
         {
-            throw new NotImplementedException();
+            var client = await _clientRepository.GetByIdAsync(clientId);
+
+            if (client is null)
+                throw new DomainException("Client not found");
+
+            await _clientRepository.DeleteAsync(client);
         }
 
         public Task<IEnumerable<ClientResponseDTO>> GetAllClientsAsync()

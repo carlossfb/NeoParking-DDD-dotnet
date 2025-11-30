@@ -12,7 +12,7 @@ namespace main.domain.entity
         public List<Vehicle> Vehicles { get; private set; }
 
 
-        private Client(string name, PhoneNumber phoneNumber, Cpf cpf)
+        private Client(string name, PhoneNumber phoneNumber, Cpf cpf, List<Vehicle>? vehicles)
         {
 
             if (string.IsNullOrWhiteSpace(name)) throw new DomainException("Name is required");
@@ -22,17 +22,26 @@ namespace main.domain.entity
             Name = name;
             PhoneNumber = phoneNumber;
             Cpf = cpf;
-            Vehicles = new List<Vehicle>();
+            Vehicles = vehicles ?? new List<Vehicle>();
         }
 
-        public static Client Create(string name, PhoneNumber phoneNumber, Cpf cpf) => new Client(name, phoneNumber, cpf);
+        public static Client Create(string name, PhoneNumber phoneNumber, Cpf cpf, List<Vehicle> vehicles)
+        {
+            return new Client(name, phoneNumber, cpf, vehicles);
+        }
+
+        public static Client Create(string name, PhoneNumber phoneNumber, Cpf cpf)
+        {
+             return Create(name, phoneNumber, cpf, new List<Vehicle>());
+        }
         
-        public Vehicle RegisterVehicle(Plate plate)
+        
+        public Vehicle RegisterVehicle(Plate plate, Guid clientId)
         {
             if (plate == null)
                 throw new DomainException("Plate is required");
 
-            var vehicle = new Vehicle(plate);
+            var vehicle = new Vehicle(plate, clientId);
             Vehicles.Add(vehicle);
             return vehicle;
         }

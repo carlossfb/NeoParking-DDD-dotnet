@@ -17,14 +17,21 @@ namespace main.infrastructure
 
         public async Task AddAsync(Client client)
         {
-            var dao = ClientMapper.DomainToDAO(client); // Converte domínio → DAO
-            await _context.Clients.AddAsync(dao);
+            var model = ClientMapper.DomainToModel(client);
+            await _context.Clients.AddAsync(model);
             await _context.SaveChangesAsync();
         }
 
-        public Task DeleteAsync(Client client)
+        public async Task DeleteAsync(Client client)
         {
-            throw new NotImplementedException();
+            var model = await _context.Clients
+                .FirstOrDefaultAsync(c => c.Id == client.Id);
+
+            if (model is null)
+                return;
+
+            _context.Clients.Remove(model);
+            await _context.SaveChangesAsync();
         }
 
         public Task<IEnumerable<Client>> GetAllAsync()
@@ -38,7 +45,7 @@ namespace main.infrastructure
             .Include(c => c.Vehicles)
             .FirstOrDefaultAsync(c => c.Id == clientId);
 
-            return dao is null ? null : ClientMapper.DAOToDomain(dao);
+            return dao is null ? null : ClientMapper.ModelToDomain(dao);
         }
 
         public Task UpdateAsync(Client client)

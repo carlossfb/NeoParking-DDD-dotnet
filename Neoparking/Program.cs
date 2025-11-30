@@ -1,21 +1,13 @@
-using Microsoft.EntityFrameworkCore;
-using main.application.dto;
-using main.application.service;
-using main.domain.ports;
-using main.infrastructure;
+using main;
+using Neoparking.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Configurar InMemory Database + EF Core
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseInMemoryDatabase("NeoParkingDB"));
-
-// Registrar dependências do módulo Access
-builder.Services.AddScoped<IClientRepository, ClientRepositoryImpl>();
-builder.Services.AddScoped<IClientService, ClientServiceImpl>();
+// Configurar módulos
+builder.Services.AddAccessModule();
 
 var app = builder.Build();
 
@@ -25,17 +17,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Endpoints
-app.MapPost("/clients", async (ClientRequestDTO request, IClientService service) =>
-{
-    var result = await service.CreateClientAsync(request);
-    return Results.Created($"/clients/{result.Id}", result);
-});
-
-app.MapGet("/clients/{id}", async (Guid id, IClientService service) =>
-{
-    var result = await service.GetClientByIdAsync(id);
-    return result != null ? Results.Ok(result) : Results.NotFound();
-});
+// Endpoints da WebAPI
+app.MapClientEndpoints();
 
 app.Run();

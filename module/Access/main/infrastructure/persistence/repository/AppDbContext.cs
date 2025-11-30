@@ -1,12 +1,12 @@
 using Microsoft.EntityFrameworkCore;
-using main.infrastructure.dao;
+using main.infrastructure.persistence.model;
 
 namespace main.infrastructure
 {
     public class AppDbContext : DbContext
     {
-        public DbSet<ClientDAO> Clients { get; set; }
-        public DbSet<VehicleDAO> Vehicles { get; set; }
+        public DbSet<ClientModel> Clients { get; set; }
+        public DbSet<VehicleModel> Vehicles { get; set; }
 
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
@@ -14,9 +14,9 @@ namespace main.infrastructure
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<ClientDAO>()
+            modelBuilder.Entity<ClientModel>()
                 .HasMany(c => c.Vehicles)
-                .WithOne()
+                .WithOne(v => v.Client)
                 .HasForeignKey(v => v.ClientId)
                 .OnDelete(DeleteBehavior.Cascade);
         }

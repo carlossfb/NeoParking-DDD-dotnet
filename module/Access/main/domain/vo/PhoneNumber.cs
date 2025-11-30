@@ -32,7 +32,7 @@ namespace main.domain.vo
 
         private static bool TryCreate (string rawNumber, string region, out PhoneNumber phone)
         {
-            phone = null;
+            phone = null!;
             var util = PhoneNumberUtil.GetInstance();
 
             try

@@ -1,12 +1,12 @@
-namespace main.infrastructure.dao
+namespace main.infrastructure.persistence.model
 {
-    public class VehicleDAO
+    public class VehicleModel
     {
         public Guid Id {get; set;}
         public string? Plate {get; set;}
         public Guid ClientId { get; set; }
         
         // Navigation property
-        public ClientDAO? Client { get; set; }
+        public ClientModel? Client { get; set; }
     }
 }
