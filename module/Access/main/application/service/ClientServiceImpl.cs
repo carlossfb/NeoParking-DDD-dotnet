@@ -31,9 +31,10 @@ namespace main.application.service
             await _clientRepository.DeleteAsync(client);
         }
 
-        public Task<IEnumerable<ClientResponseDTO>> GetAllClientsAsync()
+        public async Task<IEnumerable<ClientResponseDTO>> GetAllClientsAsync()
         {
-            throw new NotImplementedException();
+            var clients = await _clientRepository.GetAllAsync();
+            return clients.Select(ClientMapper.DomainToResponseDTO);
         }
 
         public async Task<ClientResponseDTO?> GetClientByIdAsync(Guid clientId)
@@ -42,9 +43,15 @@ namespace main.application.service
             return client is null ? null : ClientMapper.DomainToResponseDTO(client);
         }
 
-        public Task<ClientResponseDTO> UpdateClientAsync(Guid clientId, ClientRequestDTO dto)
+        public async Task<ClientResponseDTO> UpdateClientAsync(Guid clientId, ClientRequestDTO dto)
         {
-            throw new NotImplementedException();
+            var existingClient = await _clientRepository.GetByIdAsync(clientId);
+
+            if (existingClient is null)
+                throw new DomainException("Client not found");
+            
+            await _clientRepository.UpdateAsync(existingClient);
+            return ClientMapper.DomainToResponseDTO(existingClient);
         }
     }
 }

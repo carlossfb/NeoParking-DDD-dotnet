@@ -34,23 +34,31 @@ namespace main.infrastructure
             await _context.SaveChangesAsync();
         }
 
-        public Task<IEnumerable<Client>> GetAllAsync()
+        public async Task<IEnumerable<Client>> GetAllAsync()
         {
-            throw new NotImplementedException();
+            var models = await _context.Clients
+                .Include(c => c.Vehicles)
+                .ToListAsync();
+
+            return models.Select(ClientMapper.ModelToDomain);
         }
 
         public async Task<Client?> GetByIdAsync(Guid clientId)
         {
             var dao = await _context.Clients
+            .AsNoTracking()
             .Include(c => c.Vehicles)
             .FirstOrDefaultAsync(c => c.Id == clientId);
 
             return dao is null ? null : ClientMapper.ModelToDomain(dao);
         }
 
-        public Task UpdateAsync(Client client)
+        public async Task UpdateAsync(Client client)
         {
-            throw new NotImplementedException();
-        }
+            var model = ClientMapper.DomainToModel(client);
+            _context.Clients.Update(model);
+            await _context.SaveChangesAsync();
+        }       
+
     }
 }

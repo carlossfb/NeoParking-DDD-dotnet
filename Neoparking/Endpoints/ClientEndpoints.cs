@@ -30,6 +30,22 @@ namespace Neoparking.Endpoints
             })
             .WithName("DeleteClient")
             .WithOpenApi();
+
+            app.MapGet("/clients",  async (IClientService service) =>
+            {
+                var result = await service.GetAllClientsAsync();
+                return Results.Ok(result);
+            })
+            .WithName("GetAllClients")
+            .WithOpenApi();
+
+            app.MapPut("/clients/{id}", async (Guid id, ClientRequestDTO request, IClientService service) =>
+            {
+                var result = await service.UpdateClientAsync(id, request);
+                return Results.Ok(result);
+            })
+            .WithName("UpdateClient")
+            .WithOpenApi();
         }
     }
 }

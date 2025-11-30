@@ -6,10 +6,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Configurar módulos
-builder.Services.AddAccessModule();
+
+builder.Services.AddAccessModule(builder.Configuration.GetConnectionString("Access") ?? "DefaultConnectionString");
 
 var app = builder.Build();
+
+// Inicializa o banco de dados
+AccessModule.InitializeDatabase(app.Services);
 
 if (app.Environment.IsDevelopment())
 {
