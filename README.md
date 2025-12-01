@@ -13,7 +13,6 @@
 5. [Project Structure and Architecture](#5-project-structure-and-architecture)  
 6. [Context Map](#6-Context-Map)  
 7. [Events](#7-events)  
-   7.1 [Events in Repositories](#71-events-in-repositories)  
 8. [ArchUnit](#8-archunit)   
 9. [.NET](#9-net)  
 10. [Tests](#10-tests)  
@@ -130,15 +129,54 @@ The architectural decisions based on this approach are described in more detail 
 
 TODO
 
-### 7.1 Events in Repositories
+## 8. Architecture Tests
 
-TODO
+The project implements architecture tests using **NetArchTest** to enforce hexagonal architecture boundaries and DDD principles.
 
----
+### 🏗️ Layer Separation Rules
 
-## 8. ArchUnit
+- **Domain Independence**: Domain layer has no external dependencies (EF Core, MongoDB, etc.)
+- **Application Isolation**: Application layer only depends on Domain
+- **Dependency Direction**: Domain never depends on Application or Infrastructure
 
-TODO
+### 🧪 Test Categories
+
+#### **Layer Architecture Tests**
+```csharp
+[Fact]
+public void Domain_ShouldNotHaveExternalDependencies()
+[Fact] 
+public void Application_ShouldOnlyDependOnDomain()
+```
+
+#### **Domain Architecture Tests**
+```csharp
+[Fact]
+public void Domain_ShouldNotDependOnApplication()
+[Fact]
+public void Domain_ShouldNotDependOnInfrastructure()
+[Fact]
+public void ValueObjects_ShouldBeClasses()
+[Fact]
+public void Entities_ShouldBeClasses()
+```
+
+### 🎯 Benefits
+
+- **Prevents architectural drift** over time
+- **Enforces hexagonal boundaries** automatically
+- **Validates DDD structure** in CI/CD pipeline
+- **Catches violations early** in development
+
+### 📊 Running Architecture Tests
+
+```bash
+# Run only architecture tests
+dotnet test --filter "FullyQualifiedName~Architecture"
+
+# Include in full test suite
+dotnet test
+```
 
 ---
 
