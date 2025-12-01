@@ -1,24 +1,25 @@
-using main.application.dto;
+using main.common.dto;
 using main.domain.exception;
 using main.domain.ports;
-using main.infrastructure.util;
 
 namespace main.application.service
 {
     public class ClientServiceImpl : IClientService
     {
         private readonly IClientRepository _clientRepository;
+        private readonly IClientMapper _clientMapper;
 
-        public ClientServiceImpl(IClientRepository clientRepository)
+        public ClientServiceImpl(IClientRepository clientRepository, IClientMapper clientMapper)
         {
             _clientRepository = clientRepository;
+            _clientMapper = clientMapper;
         }
 
         public async Task<ClientResponseDTO> CreateClientAsync(ClientRequestDTO dto)
         {
-            var client = ClientMapper.RequestDTOToDomain(dto);
+            var client = _clientMapper.RequestDTOToDomain(dto);
             await _clientRepository.AddAsync(client); 
-            return ClientMapper.DomainToResponseDTO(client);
+            return _clientMapper.DomainToResponseDTO(client);
         }
 
         public async Task DeleteClientAsync(Guid clientId)
@@ -34,13 +35,13 @@ namespace main.application.service
         public async Task<IEnumerable<ClientResponseDTO>> GetAllClientsAsync()
         {
             var clients = await _clientRepository.GetAllAsync();
-            return clients.Select(ClientMapper.DomainToResponseDTO);
+            return clients.Select(_clientMapper.DomainToResponseDTO);
         }
 
         public async Task<ClientResponseDTO?> GetClientByIdAsync(Guid clientId)
         {
             var client = await _clientRepository.GetByIdAsync(clientId);
-            return client is null ? null : ClientMapper.DomainToResponseDTO(client);
+            return client is null ? null : _clientMapper.DomainToResponseDTO(client);
         }
 
         public async Task<ClientResponseDTO> UpdateClientAsync(Guid clientId, ClientUpdateDTO dto)
@@ -51,10 +52,10 @@ namespace main.application.service
                 throw new DomainException("Client not found");
             
             // Aplica as mudanças do DTO no cliente existente
-            var updatedClient = ClientMapper.UpdateClientFromDTO(existingClient, dto);
+            var updatedClient = _clientMapper.UpdateClientFromDTO(existingClient, dto);
             
             await _clientRepository.UpdateAsync(updatedClient);
-            return ClientMapper.DomainToResponseDTO(updatedClient);
+            return _clientMapper.DomainToResponseDTO(updatedClient);
         }
     }
 }

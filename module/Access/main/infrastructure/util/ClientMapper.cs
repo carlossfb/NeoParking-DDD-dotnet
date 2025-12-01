@@ -1,12 +1,13 @@
     using System.Linq;
-    using main.application.dto;
+    using main.common.dto;
     using main.domain.entity;
     using main.domain.vo;
+    using main.domain.ports;
     using main.infrastructure.persistence.mysql.model;
 
     namespace main.infrastructure.util
     {
-        internal static class ClientMapper
+        public class ClientMapper : IClientMapper
         {
             // Domínio → model
             public static ClientModel DomainToModel(Client client)
@@ -28,7 +29,7 @@
                 };
             }
 
-        public static Client RequestDTOToDomain(ClientRequestDTO dto)
+        public Client RequestDTOToDomain(ClientRequestDTO dto)
         {
             var vehicles = dto.Vehicles?.Select(vDto => 
                 new Vehicle(Plate.Create(vDto.Plate), Guid.Empty)
@@ -43,14 +44,14 @@
         }
 
 
-            public static ClientResponseDTO DomainToResponseDTO(Client client)
+            public ClientResponseDTO DomainToResponseDTO(Client client)
             {
                 return new ClientResponseDTO(
                     client.Id,
                     client.Name,
-                    client.PhoneNumber,
-                    client.Cpf,
-                    client.Vehicles.Select(v => new VehicleResponseDTO(v.Id, v.Plate)).ToList()
+                    client.PhoneNumber.Value,
+                    client.Cpf.Document,
+                    client.Vehicles.Select(v => new VehicleResponseDTO(v.Id, v.Plate.Document)).ToList()
                 );
             }
 
@@ -81,7 +82,7 @@
                 return client;
             }
 
-            public static Client UpdateClientFromDTO(Client existingClient, ClientUpdateDTO dto)
+            public Client UpdateClientFromDTO(Client existingClient, ClientUpdateDTO dto)
             {
                 // Cria um novo cliente com os dados atualizados (vehicles sempre preservados)
                 var updatedClient = Client.Create(

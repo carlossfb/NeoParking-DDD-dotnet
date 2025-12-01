@@ -1,4 +1,4 @@
-using main.application.dto;
+using main.common.dto;
 
 namespace main.domain.ports
 {

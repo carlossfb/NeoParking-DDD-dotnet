@@ -1,4 +1,4 @@
-namespace main.application.dto
+namespace main.common.dto
 {
     public record ClientUpdateDTO(
         string? Name,

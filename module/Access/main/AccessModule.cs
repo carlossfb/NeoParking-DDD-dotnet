@@ -44,6 +44,9 @@ namespace main
                     throw new ArgumentException($"Unsupported database provider: {provider}");
             }
 
+            // Mappers (comum para todos os providers)
+            services.AddScoped<IClientMapper, main.infrastructure.util.ClientMapper>();
+            
             // Services (comum para todos os providers)
             services.AddScoped<IClientService, ClientServiceImpl>();
 

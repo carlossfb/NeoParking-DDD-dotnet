@@ -1,4 +1,4 @@
-using main.application.dto;
+using main.common.dto;
 using main.domain.ports;
 
 namespace Neoparking.Endpoints

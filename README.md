@@ -253,7 +253,41 @@ dotnet run
 
 ## 10. Tests
 
-TODO
+### 🧪 Pirâmide de Testes - Módulo Access
+
+```
+        E2E (Poucos)
+       /              \
+    Integration (Alguns)
+   /                    \
+Unit Tests (Muitos)
+```
+
+#### **Testes Unitários** (Base - 70%)
+- **Domain**: Client, Vehicle, CPF, Plate, PhoneNumber
+- **Application**: ClientService com mocks
+- **Velocidade**: < 1ms cada
+
+#### **Testes de Integração** (Meio - 20%)
+- **Repository**: Persistência com InMemory DB
+- **Service**: Integração serviço + repositório  
+- **Infrastructure**: TestContainers com MySQL real
+- **Performance**: Testes de carga e tempo
+
+#### **Testes E2E** (Topo - 10%)
+- **API**: Endpoints HTTP completos
+- **Fluxos**: Cenários de usuário reais
+
+#### **Comandos**
+```bash
+# Todos os testes
+dotnet test
+
+# Por categoria
+dotnet test --filter "FullyQualifiedName~Unit"
+dotnet test --filter "FullyQualifiedName~Integration" 
+dotnet test --filter "FullyQualifiedName~E2E"
+```
 
 ---
 

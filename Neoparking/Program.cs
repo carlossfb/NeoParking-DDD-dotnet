@@ -26,3 +26,9 @@ if (app.Environment.IsDevelopment())
 app.MapClientEndpoints();
 
 app.Run();
+
+// Torna Program público para testes E2E
+public partial class Program { }
+
+// Torna a classe Program pública para testes E2E
+public partial class Program { }
