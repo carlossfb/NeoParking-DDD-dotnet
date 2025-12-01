@@ -239,9 +239,15 @@ dotnet build
 # Run tests
 dotnet test
 
-# Run web API
+# Run web API (from root directory)
 dotnet run --project Neoparking
+
+# Alternative: Navigate to project folder
+cd Neoparking
+dotnet run
 ```
+
+**Note**: Due to the modular architecture with multiple projects, `dotnet run` from the root directory requires specifying the startup project with `--project Neoparking`.
 
 ---
 
