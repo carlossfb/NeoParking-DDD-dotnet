@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using main.common.dto;
 using main.application.service;
 using main.infrastructure;
-using main.infrastructure.persistence.mysql;
 
 namespace Access.Tests.E2E;
 

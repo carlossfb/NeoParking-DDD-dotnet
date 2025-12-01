@@ -154,21 +154,36 @@ NeoParking-DDD-dotnet/
 ├── docs/
 │   ├── architecture-decisions.md
 │   └── graph/
+│       └── arch.drawio.png
 ├── Module/
 │   └── Access/
 │       ├── main/                    # Class library for Access context
-│       │   ├── application/         # Application services & DTOs
+│       │   ├── application/         # Application services
+│       │   ├── common/              # DTOs and shared contracts
 │       │   ├── domain/              # Domain entities & value objects
+│       │   │   ├── entity/          # Domain entities
+│       │   │   ├── exception/       # Domain exceptions
+│       │   │   ├── ports/           # Domain interfaces
+│       │   │   └── vo/              # Value objects
 │       │   ├── infrastructure/      # Data access & external services
+│       │   │   ├── persistence/     # Repository implementations
+│       │   │   └── util/            # Mappers and utilities
 │       │   ├── Migrations/          # EF Core migrations
 │       │   ├── Access.csproj
 │       │   └── AccessModule.cs      # Extension methods for DI
 │       └── test/
+│           ├── Architecture/        # Architecture tests
+│           ├── E2E/                 # End-to-end tests
+│           ├── Integration/         # Integration tests
+│           ├── Unit/                # Unit tests
 │           └── Access.Tests.csproj
 ├── Neoparking/                      # Web API host
 │   ├── Endpoints/
+│   │   └── ClientEndpoints.cs
+│   ├── Properties/
 │   ├── Program.cs
-│   └── appsettings.json
+│   ├── appsettings.json
+│   └── Neoparking.csproj
 └── Neoparking.sln
 ```
 
@@ -253,37 +268,37 @@ dotnet run
 
 ## 10. Tests
 
-### 🧪 Pirâmide de Testes - Módulo Access
+### 🧪 Test Pyramid - Access Module
 
 ```
-        E2E (Poucos)
+        E2E (Few)
        /              \
-    Integration (Alguns)
+    Integration (Some)
    /                    \
-Unit Tests (Muitos)
+Unit Tests (Many)
 ```
 
-#### **Testes Unitários** (Base - 70%)
+#### **Unit Tests** (Base - 70%)
 - **Domain**: Client, Vehicle, CPF, Plate, PhoneNumber
-- **Application**: ClientService com mocks
-- **Velocidade**: < 1ms cada
+- **Application**: ClientService with mocks
+- **Speed**: < 1ms each
 
-#### **Testes de Integração** (Meio - 20%)
-- **Repository**: Persistência com InMemory DB
-- **Service**: Integração serviço + repositório  
-- **Infrastructure**: TestContainers com MySQL real
-- **Performance**: Testes de carga e tempo
+#### **Integration Tests** (Middle - 20%)
+- **Repository**: Persistence with InMemory DB
+- **Service**: Service + repository integration  
+- **Infrastructure**: TestContainers with real MySQL
+- **Performance**: Load and timing tests
 
-#### **Testes E2E** (Topo - 10%)
-- **API**: Endpoints HTTP completos
-- **Fluxos**: Cenários de usuário reais
+#### **E2E Tests** (Top - 10%)
+- **API**: Complete HTTP endpoints
+- **Flows**: Real user scenarios
 
-#### **Comandos**
+#### **Commands**
 ```bash
-# Todos os testes
+# All tests
 dotnet test
 
-# Por categoria
+# By category
 dotnet test --filter "FullyQualifiedName~Unit"
 dotnet test --filter "FullyQualifiedName~Integration" 
 dotnet test --filter "FullyQualifiedName~E2E"
