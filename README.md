@@ -145,42 +145,102 @@ TODO
 
 ## 9. .NET
 
-### Configuração do Projeto
+### Project Structure
 
-Passo a passo para criação da estrutura do projeto:
+The project follows a modular architecture where each bounded context is implemented as a separate class library with extension methods for dependency injection.
 
-```bash
-# Criar solução
-dotnet new sln -n Neoparking
-
-# Criar diretório para módulos
-mkdir module
-
-# Criar projeto de biblioteca de classes
-dotnet new classlib -n Access -o .\module\Access\src\
-
-# Criar projeto de testes
-dotnet new xunit -n Access.Tests -o module/Access/test
-
-# Adicionar projetos à solução
-dotnet sln add .\module\Access\src\Access.csproj
-dotnet sln add .\module\Access\test\Access.Tests.csproj
-
-# Adicionar referência do projeto principal no projeto de testes
-dotnet add module\Access\test\Access.Tests.csproj reference module\Access\src\Access.csproj
+```
+NeoParking-DDD-dotnet/
+├── docs/
+│   ├── architecture-decisions.md
+│   └── graph/
+├── Module/
+│   └── Access/
+│       ├── main/                    # Class library for Access context
+│       │   ├── application/         # Application services & DTOs
+│       │   ├── domain/              # Domain entities & value objects
+│       │   ├── infrastructure/      # Data access & external services
+│       │   ├── Migrations/          # EF Core migrations
+│       │   ├── Access.csproj
+│       │   └── AccessModule.cs      # Extension methods for DI
+│       └── test/
+│           └── Access.Tests.csproj
+├── Neoparking/                      # Web API host
+│   ├── Endpoints/
+│   ├── Program.cs
+│   └── appsettings.json
+└── Neoparking.sln
 ```
 
-### Comandos para Execução
+### Module Creation
+
+Each bounded context is implemented as a **class library** to ensure proper separation:
 
 ```bash
-# Restaurar dependências
+# Create module directory structure
+mkdir Module\{ContextName}\main
+mkdir Module\{ContextName}\test
+
+# Create class library with specific output directory
+dotnet new classlib -n {ContextName} -o Module\{ContextName}\main
+
+# Create test project
+dotnet new xunit -n {ContextName}.Tests -o Module\{ContextName}\test
+
+# Add projects to solution
+dotnet sln add Module\{ContextName}\main\{ContextName}.csproj
+dotnet sln add Module\{ContextName}\test\{ContextName}.Tests.csproj
+
+# Add reference from test to main project
+dotnet add Module\{ContextName}\test\{ContextName}.Tests.csproj reference Module\{ContextName}\main\{ContextName}.csproj
+```
+
+### Extension Methods Pattern
+
+Each module exposes its services through extension methods:
+
+```csharp
+public static class AccessModule
+{
+    public static IServiceCollection AddAccessModule(
+        this IServiceCollection services, 
+        IConfiguration configuration)
+    {
+        // Configure database provider
+        // Register repositories
+        // Register services
+        return services;
+    }
+}
+```
+
+### Usage in Web API
+
+```csharp
+// Program.cs
+builder.Services.AddAccessModule(builder.Configuration);
+
+var app = builder.Build();
+
+// Initialize databases
+var provider = AccessModule.GetDatabaseProvider(builder.Configuration);
+AccessModule.InitializeDatabase(app.Services, provider);
+```
+
+### Commands
+
+```bash
+# Restore dependencies
 dotnet restore
 
-# Compilar projeto
+# Build solution
 dotnet build
 
-# Executar testes
+# Run tests
 dotnet test
+
+# Run web API
+dotnet run --project Neoparking
 ```
 
 ---
