@@ -11,21 +11,14 @@
 3. [General Assumptions](#3-general-assumptions)  
 4. [Process Discovery](#4-process-discovery)  
 5. [Project Structure and Architecture](#5-project-structure-and-architecture)  
-6. [Bounded Contexts](#6-bounded-contexts)  
-   6.1 [Access](#61-access)  
-   6.2 [Occupancy](#62-occupancy)  
-   6.3 [Billing](#63-billing)  
-   6.4 [Management](#64-management) 
+6. [Context Map](#6-Context-Map)  
 7. [Events](#7-events)  
    7.1 [Events in Repositories](#71-events-in-repositories)  
-8. [ArchUnit](#8-archunit)  
-9. [Functional Thinking](#9-functional-thinking)   
-10. [Architecture-Code Gap](#10-architecture-code-gap)  
-11. [Model-Code Gap](#11-model-code-gap)  
-12. [.NET](#12-net)  
-13. [Tests](#13-tests)  
-14. [How to Contribute](#14-how-to-contribute)  
-15. [References](#15-references)
+8. [ArchUnit](#8-archunit)   
+9. [.NET](#9-net)  
+10. [Tests](#10-tests)  
+11. [How to Contribute](#11-how-to-contribute)  
+12. [References](#12-references)
 
 ---
 
@@ -46,38 +39,38 @@ The main revenue of NeoParking comes from two sources: walk-in customers in the 
 
 ## 3. General Assumptions
 
-![Context Map](https://www.plantuml.com/plantuml/png/ZPBBJW8n58RtVOgJsRWYn2qXX4GNccY61EB6i2YT0pOCfxMd1OtnXNmDNypQCfVPpRB_vIlyqoLxwNmurS9hNoFS6VBuuU5PMY6iL4TvG2ZA2w5hl0Bcyvq9L65rLHOB-180gfRCaBBjwGNVjAfHVFTe6wsEw3KTHX9pVe0ebGfMUcre9ACh33Wh-Nb2yYCXr_I0y5Xk8ERGaQn7OjP8R5mizXHtngH4T7k0uhQ0oMJH5M06va8iH1gvyPkHM_S6xj4YLRy_fBHaGF8EGUMVObZaGLCrWsRmMZwij_0Uq6baE6VWr2HNqzxa6rEbsQmffHV4OAyoXnqhfstQEjyqfhP7xFtpcEzzuboPFgss_rDK3ARp8iO75ikenrVy1m00)
+### Business Assumptions
 
-Breaks down the system into its main bounded contexts:
+**Payment Models Volatility**: Subscription, monthly, and daily payment models are subject to frequent changes due to market conditions and business strategy adjustments. However, the **hourly payment model remains the core stable revenue stream** and serves as the foundation for all pricing calculations.
 
-- "Access Context"
-- "Occupancy Context"
-- "Billing Context"
-- "Management Context"
-- "IOT external Context"
+**Pricing Strategy**: The hourly model acts as the base unit, with other models being derivatives or packages of hourly rates with discounts or special conditions.
 
----
+
+
+### Technical Assumptions
+
+**Scalability**: System designed for medium-scale operations (1000+ daily transactions)  
+**Availability**: 99.5% uptime requirement with graceful degradation  
+**Data Consistency**: Eventual consistency acceptable between contexts  
+**Integration**: REST APIs for external systems, domain events for internal communication
+
 
 ## 4. Process Discovery
 
 As an initial step, I decided to understand a little more about the business domain using user story and event storming. Through the big picture, some information that was hidden in the process was made explicit. I continued to initially place the relevant events, organized them chronologically, associated them with actions and then with the responsible actors, and if it made sense, I also associated a reading model.
 
-![Event Storming_parte1](https://github.com/carlossfb/NeoParking-DDD/blob/main/docs/graph/temporary_clients.jpg)
-
-![Event Storming_parte2](https://github.com/carlossfb/NeoParking-DDD/blob/main/docs/graph/creating_subscriber.jpg)
-
-![Event Storming_parte3](https://github.com/carlossfb/NeoParking-DDD/blob/main/docs/graph/subscriber_workflow.jpg)
+<iframe width="768" height="496" src="https://miro.com/app/live-embed/uXjVJXjg3VM=/?focusWidget=3458764636230014271&embedMode=view_only_without_ui&embedId=886965748997" frameborder="0" scrolling="no" allow="fullscreen; clipboard-read; clipboard-write" allowfullscreen></iframe>
 
 
 Definitions around domain extracted from user stories:
 
 ### Nouns (specific to NeoParking domain)
-- Owner
+- Owner/Client
 - Subscriber driver
 - RFID
 - Ticket
 - Fee
-- Parking operator
+- Parking operator / Manager
 - Available parking spots
 - Subscription plan
 - Payment
@@ -99,10 +92,10 @@ Definitions around domain extracted from user stories:
 
 - Operator
 The entity responsible for managing the entire parking system. The operator configures operational rules, monitors the system, manages pricing policies, handles audits, and ensures that the infrastructure and services are functioning properly.
-- Owner
+- Client
 A customer who owns a vehicle and has the right to use the parking service. The owner can be either a casual user (pay-per-use) or a registered subscriber. An owner is associated with tickets, payments, and possibly identification methods like RFID.
 - Subscriber
-A special type of owner with an active subscription plan (e.g., monthly pass). Subscribers typically have extended privileges such as automated entry and exit via RFID, and are not charged per visit but through a recurring fee.
+A special type of client with an active subscription plan (e.g., monthly pass). Subscribers typically have extended privileges such as automated entry and exit via RFID, and are not charged per visit but through a recurring fee.
 - Ticket
 A representation of a parking session. It includes information such as entry time, vehicle identification, and assigned parking area. Tickets can be physical (e.g., printed with a QR code) or digital, and are used for validating entry, exit, and fee calculation.
 - Fee
@@ -117,13 +110,17 @@ A Radio Frequency Identification tag assigned to a vehicle or user. RFID allows 
 
 I chose to use the tactical design decision tree, ref: Learning Domain-Driven Design: Aligning Software Architecture and Business Strategy -  Vlad Khononov
 
-![Event Storming_parte1](https://github.com/carlossfb/NeoParking-DDD/blob/main/docs/graph/arch.drawio.png)
+The architectural decisions based on this approach are described in more detail in the Architecture Decision Records (ADRs).
+
+📋 **[View Complete ADRs →](docs/architecture-decisions.md)**
+
+![Arch](https://github.com/carlossfb/NeoParking-DDD/blob/main/docs/graph/arch.drawio.png)
 ---
 
 
-## 6. Bounded Contexts
+## 6. Context Map
 
-
+![ContextMap](https://www.plantuml.com/plantuml/png/RLBDIWCn4BxdAOPwi8MjegKN3r9RL-n1MhJrv2KamngQJPPCgXRnWNmENynPTxTDGTX3-7w-6RxP2KKPuhQqWZR6LJB84WAgA5rX4Ju5mDG7ZM7chGzmCXwFQqYgJH7yrkaMplESuSS62Gu3N5oAhoHIXk3V_-9QnsWqOe4uXMbjGisuY_WHIHoczswKGgAEUd7zcJNeOWRF-6gKnGnMHcqm3deW2HfrwbyejQsaKxiaOkvN6Hm8Ne-NB9g4FPo6J8srh4WYbd9NyXgKmHqYDTPMbHhdcaKcxiuVf9C5rfOaP4qOE669eJH4nhisg7DnD_it_7p3kg8OaAki2uNejIUnvuV3QsZBkeB5_TCHq-ts3vKKqP0yj5Dhh90l0_pX6riyyRERWabNdU5eYLjVIkCWhvq4_UPEC-i9TGOOrTb0237X0Vph_G80)
 
 
 
@@ -145,26 +142,8 @@ TODO
 
 ---
 
-## 9. Functional Thinking
 
-TODO
-
----
-
-
-## 10. Architecture-Code Gap
-
-TODO
-
----
-
-## 11. Model-Code Gap
-
-TODO
-
----
-
-## 12. .NET
+## 9. .NET
 
 ### Configuração do Projeto
 
@@ -206,18 +185,18 @@ dotnet test
 
 ---
 
-## 13. Tests
+## 10. Tests
 
 TODO
 
 ---
 
-## 14. How to Contribute
+## 11. How to Contribute
 
 TODO
 
 ---
 
-## 15. References
+## 12. References
 
 TODO
