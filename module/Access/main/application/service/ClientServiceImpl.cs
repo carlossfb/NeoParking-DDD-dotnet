@@ -43,15 +43,18 @@ namespace main.application.service
             return client is null ? null : ClientMapper.DomainToResponseDTO(client);
         }
 
-        public async Task<ClientResponseDTO> UpdateClientAsync(Guid clientId, ClientRequestDTO dto)
+        public async Task<ClientResponseDTO> UpdateClientAsync(Guid clientId, ClientUpdateDTO dto)
         {
             var existingClient = await _clientRepository.GetByIdAsync(clientId);
 
             if (existingClient is null)
                 throw new DomainException("Client not found");
             
-            await _clientRepository.UpdateAsync(existingClient);
-            return ClientMapper.DomainToResponseDTO(existingClient);
+            // Aplica as mudanças do DTO no cliente existente
+            var updatedClient = ClientMapper.UpdateClientFromDTO(existingClient, dto);
+            
+            await _clientRepository.UpdateAsync(updatedClient);
+            return ClientMapper.DomainToResponseDTO(updatedClient);
         }
     }
 }

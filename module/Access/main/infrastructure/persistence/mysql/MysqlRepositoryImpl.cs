@@ -5,12 +5,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace main.infrastructure
 {
-    public class ClientRepositoryImpl : IClientRepository 
+    public class MysqlRepositoryImpl : IClientRepository 
     {
     
         private readonly AppDbContext _context;
 
-        public ClientRepositoryImpl(AppDbContext context)
+        public MysqlRepositoryImpl(AppDbContext context)
         {
             _context = context;
         }
@@ -55,8 +55,18 @@ namespace main.infrastructure
 
         public async Task UpdateAsync(Client client)
         {
-            var model = ClientMapper.DomainToModel(client);
-            _context.Clients.Update(model);
+            var existingModel = await _context.Clients
+                .Include(c => c.Vehicles)
+                .FirstOrDefaultAsync(c => c.Id == client.Id);
+
+            if (existingModel == null)
+                throw new InvalidOperationException($"Client with ID {client.Id} not found");
+
+            
+            existingModel.Name = client.Name;
+            existingModel.PhoneNumber = client.PhoneNumber.Value;
+            existingModel.Cpf = client.Cpf.Document;
+
             await _context.SaveChangesAsync();
         }       
 

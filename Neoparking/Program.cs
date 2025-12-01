@@ -1,5 +1,6 @@
 using main;
 using Neoparking.Endpoints;
+using static main.DatabaseProvider;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,12 +8,13 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 
-builder.Services.AddAccessModule(builder.Configuration.GetConnectionString("Access") ?? "DefaultConnectionString");
+builder.Services.AddAccessModule(builder.Configuration);
 
 var app = builder.Build();
 
 // Inicializa o banco de dados
-AccessModule.InitializeDatabase(app.Services);
+var databaseProvider = AccessModule.GetDatabaseProvider(builder.Configuration);
+AccessModule.InitializeDatabase(app.Services, databaseProvider);
 
 if (app.Environment.IsDevelopment())
 {

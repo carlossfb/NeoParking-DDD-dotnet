@@ -6,26 +6,26 @@
 
 ## 📖 Table of Contents
 
-1. [About](#about)  
-2. [Domain Description](#domain-description)  
-3. [General Assumptions](#general-assumptions)  
-4. [Process Discovery](#process-discovery)  
-5. [Project Structure and Architecture](#project-structure-and-architecture)  
-6. [Bounded Contexts](#bounded-contexts)  
-   6.1 [Access](#access)  
-   6.2 [Occupancy](#occupancy)  
-   6.3 [Billing](#billing)  
-   6.4 [Management](#management) 
-7. [Events](#events)  
-   7.1 [Events in Repositories](#events-in-repositories)  
-8. [ArchUnit](#archunit)  
-9. [Functional Thinking](#functional-thinking)   
-10. [Architecture-Code Gap](#architecture-code-gap)  
-11. [Model-Code Gap](#model-code-gap)  
-12. [.NET](#net)  
-13. [Tests](#tests)  
-14. [How to Contribute](#how-to-contribute)  
-15. [References](#references)
+1. [About](#1-about)
+2. [Domain Description](#2-domain-description)  
+3. [General Assumptions](#3-general-assumptions)  
+4. [Process Discovery](#4-process-discovery)  
+5. [Project Structure and Architecture](#5-project-structure-and-architecture)  
+6. [Bounded Contexts](#6-bounded-contexts)  
+   6.1 [Access](#61-access)  
+   6.2 [Occupancy](#62-occupancy)  
+   6.3 [Billing](#63-billing)  
+   6.4 [Management](#64-management) 
+7. [Events](#7-events)  
+   7.1 [Events in Repositories](#71-events-in-repositories)  
+8. [ArchUnit](#8-archunit)  
+9. [Functional Thinking](#9-functional-thinking)   
+10. [Architecture-Code Gap](#10-architecture-code-gap)  
+11. [Model-Code Gap](#11-model-code-gap)  
+12. [.NET](#12-net)  
+13. [Tests](#13-tests)  
+14. [How to Contribute](#14-how-to-contribute)  
+15. [References](#15-references)
 
 ---
 
@@ -123,27 +123,8 @@ I chose to use the tactical design decision tree, ref: Learning Domain-Driven De
 
 ## 6. Bounded Contexts
 
-### 6.1 Access
 
-Responsible for vehicle entry and exit control, RFID management, and access permissions.
 
-![Aggregate root Ticket](https://www.plantuml.com/plantuml/png/XP11Qm8n58Jl-HMFFIb5eTSzY4KjUB9GxVqHnpMOP2LvAxR5_zwONLjSa5uIvfiFCcGQXOCqpYenOa5hemyGUgcgW8e5D6Y9yHNDQYyuor2f8-i3Lw2YhnVqhOYqvHYfxJ8W6f7akDoMjDaivnqyOM-qnPjbGNcNFbQT0Y_XSvx8shZah7Qx2BdbctCsyeyIXQM9PRVgFQUs6kNhYNG02zf-CBn1MyS-uqRsTJ1VM5od_QbiTNET_WhymW0BZbYaWPbTL3gC5uGTQz2yTcpyuWGlglTnipndIyOTBLmIuftTazFCnwwYJgFYkQ3nUD9xeYGu8v4c3qLRnpllegRmsyRP7m00)
-
-### 6.2 Occupancy
-
-Manages parking spot availability, capacity monitoring, and space allocation.
-
-![Aggregate root Occupation](https://www.plantuml.com/plantuml/png/TP1DQiCm48NtEiNWLK99eDiiGaBTGbPUf3d0L7us8lenyhWKIkvUANM30ir6GjzyyqRIRXIECZchn8W5DLfF0ui9dlPz7z6pW1O5VGbUy2LBfGRMP-v1rNyz5Nqh8crv7ClC38bM56xeq6xeT3hKSs7WU3Q-Fmv1SkKeCPtA9eE4FqAmO3_p5W8jQFUoeQRhHaZDWdVZy2kihjiJkPJTp1cBPG7V8d055vKMumMnOmsgWsFZNp_XHTrUaw_sbqB63HOENiOxkNHp-4DHKVaxrND5w_NsViI6u4ngspvsyuXIlAWTV3iv-mC0)
-
-### 6.3 Billing
-
-Handles fee calculation, payment processing, and subscription management.
-
-### 6.4 Management
-
-Manages owners, subscribers, and operational configurations.
-
-![Aggregate root Owner](https://www.plantuml.com/plantuml/png/RP8_Ry8m4CLtVufJ9aeLrAvCzC_2K85KmMxP3nFLiIFdA4KLtxs4NArYTKhUx_nyTtbPzAmJ7rglk64FMXq34ht4mFXYgaK_EPVWD4EfJfiFxK1LKQdeMn4Ph_jUJ8EconLnK4ixfyrc-Ieiw1PpUkVK12V8nC3QS4cxNK4wVMeHBkVMuyjsDHRgw-EU4bpJCz9rYCcTq4DdDUEMMNXaLhYts3V6e_0BBMuegGENQDS4A-pvjFQQCHcNecuGVvoorHju7stscxqE3hUrl3y574KCvyyg1o4jSnIVeox2-2yW4trCnPVtZK7eSHs_ABNHmlyocK5-W-gnecbTK_KmcqshFD9yQDkhireWs4FhVm00)
 
 
 ---

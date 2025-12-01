@@ -14,7 +14,7 @@ namespace main.domain.ports
     Task<IEnumerable<ClientResponseDTO>> GetAllClientsAsync();
 
     // Atualizar dados do cliente
-    Task<ClientResponseDTO> UpdateClientAsync(Guid clientId, ClientRequestDTO dto);
+    Task<ClientResponseDTO> UpdateClientAsync(Guid clientId, ClientUpdateDTO dto);
 
     // Deletar cliente
     Task DeleteClientAsync(Guid clientId);

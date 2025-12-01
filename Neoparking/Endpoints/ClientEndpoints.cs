@@ -39,7 +39,7 @@ namespace Neoparking.Endpoints
             .WithName("GetAllClients")
             .WithOpenApi();
 
-            app.MapPut("/clients/{id}", async (Guid id, ClientRequestDTO request, IClientService service) =>
+            app.MapPatch("/clients/{id}", async (Guid id, ClientUpdateDTO request, IClientService service) =>
             {
                 var result = await service.UpdateClientAsync(id, request);
                 return Results.Ok(result);

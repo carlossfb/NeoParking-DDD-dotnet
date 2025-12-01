@@ -2,7 +2,7 @@
     using main.application.dto;
     using main.domain.entity;
     using main.domain.vo;
-    using main.infrastructure.persistence.model;
+    using main.infrastructure.persistence.mysql.model;
 
     namespace main.infrastructure.util
     {
@@ -79,6 +79,23 @@
                 }
 
                 return client;
+            }
+
+            public static Client UpdateClientFromDTO(Client existingClient, ClientUpdateDTO dto)
+            {
+                // Cria um novo cliente com os dados atualizados (vehicles sempre preservados)
+                var updatedClient = Client.Create(
+                    dto.Name ?? existingClient.Name,
+                    dto.PhoneNumber != null ? PhoneNumber.Create(dto.PhoneNumber) : existingClient.PhoneNumber,
+                    dto.Cpf != null ? Cpf.Create(dto.Cpf) : existingClient.Cpf,
+                    existingClient.Vehicles.ToList()
+                );
+
+                // Preserva o ID original
+                var idProperty = updatedClient.GetType().GetProperty("Id");
+                idProperty?.SetValue(updatedClient, existingClient.Id);
+
+                return updatedClient;
             }
 
         }

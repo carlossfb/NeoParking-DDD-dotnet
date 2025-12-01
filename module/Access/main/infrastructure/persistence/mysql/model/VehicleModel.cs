@@ -1,4 +1,4 @@
-namespace main.infrastructure.persistence.model
+namespace main.infrastructure.persistence.mysql.model
 {
     public class VehicleModel
     {

@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using main.infrastructure.persistence.model;
+using main.infrastructure.persistence.mysql.model;
 
 namespace main.infrastructure
 {
