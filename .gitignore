@@ -122,3 +122,6 @@ crash.log
 
 # Local tooling
 tools/
+
+# Snyk Security Extension - AI Rules (auto-generated)
+.github/instructions/snyk_rules.instructions.md

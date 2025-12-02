@@ -14,10 +14,11 @@
 6. [Context Map](#6-Context-Map)  
 7. [Events](#7-events)  
 8. [ArchUnit](#8-archunit)   
-9. [.NET](#9-net)  
-10. [Tests](#10-tests)  
-11. [How to Contribute](#11-how-to-contribute)  
-12. [References](#12-references)
+9. [DevSec](#9-devsec)  
+10. [.NET](#10-net)  
+11. [Tests](#11-tests)  
+12. [How to Contribute](#12-how-to-contribute)  
+13. [References](#13-references)
 
 ---
 
@@ -180,8 +181,51 @@ dotnet test
 
 ---
 
+## 9. DevSec
 
-## 9. .NET
+The project implements security-first development practices with integrated vulnerability scanning and dependency management.
+
+### 🔒 Software Composition Analysis (SCA)
+
+We use **Snyk** for continuous security monitoring of dependencies and transitive packages.
+
+#### **Vulnerability Scanning**
+```bash
+# Install Snyk CLI
+npm install -g snyk
+
+# Authenticate
+snyk auth
+
+# Scan for vulnerabilities
+snyk test
+
+# Monitor project (optional)
+snyk monitor
+```
+
+#### **Security Practices**
+- **Dependency Pinning**: Explicit package versions to prevent supply chain attacks
+- **Regular Updates**: Monthly security updates for critical packages
+- **Vulnerability Remediation**: Immediate patching of high/critical CVEs
+- **Transitive Analysis**: Deep scanning of indirect dependencies
+
+#### **Current Security Status**
+- ✅ **Zero Known Vulnerabilities** in production dependencies
+- ✅ **Automated Scanning** integrated in development workflow
+- ✅ **Security Overrides** for vulnerable transitive packages
+
+### 🛡️ Security Guidelines
+
+- Never commit secrets or credentials
+- Use latest stable versions of security-critical packages
+- Review Snyk reports before merging PRs
+- Implement least-privilege access patterns
+- Validate all external inputs in domain layer
+
+---
+
+## 10. .NET
 
 ### Project Structure
 
