@@ -1,0 +1,109 @@
+@baseUrl = http://localhost:5114
+@clientId = {{createClient.response.body.id}}
+
+### Criar cliente sem veículos
+# @name createClient
+POST {{baseUrl}}/clients
+Content-Type: application/json
+
+{
+  "name": "João Silva",
+  "phoneNumber": "+5511999999999",
+  "cpf": "11144477735"
+}
+
+###
+
+### Criar cliente com veículos
+POST {{baseUrl}}/clients
+Content-Type: application/json
+
+{
+  "name": "Maria Oliveira",
+  "phoneNumber": "+5521987654321",
+  "cpf": "98765432100",
+  "vehicles": [
+    { "plate": "ABC1234" },
+    { "plate": "XYZ9876" }
+  ]
+}
+
+###
+
+### Listar todos os clientes
+GET {{baseUrl}}/clients
+
+###
+
+### Buscar cliente por ID (usa o id do createClient)
+GET {{baseUrl}}/clients/{{clientId}}
+
+###
+
+### Atualizar cliente
+PATCH {{baseUrl}}/clients/{{clientId}}
+Content-Type: application/json
+
+{
+  "name": "João Silva Atualizado",
+  "phoneNumber": "+5511988888888"
+}
+
+###
+
+### Buscar cliente atualizado
+GET {{baseUrl}}/clients/{{clientId}}
+
+###
+
+### Deletar cliente
+DELETE {{baseUrl}}/clients/{{clientId}}
+
+###
+
+### Confirmar que foi deletado (deve retornar 404)
+GET {{baseUrl}}/clients/{{clientId}}
+
+###
+
+### Criar cliente com placa formato Mercosul
+POST {{baseUrl}}/clients
+Content-Type: application/json
+
+{
+  "name": "Carlos Ferreira",
+  "phoneNumber": "+5511977777777",
+  "cpf": "11144477735",
+  "vehicles": [
+    { "plate": "ABC1D23" }
+  ]
+}
+
+###
+
+### Criar cliente com CPF inválido (deve retornar erro)
+POST {{baseUrl}}/clients
+Content-Type: application/json
+
+{
+  "name": "Teste Inválido",
+  "phoneNumber": "+5511999999999",
+  "cpf": "00000000000"
+}
+
+###
+
+### Criar cliente com telefone inválido (deve retornar erro)
+POST {{baseUrl}}/clients
+Content-Type: application/json
+
+{
+  "name": "Teste Inválido",
+  "phoneNumber": "123",
+  "cpf": "11144477735"
+}
+
+###
+
+### Buscar cliente com ID inexistente (deve retornar 404)
+GET {{baseUrl}}/clients/00000000-0000-0000-0000-000000000000
