@@ -18,7 +18,6 @@ public sealed class MySqlClientRepository : IClientRepository
 
     public async Task<Client?> GetByIdAsync(Guid clientId) =>
         await _context.Clients
-            .AsNoTracking()
             .Include(c => c.Vehicles)
             .FirstOrDefaultAsync(c => c.Id == clientId);
 
@@ -30,7 +29,31 @@ public sealed class MySqlClientRepository : IClientRepository
 
     public async Task UpdateAsync(Client client)
     {
-        _context.Clients.Update(client);
+        foreach (var vehicle in client.Vehicles)
+        {
+            var entry = _context.Entry(vehicle);
+
+            if (entry.State == EntityState.Detached || entry.State == EntityState.Modified)
+            {
+                var exists = await _context.Vehicles
+                    .AsNoTracking()
+                    .AnyAsync(v => v.Id == vehicle.Id);
+
+                if (exists)
+                    entry.State = EntityState.Modified;
+                else
+                    entry.State = EntityState.Added;
+            }
+        }
+
+        var vehicleIds = client.Vehicles.Select(v => v.Id).ToList();
+        var orphans = await _context.Vehicles
+            .Where(v => v.ClientId == client.Id && !vehicleIds.Contains(v.Id))
+            .ToListAsync();
+
+        if (orphans.Any())
+            _context.Vehicles.RemoveRange(orphans);
+
         await _context.SaveChangesAsync();
     }
 

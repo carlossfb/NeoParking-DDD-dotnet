@@ -66,4 +66,24 @@ public sealed class ClientService : IClientService
             client.Vehicles
                 .Select(v => new VehicleResponseDTO(v.Id, v.Plate.Value))
                 .ToList());
+
+    public async Task<VehicleResponseDTO> RegisterVehicleAsync(Guid clientId, VehicleRequestDTO dto)
+    {
+        var client = await _repository.GetByIdAsync(clientId)
+            ?? throw new DomainException("Client not found");
+
+        var vehicle = client.RegisterVehicle(Plate.Create(dto.Plate));
+
+        await _repository.UpdateAsync(client);
+        return new VehicleResponseDTO(vehicle.Id, vehicle.Plate.Value);
+    }
+
+    public async Task RemoveVehicleAsync(Guid clientId, Guid vehicleId)
+    {
+        var client = await _repository.GetByIdAsync(clientId)
+            ?? throw new DomainException("Client not found");
+
+        client.RemoveVehicle(vehicleId);
+        await _repository.UpdateAsync(client);
+    }
 }

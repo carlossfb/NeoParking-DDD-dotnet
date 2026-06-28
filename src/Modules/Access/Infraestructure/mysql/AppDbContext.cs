@@ -1,6 +1,7 @@
 namespace NeoParking.Access.Infrastructure;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using NeoParking.Access.Domain;
 
 public sealed class AccessDbContext : DbContext
@@ -24,7 +25,11 @@ public sealed class AccessDbContext : DbContext
                 .IsRequired()
                 .HasConversion(
                     cpf => cpf.Document,
-                    value => Cpf.Create(value));
+                    value => Cpf.Create(value))
+                .Metadata.SetValueComparer(new ValueComparer<Cpf>(
+                    (a, b) => a!.Document == b!.Document,
+                    c => c.Document.GetHashCode(),
+                    c => Cpf.Create(c.Document)));
 
             builder.Property(c => c.PhoneNumber)
                 .HasColumnName("phone_number")
@@ -32,7 +37,12 @@ public sealed class AccessDbContext : DbContext
                 .IsRequired()
                 .HasConversion(
                     phone => phone.Value,
-                    value => PhoneNumber.CreateBR(value));
+                    value => PhoneNumber.CreateBR(value))
+                .Metadata.SetValueComparer(new ValueComparer<PhoneNumber>(
+                    (a, b) => a!.Value == b!.Value,
+                    c => c.Value.GetHashCode(),
+                    c => PhoneNumber.CreateBR(c.Value)));
+
             builder.HasMany(c => c.Vehicles)
                 .WithOne()
                 .HasForeignKey(v => v.ClientId)
@@ -53,7 +63,11 @@ public sealed class AccessDbContext : DbContext
                 .IsRequired()
                 .HasConversion(
                     plate => plate.Value,
-                    value => Plate.Create(value));
+                    value => Plate.Create(value))
+                .Metadata.SetValueComparer(new ValueComparer<Plate>(
+                    (a, b) => a!.Value == b!.Value,
+                    c => c.Value.GetHashCode(),
+                    c => Plate.Create(c.Value)));
         });
     }
 }

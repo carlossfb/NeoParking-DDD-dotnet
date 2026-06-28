@@ -46,4 +46,15 @@ public class ClientServiceTests
         var act = async () => await _service.DeleteClientAsync(Guid.NewGuid());
         await act.Should().ThrowAsync<DomainException>().WithMessage("Client not found");
     }
+
+    [Fact]
+    public void RegisterVehicle_WithDuplicatePlate_ShouldThrowDomainException()
+    {
+        var client = Client.Create("João", PhoneNumber.Create("+5511999999999"), Cpf.Create("11144477735"));
+        client.RegisterVehicle(Plate.Create("ABC1234"));
+
+        var act = () => client.RegisterVehicle(Plate.Create("ABC1234"));
+
+        act.Should().Throw<DomainException>().WithMessage("*ABC1234*");
+    }
 }

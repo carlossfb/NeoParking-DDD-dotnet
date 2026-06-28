@@ -49,6 +49,9 @@ public sealed class Client : Entity
         if (plate is null)
             throw new DomainException("Plate is required");
 
+        if (_vehicles.Any(v => v.Plate.Value == plate.Value))
+            throw new DomainException($"Plate {plate.Value} is already registered");
+
         var vehicle = Vehicle.Create(plate, Id);
         _vehicles.Add(vehicle);
         return vehicle;
@@ -63,6 +66,13 @@ public sealed class Client : Entity
         }
         if (phoneNumber is not null) PhoneNumber = PhoneNumber.Create(phoneNumber);
         if (cpf is not null) Cpf = Cpf.Create(cpf);
+    }
+    public void RemoveVehicle(Guid vehicleId)
+    {
+        var vehicle = _vehicles.FirstOrDefault(v => v.Id == vehicleId)
+            ?? throw new DomainException("Vehicle not found");
+
+        _vehicles.Remove(vehicle);
     }
 
     private static void ValidateName(string name)

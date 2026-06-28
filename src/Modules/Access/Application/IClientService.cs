@@ -7,4 +7,6 @@ public interface IClientService
     Task<IEnumerable<ClientResponseDTO>> GetAllClientsAsync();
     Task<ClientResponseDTO> UpdateClientAsync(Guid clientId, ClientUpdateDTO dto);
     Task DeleteClientAsync(Guid clientId);
+    Task<VehicleResponseDTO> RegisterVehicleAsync(Guid clientId, VehicleRequestDTO dto);
+    Task RemoveVehicleAsync(Guid clientId, Guid vehicleId);
 }

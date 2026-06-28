@@ -42,5 +42,19 @@ public static class ClientEndpoints
             return Results.NoContent();
         })
         .WithName("DeleteClient");
+
+        group.MapPost("/{id:guid}/vehicles", async (Guid id, VehicleRequestDTO request, IClientService service) =>
+        {
+            var result = await service.RegisterVehicleAsync(id, request);
+            return Results.Created($"/clients/{id}/vehicles/{result.Id}", result);
+        })
+        .WithName("RegisterVehicle");
+
+        group.MapDelete("/{id:guid}/vehicles/{vehicleId:guid}", async (Guid id, Guid vehicleId, IClientService service) =>
+        {
+            await service.RemoveVehicleAsync(id, vehicleId);
+            return Results.NoContent();
+        })
+        .WithName("RemoveVehicle");
     }
 }
