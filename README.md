@@ -7,17 +7,17 @@
 ## 📖 Table of Contents
 
 1. [About](#1-about)
-2. [Domain Description](#2-domain-description)  
-3. [General Assumptions](#3-general-assumptions)  
-4. [Process Discovery](#4-process-discovery)  
-5. [Project Structure and Architecture](#5-project-structure-and-architecture)  
-6. [Context Map](#6-Context-Map)  
-7. [Events](#7-events)  
-8. [ArchUnit](#8-archunit)   
-9. [DevSec](#9-devsec)  
-10. [.NET](#10-net)  
-11. [Tests](#11-tests)  
-12. [How to Contribute](#12-how-to-contribute)  
+2. [Domain Description](#2-domain-description)
+3. [General Assumptions](#3-general-assumptions)
+4. [Process Discovery](#4-process-discovery)
+5. [Project Structure and Architecture](#5-project-structure-and-architecture)
+6. [Context Map](#6-context-map)
+7. [Events](#7-events)
+8. [Architecture Tests](#8-architecture-tests)
+9. [DevSec](#9-devsec)
+10. [.NET](#10-net)
+11. [Tests](#11-tests)
+12. [How to Contribute](#12-how-to-contribute)
 13. [References](#13-references)
 
 ---
@@ -33,7 +33,7 @@ It highlights architecture design, domain modeling, and implementation choices a
 
 NeoParking is a conventional parking lot that seeks to modernize its operations. Its main differential is the human service and the trust it offers, but it faces challenges with manual ticket management and lack of visibility about spot availability. The vision is to integrate technology to optimize processes, improve customer experience, and ensure efficiency while maintaining the human touch that differentiates it.
 
-The main revenue of NeoParking comes from two sources: walk-in customers in the "free zone," who pay for occasional use, and monthly subscribers who guarantee a stable and predictable income. The current operation management is a combination of human supervision and manual processes. I, as the owner, supervise the team, handle daily financial management, and make occupancy decisions reactively based on observation. The modernization we are planning aims to transform this manual management into a more proactive and data-driven approach.
+The main revenue of NeoParking comes from two sources: walk-in customers in the "free zone," who pay for occasional use, and monthly subscribers who guarantee a stable and predictable income. The current operation management is a combination of human supervision and manual processes.
 
 ---
 
@@ -45,8 +45,6 @@ The main revenue of NeoParking comes from two sources: walk-in customers in the 
 
 **Pricing Strategy**: The hourly model acts as the base unit, with other models being derivatives or packages of hourly rates with discounts or special conditions.
 
-
-
 ### Technical Assumptions
 
 **Scalability**: System designed for medium-scale operations (1000+ daily transactions)  
@@ -54,15 +52,13 @@ The main revenue of NeoParking comes from two sources: walk-in customers in the 
 **Data Consistency**: Eventual consistency acceptable between contexts  
 **Integration**: REST APIs for external systems, domain events for internal communication
 
+---
 
 ## 4. Process Discovery
 
-As an initial step, I decided to understand a little more about the business domain using user story and event storming. Through the big picture, some information that was hidden in the process was made explicit. I continued to initially place the relevant events, organized them chronologically, associated them with actions and then with the responsible actors, and if it made sense, I also associated a reading model.
+As an initial step, I decided to understand a little more about the business domain using user story and event storming. Through the big picture, some information that was hidden in the process was made explicit.
 
 [Big Picture](https://miro.com/app/live-embed/uXjVJXjg3VM=/?focusWidget=3458764636230014271&embedMode=view_only_without_ui&embedId=230222431067)
-
-
-Definitions around domain extracted from user stories:
 
 ### Nouns (specific to NeoParking domain)
 - Owner/Client
@@ -90,39 +86,111 @@ Definitions around domain extracted from user stories:
 
 ### Domain language
 
-- Operator
-The entity responsible for managing the entire parking system. The operator configures operational rules, monitors the system, manages pricing policies, handles audits, and ensures that the infrastructure and services are functioning properly.
-- Client
-A customer who owns a vehicle and has the right to use the parking service. The owner can be either a casual user (pay-per-use) or a registered subscriber. An owner is associated with tickets, payments, and possibly identification methods like RFID.
-- Subscriber
-A special type of client with an active subscription plan (e.g., monthly pass). Subscribers typically have extended privileges such as automated entry and exit via RFID, and are not charged per visit but through a recurring fee.
-- Ticket
-A representation of a parking session. It includes information such as entry time, vehicle identification, and assigned parking area. Tickets can be physical (e.g., printed with a QR code) or digital, and are used for validating entry, exit, and fee calculation.
-- Fee
-The monetary charge applied to a parking session. The fee is usually calculated based on duration, but may also include special pricing rules, grace periods, or penalties. It determines what the owner must pay before exit is authorized.
-- RFID
-A Radio Frequency Identification tag assigned to a vehicle or user. RFID allows for automated access control by enabling the system to detect and identify subscribers or authorized vehicles at entry and exit points without manual intervention.
-
+- **Operator** — The entity responsible for managing the entire parking system. Configures operational rules, monitors the system, manages pricing policies, handles audits, and ensures infrastructure and services are functioning properly.
+- **Client** — A customer who owns a vehicle and has the right to use the parking service. Can be either a casual user (pay-per-use) or a registered subscriber. Associated with tickets, payments, and identification methods like RFID.
+- **Subscriber** — A special type of client with an active subscription plan (e.g., monthly pass). Typically has extended privileges such as automated entry and exit via RFID, and is charged through a recurring fee rather than per visit.
+- **Ticket** — A representation of a parking session. Includes entry time, vehicle identification, and assigned parking area. Can be physical (printed with QR code) or digital.
+- **Fee** — The monetary charge applied to a parking session. Usually calculated based on duration, but may include special pricing rules, grace periods, or penalties.
+- **RFID** — A Radio Frequency Identification tag assigned to a vehicle or user. Allows automated access control by detecting and identifying subscribers at entry and exit points without manual intervention.
 
 ---
 
 ## 5. Project Structure and Architecture
 
-I chose to use the tactical design decision tree, ref: Learning Domain-Driven Design: Aligning Software Architecture and Business Strategy -  Vlad Khononov
-
-The architectural decisions based on this approach are described in more detail in the Architecture Decision Records (ADRs).
+The project follows a **Modular Monolith** with **Domain-Driven Design** tactical patterns. Each Bounded Context is a single class library — layers are separated by folders, not by projects, enforced through architecture tests.
 
 📋 **[View Complete ADRs →](docs/architecture-decisions.md)**
 
 ![Arch](https://github.com/carlossfb/NeoParking-DDD/blob/main/docs/graph/arch.drawio.png)
----
 
+### Solution Structure
+
+```
+NeoParking-DDD-dotnet/
+├── src/
+│   ├── Shared/
+│   │   └── NeoParking.Shared.Kernel/     # Base types shared across modules
+│   │       ├── Primitives/
+│   │       │   └── Entity.cs             # Base aggregate/entity class
+│   │       ├── Events/
+│   │       │   └── IDomainEvent.cs
+│   │       └── Exceptions/
+│   │           └── DomainException.cs
+│   │
+│   ├── Modules/
+│   │   └── Access/                       # Access Bounded Context
+│   │       └── NeoParking.Access.csproj  # Single project per BC
+│   │           ├── Domain/               # Entities, VOs, repository interfaces
+│   │           │   ├── Entities/
+│   │           │   ├── ValueObjects/
+│   │           │   └── Repositories/
+│   │           ├── Application/          # Use cases, DTOs, service interfaces
+│   │           │   ├── UseCases/
+│   │           │   └── DTOs/
+│   │           └── Infrastructure/       # EF Core, MongoDB, mappers
+│   │               ├── Persistence/
+│   │               │   ├── MySql/
+│   │               │   └── Mongo/
+│   │               ├── Repositories/
+│   │               └── Migrations/
+│   │
+│   ├── NeoParking.Api/                   # Web API — entrypoint and DI composition
+│   │   ├── Endpoints/
+│   │   │   └── ClientEndpoints.cs
+│   │   ├── Program.cs
+│   │   └── appsettings.json
+│   │
+│   └── NeoParking.Tests/                 # All tests
+│       ├── Unit/
+│       │   ├── Domain/
+│       │   └── Application/
+│       ├── Integration/
+│       │   ├── Repository/
+│       │   └── Service/
+│       ├── Architecture/
+│       └── E2E/
+│
+└── NeoParking.sln
+```
+
+### Dependency Rules
+
+```
+NeoParking.Shared.Kernel   ← no dependencies
+NeoParking.Access.Domain   → Shared.Kernel
+NeoParking.Access.Application → Domain
+NeoParking.Access.Infrastructure → Domain + Application
+NeoParking.Api             → Application + Infrastructure (DI composition only)
+NeoParking.Tests           → all
+```
+
+### Module Registration Pattern
+
+Each module exposes its services through extension methods, keeping `Program.cs` clean:
+
+```csharp
+// Program.cs
+builder.Services.AddAccessModule(builder.Configuration);
+```
+
+```csharp
+// AccessModule.cs (inside NeoParking.Access.Infrastructure)
+public static IServiceCollection AddAccessModule(
+    this IServiceCollection services,
+    IConfiguration configuration)
+{
+    // registers DbContext or MongoDbContext based on provider config
+    // registers IClientRepository → MySqlClientRepository or MongoClientRepository
+    // registers IClientService → ClientService
+    return services;
+}
+```
+
+---
 
 ## 6. Context Map
 
 ![ContextMap](https://www.plantuml.com/plantuml/png/RLBDIWCn4BxdAOPwi8MjegKN3r9RL-n1MhJrv2KamngQJPPCgXRnWNmENynPTxTDGTX3-7w-6RxP2KKPuhQqWZR6LJB84WAgA5rX4Ju5mDG7ZM7chGzmCXwFQqYgJH7yrkaMplESuSS62Gu3N5oAhoHIXk3V_-9QnsWqOe4uXMbjGisuY_WHIHoczswKGgAEUd7zcJNeOWRF-6gKnGnMHcqm3deW2HfrwbyejQsaKxiaOkvN6Hm8Ne-NB9g4FPo6J8srh4WYbd9NyXgKmHqYDTPMbHhdcaKcxiuVf9C5rfOaP4qOE669eJH4nhisg7DnD_it_7p3kg8OaAki2uNejIUnvuV3QsZBkeB5_TCHq-ts3vKKqP0yj5Dhh90l0_pX6riyyRERWabNdU5eYLjVIkCWhvq4_UPEC-i9TGOOrTb0237X0Vph_G80)
-
-
 
 ---
 
@@ -130,53 +198,23 @@ The architectural decisions based on this approach are described in more detail 
 
 TODO
 
+---
+
 ## 8. Architecture Tests
 
-The project implements architecture tests using **NetArchTest** to enforce hexagonal architecture boundaries and DDD principles.
+The project enforces architectural boundaries through **NetArchTest**, ensuring DDD and Hexagonal Architecture rules are respected automatically in CI/CD.
 
-### 🏗️ Layer Separation Rules
+### Layer Separation Rules
 
-- **Domain Independence**: Domain layer has no external dependencies (EF Core, MongoDB, etc.)
-- **Application Isolation**: Application layer only depends on Domain
-- **Dependency Direction**: Domain never depends on Application or Infrastructure
+- **Domain Independence** — Domain layer has no external dependencies (EF Core, MongoDB, etc.)
+- **Application Isolation** — Application layer does not depend on Infrastructure
+- **Dependency Direction** — Domain never depends on Application or Infrastructure
+- **Repository Contracts** — All concrete repositories implement `IClientRepository`
 
-### 🧪 Test Categories
-
-#### **Layer Architecture Tests**
-```csharp
-[Fact]
-public void Domain_ShouldNotHaveExternalDependencies()
-[Fact] 
-public void Application_ShouldOnlyDependOnDomain()
-```
-
-#### **Domain Architecture Tests**
-```csharp
-[Fact]
-public void Domain_ShouldNotDependOnApplication()
-[Fact]
-public void Domain_ShouldNotDependOnInfrastructure()
-[Fact]
-public void ValueObjects_ShouldBeClasses()
-[Fact]
-public void Entities_ShouldBeClasses()
-```
-
-### 🎯 Benefits
-
-- **Prevents architectural drift** over time
-- **Enforces hexagonal boundaries** automatically
-- **Validates DDD structure** in CI/CD pipeline
-- **Catches violations early** in development
-
-### 📊 Running Architecture Tests
+### Running Architecture Tests
 
 ```bash
-# Run only architecture tests
 dotnet test --filter "FullyQualifiedName~Architecture"
-
-# Include in full test suite
-dotnet test
 ```
 
 ---
@@ -185,11 +223,10 @@ dotnet test
 
 The project implements security-first development practices with integrated vulnerability scanning and dependency management.
 
-### 🔒 Software Composition Analysis (SCA)
+### Software Composition Analysis (SCA)
 
 We use **Snyk** for continuous security monitoring of dependencies and transitive packages.
 
-#### **Vulnerability Scanning**
 ```bash
 # Install Snyk CLI
 npm install -g snyk
@@ -199,201 +236,167 @@ snyk auth
 
 # Scan for vulnerabilities
 snyk test
-
-# Monitor project (optional)
-snyk monitor
 ```
 
-#### **Security Practices**
-- **Dependency Pinning**: Explicit package versions to prevent supply chain attacks
-- **Regular Updates**: Monthly security updates for critical packages
-- **Vulnerability Remediation**: Immediate patching of high/critical CVEs
-- **Transitive Analysis**: Deep scanning of indirect dependencies
+### Security Practices
 
-#### **Current Security Status**
-- ✅ **Zero Known Vulnerabilities** in production dependencies
-- ✅ **Automated Scanning** integrated in development workflow
-- ✅ **Security Overrides** for vulnerable transitive packages
-
-### 🛡️ Security Guidelines
-
-- Never commit secrets or credentials
-- Use latest stable versions of security-critical packages
-- Review Snyk reports before merging PRs
-- Implement least-privilege access patterns
-- Validate all external inputs in domain layer
+- **Dependency Pinning** — Explicit package versions to prevent supply chain attacks
+- **Regular Updates** — Monthly security updates for critical packages
+- **Vulnerability Remediation** — Immediate patching of high/critical CVEs
+- **No Secrets in Code** — Credentials via environment variables or `appsettings.Development.json` (gitignored)
 
 ---
 
 ## 10. .NET
 
-### Project Structure
+### Prerequisites
 
-The project follows a modular architecture where each bounded context is implemented as a separate class library with extension methods for dependency injection.
+- .NET 8 SDK
+- Docker (for MySQL or MongoDB)
+- `dotnet-ef` tool v8: `dotnet tool install --global dotnet-ef --version 8.0.11`
 
-```
-NeoParking-DDD-dotnet/
-├── docs/
-│   ├── architecture-decisions.md
-│   └── graph/
-│       └── arch.drawio.png
-├── Module/
-│   └── Access/
-│       ├── main/                    # Class library for Access context
-│       │   ├── application/         # Application services
-│       │   ├── common/              # DTOs and shared contracts
-│       │   ├── domain/              # Domain entities & value objects
-│       │   │   ├── entity/          # Domain entities
-│       │   │   ├── exception/       # Domain exceptions
-│       │   │   ├── ports/           # Domain interfaces
-│       │   │   └── vo/              # Value objects
-│       │   ├── infrastructure/      # Data access & external services
-│       │   │   ├── persistence/     # Repository implementations
-│       │   │   └── util/            # Mappers and utilities
-│       │   ├── Migrations/          # EF Core migrations
-│       │   ├── Access.csproj
-│       │   └── AccessModule.cs      # Extension methods for DI
-│       └── test/
-│           ├── Architecture/        # Architecture tests
-│           ├── E2E/                 # End-to-end tests
-│           ├── Integration/         # Integration tests
-│           ├── Unit/                # Unit tests
-│           └── Access.Tests.csproj
-├── Neoparking/                      # Web API host
-│   ├── Endpoints/
-│   │   └── ClientEndpoints.cs
-│   ├── Properties/
-│   ├── Program.cs
-│   ├── appsettings.json
-│   └── Neoparking.csproj
-└── Neoparking.sln
-```
+### Running locally
 
-### Module Creation
-
-Each bounded context is implemented as a **class library** to ensure proper separation:
+**1. Start the database**
 
 ```bash
-# Create module directory structure
-mkdir Module\{ContextName}\main
-mkdir Module\{ContextName}\test
+# MySQL
+docker run -d \
+  --name neoparking-mysql \
+  -e MYSQL_ROOT_PASSWORD=password \
+  -e MYSQL_DATABASE=neoparking_access \
+  -p 3306:3306 \
+  mysql:8
 
-# Create class library with specific output directory
-dotnet new classlib -n {ContextName} -o Module\{ContextName}\main
-
-# Create test project
-dotnet new xunit -n {ContextName}.Tests -o Module\{ContextName}\test
-
-# Add projects to solution
-dotnet sln add Module\{ContextName}\main\{ContextName}.csproj
-dotnet sln add Module\{ContextName}\test\{ContextName}.Tests.csproj
-
-# Add reference from test to main project
-dotnet add Module\{ContextName}\test\{ContextName}.Tests.csproj reference Module\{ContextName}\main\{ContextName}.csproj
+# or MongoDB
+docker run -d -p 27017:27017 --name neoparking-mongo mongo
 ```
 
-### Extension Methods Pattern
+**2. Configure**
 
-Each module exposes its services through extension methods:
+Create `src/NeoParking.Api/appsettings.Development.json` (gitignored):
 
-```csharp
-public static class AccessModule
+```json
 {
-    public static IServiceCollection AddAccessModule(
-        this IServiceCollection services, 
-        IConfiguration configuration)
-    {
-        // Configure database provider
-        // Register repositories
-        // Register services
-        return services;
-    }
+  "Access": {
+    "DatabaseProvider": "MySQL",
+    "ConnectionString": "Server=localhost;Database=neoparking_access;Uid=root;Pwd=password;AllowPublicKeyRetrieval=true;SslMode=none;"
+  }
 }
 ```
 
-### Usage in Web API
+For MongoDB:
+```json
+{
+  "Access": {
+    "DatabaseProvider": "MongoDB",
+    "ConnectionString": "mongodb://localhost:27017/neoparking_access"
+  }
+}
+```
 
-```csharp
-// Program.cs
-builder.Services.AddAccessModule(builder.Configuration);
+**3. Run migrations (MySQL only)**
 
-var app = builder.Build();
+```bash
+dotnet ef database update \
+  --project src/Modules/Access/NeoParking.Access.csproj \
+  --startup-project src/NeoParking.Api/NeoParking.Api.csproj
+```
 
-// Initialize databases
-var provider = AccessModule.GetDatabaseProvider(builder.Configuration);
-AccessModule.InitializeDatabase(app.Services, provider);
+**4. Run the API**
+
+```bash
+dotnet run --project src/NeoParking.Api/NeoParking.Api.csproj
+```
+
+### Adding a new Bounded Context
+
+```bash
+# Create module
+dotnet new classlib -n NeoParking.{Context} -o src/Modules/{Context}/NeoParking.{Context}
+dotnet sln add src/Modules/{Context}/NeoParking.{Context}/NeoParking.{Context}.csproj
+
+# Add references
+dotnet add src/Modules/{Context}/NeoParking.{Context}/NeoParking.{Context}.csproj \
+  reference src/Shared/NeoParking.Shared.Kernel/NeoParking.Shared.Kernel.csproj
+
+dotnet add src/NeoParking.Api/NeoParking.Api.csproj \
+  reference src/Modules/{Context}/NeoParking.{Context}/NeoParking.{Context}.csproj
+
+dotnet add src/NeoParking.Tests/NeoParking.Tests.csproj \
+  reference src/Modules/{Context}/NeoParking.{Context}/NeoParking.{Context}.csproj
 ```
 
 ### Commands
 
 ```bash
-# Restore dependencies
-dotnet restore
-
-# Build solution
+# Build
 dotnet build
 
 # Run tests
 dotnet test
 
-# Run web API (from root directory)
-dotnet run --project Neoparking
+# Run API
+dotnet run --project src/NeoParking.Api/NeoParking.Api.csproj
 
-# Alternative: Navigate to project folder
-cd Neoparking
-dotnet run
+# Create migration
+dotnet ef migrations add {Name} \
+  --project src/Modules/Access/NeoParking.Access.csproj \
+  --startup-project src/NeoParking.Api/NeoParking.Api.csproj
+
+# Apply migration
+dotnet ef database update \
+  --project src/Modules/Access/NeoParking.Access.csproj \
+  --startup-project src/NeoParking.Api/NeoParking.Api.csproj
 ```
-
-**Note**: Due to the modular architecture with multiple projects, `dotnet run` from the root directory requires specifying the startup project with `--project Neoparking`.
 
 ---
 
-## 10. Tests
+## 11. Tests
 
-### 🧪 Test Pyramid - Access Module
+### Test Pyramid
 
 ```
         E2E (Few)
-       /              \
-    Integration (Some)
-   /                    \
+       /          \
+  Integration (Some)
+ /                  \
 Unit Tests (Many)
 ```
 
-#### **Unit Tests** (Base - 70%)
-- **Domain**: Client, Vehicle, CPF, Plate, PhoneNumber
-- **Application**: ClientService with mocks
-- **Speed**: < 1ms each
+| Layer | Scope | Tool |
+|---|---|---|
+| Unit | Domain entities, VOs, Application service | xUnit + Moq + FluentAssertions |
+| Integration | Repository + Service with InMemory DB | xUnit + EF InMemory |
+| Architecture | Layer dependency rules | NetArchTest |
+| E2E | HTTP endpoints against running API | REST Client (`.http` file) |
 
-#### **Integration Tests** (Middle - 20%)
-- **Repository**: Persistence with InMemory DB
-- **Service**: Service + repository integration  
-- **Infrastructure**: TestContainers with real MySQL
-- **Performance**: Load and timing tests
+### Running Tests
 
-#### **E2E Tests** (Top - 10%)
-- **API**: Complete HTTP endpoints
-- **Flows**: Real user scenarios
-
-#### **Commands**
 ```bash
 # All tests
 dotnet test
 
 # By category
 dotnet test --filter "FullyQualifiedName~Unit"
-dotnet test --filter "FullyQualifiedName~Integration" 
+dotnet test --filter "FullyQualifiedName~Integration"
+dotnet test --filter "FullyQualifiedName~Architecture"
 dotnet test --filter "FullyQualifiedName~E2E"
+
+# With detailed output
+dotnet test --logger "console;verbosity=detailed"
 ```
 
 ---
 
-## 11. How to Contribute
+## 12. How to Contribute
 
 TODO
 
 ---
 
-## 12. References
+## 13. References
 
-TODO
+- Evans, Eric. *Domain-Driven Design: Tackling Complexity in the Heart of Software*. Addison-Wesley, 2003.
+- Khononov, Vlad. *Learning Domain-Driven Design: Aligning Software Architecture and Business Strategy*. O'Reilly, 2021.
+- Vernon, Vaughn. *Implementing Domain-Driven Design*. Addison-Wesley, 2013.

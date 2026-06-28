@@ -1,0 +1,162 @@
+@baseUrl = http://localhost:5114
+@clientId = {{createClient.response.body.id}}
+@vehicleId = {{registerVehicle.response.body.id}}
+
+### Criar cliente sem veículos
+# @name createClient
+POST {{baseUrl}}/clients
+Content-Type: application/json
+
+{
+  "name": "João Silva",
+  "phoneNumber": "+5511999999999",
+  "cpf": "11144477735"
+}
+
+###
+
+### Criar cliente com veículos
+POST {{baseUrl}}/clients
+Content-Type: application/json
+
+{
+  "name": "Maria Oliveira",
+  "phoneNumber": "+5521987654321",
+  "cpf": "98765432100",
+  "vehicles": [
+    { "plate": "ABC1234" },
+    { "plate": "XYZ9876" }
+  ]
+}
+
+###
+
+### Listar todos os clientes
+GET {{baseUrl}}/clients
+
+###
+
+### Buscar cliente por ID (usa o id do createClient)
+GET {{baseUrl}}/clients/{{clientId}}
+
+###
+
+### Atualizar cliente
+PATCH {{baseUrl}}/clients/{{clientId}}
+Content-Type: application/json
+
+{
+  "name": "João Silva Atualizado",
+  "phoneNumber": "+5511988888888"
+}
+
+###
+
+### Buscar cliente atualizado
+GET {{baseUrl}}/clients/{{clientId}}
+
+###
+
+# ── Veículos ──────────────────────────────────────────────────
+
+### Registrar veículo em cliente existente (formato antigo)
+# @name registerVehicle
+POST {{baseUrl}}/clients/{{clientId}}/vehicles
+Content-Type: application/json
+
+{
+  "plate": "DEF5678"
+}
+
+###
+
+### Registrar veículo formato Mercosul
+POST {{baseUrl}}/clients/{{clientId}}/vehicles
+Content-Type: application/json
+
+{
+  "plate": "ABC1D24"
+}
+
+###
+
+### Buscar cliente e confirmar veículo registrado
+GET {{baseUrl}}/clients/{{clientId}}
+
+###
+
+### Remover veículo (usa o id do registerVehicle)
+DELETE {{baseUrl}}/clients/{{clientId}}/vehicles/{{vehicleId}}
+
+###
+
+### Buscar cliente e confirmar veículo removido
+GET {{baseUrl}}/clients/{{clientId}}
+
+###
+
+### Registrar veículo com placa inválida (deve retornar erro)
+POST {{baseUrl}}/clients/{{clientId}}/vehicles
+Content-Type: application/json
+
+{
+  "plate": "INVALIDA"
+}
+
+###
+
+### Registrar veículo em cliente inexistente (deve retornar erro)
+POST {{baseUrl}}/clients/00000000-0000-0000-0000-000000000000/vehicles
+Content-Type: application/json
+
+{
+  "plate": "ABC1234"
+}
+
+###
+
+### Remover veículo inexistente (deve retornar erro)
+DELETE {{baseUrl}}/clients/{{clientId}}/vehicles/00000000-0000-0000-0000-000000000000
+
+###
+
+# ── Validações ────────────────────────────────────────────────
+
+### Criar cliente com CPF inválido (deve retornar erro)
+POST {{baseUrl}}/clients
+Content-Type: application/json
+
+{
+  "name": "Teste Inválido",
+  "phoneNumber": "+5511999999999",
+  "cpf": "00000000000"
+}
+
+###
+
+### Criar cliente com telefone inválido (deve retornar erro)
+POST {{baseUrl}}/clients
+Content-Type: application/json
+
+{
+  "name": "Teste Inválido",
+  "phoneNumber": "123",
+  "cpf": "11144477735"
+}
+
+###
+
+### Buscar cliente com ID inexistente (deve retornar 404)
+GET {{baseUrl}}/clients/00000000-0000-0000-0000-000000000000
+
+###
+
+# ── Limpeza ───────────────────────────────────────────────────
+
+### Deletar cliente
+DELETE {{baseUrl}}/clients/{{clientId}}
+
+###
+
+### Confirmar que foi deletado (deve retornar 404)
+GET {{baseUrl}}/clients/{{clientId}}
