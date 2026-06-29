@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NeoParking.Access.Application;
 using NeoParking.Access.Domain;
+using NeoParking.Shared.Kernel.Outbox;
 
 public enum DatabaseProvider { MySQL, MongoDB }
 
@@ -26,10 +27,18 @@ public static class AccessModule
                 services.AddDbContext<AccessDbContext>(options =>
                     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
                 services.AddScoped<IClientRepository, MySqlClientRepository>();
+
+                services.AddScoped<AccessOutboxRepository>();
+                services.AddScoped<IOutboxRepository>(sp => sp.GetRequiredService<AccessOutboxRepository>());
+
+                services.AddScoped<IUnitOfWork, AccessUnitOfWork>();
+
+                services.AddHostedService<AccessOutboxProcessor>();
                 break;
             case DatabaseProvider.MongoDB:
                 services.AddSingleton(_ => new MongoDbContext(connectionString));
                 services.AddScoped<IClientRepository, MongoClientRepository>();
+                // outbox não suportado no provider MongoDB por ora
                 break;
             default:
                 throw new ArgumentException($"Unsupported provider: {provider}");

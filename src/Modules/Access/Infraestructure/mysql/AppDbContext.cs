@@ -3,11 +3,13 @@ namespace NeoParking.Access.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using NeoParking.Access.Domain;
+using NeoParking.Shared.Kernel.Outbox;
 
 public sealed class AccessDbContext : DbContext
 {
     public DbSet<Client> Clients { get; set; }
     public DbSet<Vehicle> Vehicles { get; set; }
+    public DbSet<OutboxMessage> OutboxMessages { get; set; }
 
     public AccessDbContext(DbContextOptions<AccessDbContext> options) : base(options) { }
 
@@ -68,6 +70,27 @@ public sealed class AccessDbContext : DbContext
                     (a, b) => a!.Value == b!.Value,
                     c => c.Value.GetHashCode(),
                     c => Plate.Create(c.Value)));
+        });
+
+        modelBuilder.Entity<OutboxMessage>(builder =>
+        {
+            builder.ToTable("outbox_messages");
+            builder.HasKey(o => o.Id);
+
+            builder.Property(o => o.Type)
+                .HasMaxLength(500)
+                .IsRequired();
+
+            builder.Property(o => o.Payload)
+                .HasColumnType("longtext")
+                .IsRequired();
+
+            builder.Property(o => o.CreatedAt).IsRequired();
+            builder.Property(o => o.PublishedAt).IsRequired(false);
+
+            // índice para o worker buscar mensagens pendentes eficientemente
+            builder.HasIndex(o => o.PublishedAt)
+                .HasDatabaseName("ix_outbox_messages_published_at");
         });
     }
 }

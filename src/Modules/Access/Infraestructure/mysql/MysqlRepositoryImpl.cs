@@ -12,8 +12,8 @@ public sealed class MySqlClientRepository : IClientRepository
 
     public async Task AddAsync(Client client)
     {
+        // Sem SaveChangesAsync — quem chama (ClientService) é responsável pelo SaveChanges atômico
         await _context.Clients.AddAsync(client);
-        await _context.SaveChangesAsync();
     }
 
     public async Task<Client?> GetByIdAsync(Guid clientId) =>

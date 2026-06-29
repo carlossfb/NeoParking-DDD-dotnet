@@ -1,4 +1,4 @@
-@baseUrl = http://localhost:5114
+@baseUrl = http://localhost:8080
 @clientId = {{createClient.response.body.id}}
 @vehicleId = {{registerVehicle.response.body.id}}
 

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\..\Shared\NeoParking.Shared.Kernel\NeoParking.Shared.Kernel.csproj" />
@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="libphonenumber-csharp" Version="9.0.33" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.11" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.11">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -20,5 +21,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <!-- Exclui a pasta de testes do projeto de produção -->
+  <ItemGroup>
+    <Compile Remove="NeoParking.Access.Tests\**" />
+    <EmbeddedResource Remove="NeoParking.Access.Tests\**" />
+    <None Remove="NeoParking.Access.Tests\**" />
+  </ItemGroup>
 
 </Project>
