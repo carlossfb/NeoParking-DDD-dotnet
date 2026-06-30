@@ -38,7 +38,8 @@ public static class ManagementEndpoints
             var result = await service.CreateOperatorAsync(requesterId, request);
             return Results.Created($"/operators/{result.Id}", result);
         })
-        .WithName("CreateOperator");
+        .WithName("CreateOperator")
+        .RequireAuthorization();
 
         // ── consulta ─────────────────────────────────────────────────────────
         group.MapGet("/{id:guid}", async (Guid id, OperatorService service) =>
@@ -46,7 +47,8 @@ public static class ManagementEndpoints
             var result = await service.GetByIdAsync(id);
             return Results.Ok(result);
         })
-        .WithName("GetOperator");
+        .WithName("GetOperator")
+        .RequireAuthorization();
 
         // ── promoção / rebaixamento ───────────────────────────────────────────
         group.MapPost("/{requesterId:guid}/promote/{targetId:guid}", async (
@@ -55,7 +57,8 @@ public static class ManagementEndpoints
             await service.PromoteToAdminAsync(requesterId, targetId);
             return Results.NoContent();
         })
-        .WithName("PromoteToAdmin");
+        .WithName("PromoteToAdmin")
+        .RequireAuthorization();
 
         group.MapPost("/{requesterId:guid}/demote/{targetId:guid}", async (
             Guid requesterId, Guid targetId, OperatorService service) =>
@@ -63,7 +66,8 @@ public static class ManagementEndpoints
             await service.DemoteToOperatorAsync(requesterId, targetId);
             return Results.NoContent();
         })
-        .WithName("DemoteToOperator");
+        .WithName("DemoteToOperator")
+        .RequireAuthorization();
 
         // ── ativação / desativação ────────────────────────────────────────────
         group.MapPost("/{requesterId:guid}/deactivate/{targetId:guid}", async (
@@ -72,7 +76,8 @@ public static class ManagementEndpoints
             await service.DeactivateAsync(requesterId, targetId);
             return Results.NoContent();
         })
-        .WithName("DeactivateOperator");
+        .WithName("DeactivateOperator")
+        .RequireAuthorization();
 
         group.MapPost("/{requesterId:guid}/activate/{targetId:guid}", async (
             Guid requesterId, Guid targetId, OperatorService service) =>
@@ -80,6 +85,7 @@ public static class ManagementEndpoints
             await service.ActivateAsync(requesterId, targetId);
             return Results.NoContent();
         })
-        .WithName("ActivateOperator");
+        .WithName("ActivateOperator")
+        .RequireAuthorization();
     }
 }

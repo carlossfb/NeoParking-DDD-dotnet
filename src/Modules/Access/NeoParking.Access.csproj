@@ -22,11 +22,5 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <!-- Exclui a pasta de testes do projeto de produção -->
-  <ItemGroup>
-    <Compile Remove="NeoParking.Access.Tests\**" />
-    <EmbeddedResource Remove="NeoParking.Access.Tests\**" />
-    <None Remove="NeoParking.Access.Tests\**" />
-  </ItemGroup>
 
 </Project>

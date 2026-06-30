@@ -22,11 +22,5 @@
     <PackageReference Include="MediatR" Version="12.4.1" />
   </ItemGroup>
 
-  <!-- Exclui a pasta de testes do projeto de produção -->
-  <ItemGroup>
-    <Compile Remove="NeoParking.Management.Tests\**" />
-    <EmbeddedResource Remove="NeoParking.Management.Tests\**" />
-    <None Remove="NeoParking.Management.Tests\**" />
-  </ItemGroup>
 
 </Project>
