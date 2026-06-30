@@ -1,0 +1,59 @@
+services:
+
+  mysql:
+    image: mysql:8.4
+    container_name: neoparking_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-neoparking}
+    ports:
+      - "${MYSQL_EXPOSED_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./scripts/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost",
+             "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-password}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: neoparking_api
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      Access__DatabaseProvider: MySQL
+      Access__ConnectionString: >-
+        Server=mysql;
+        Database=neoparking_access;
+        Uid=root;
+        Pwd=${MYSQL_ROOT_PASSWORD:-password};
+        AllowPublicKeyRetrieval=true;
+        SslMode=none;
+      Management__ConnectionString: >-
+        Server=mysql;
+        Database=neoparking_management;
+        Uid=root;
+        Pwd=${MYSQL_ROOT_PASSWORD:-password};
+        AllowPublicKeyRetrieval=true;
+        SslMode=none;
+      Jwt__Secret: ${JWT_SECRET:-CHANGE_ME_IN_PRODUCTION_MIN_32_CHARS!!}
+      Jwt__Issuer: neoparking
+      Jwt__Audience: neoparking
+      Jwt__ExpireMinutes: "60"
+    ports:
+      - "${API_PORT:-8080}:8080"
+
+volumes:
+  mysql_data:
