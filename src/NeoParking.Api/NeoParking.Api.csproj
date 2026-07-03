@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Modules\Access\NeoParking.Access.csproj" />
     <ProjectReference Include="..\Modules\Management\NeoParking.Management.csproj" />
+    <ProjectReference Include="..\Modules\Billing\NeoParking.Billing.csproj" />
   </ItemGroup>
 
 </Project>

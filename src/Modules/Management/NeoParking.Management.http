@@ -1,0 +1,120 @@
+@baseUrl = http://localhost:8080
+@authToken = {{login.response.body.token}}
+@ownerId = {{createOwner.response.body.id}}
+@operatorId = {{createOperator.response.body.id}}
+
+# ── Bootstrap ─────────────────────────────────────────────────
+
+### Criar o Owner inicial (não exige autenticação — só funciona se ainda não existir nenhum operator)
+# @name createOwner
+POST {{baseUrl}}/operators/owner
+Content-Type: application/json
+
+{
+  "name": "Carlos Owner",
+  "email": "owner@neoparking.com",
+  "password": "SenhaForte123!"
+}
+
+###
+
+### Login como Owner
+# @name login
+POST {{baseUrl}}/operators/login
+Content-Type: application/json
+
+{
+  "email": "owner@neoparking.com",
+  "password": "SenhaForte123!"
+}
+
+###
+
+# ── Operators (requer token do Owner/Admin) ─────────────────────
+
+### Criar um novo Operator
+# @name createOperator
+POST {{baseUrl}}/operators/{{ownerId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "João Operador",
+  "email": "joao.operador@neoparking.com",
+  "password": "OutraSenha123!",
+  "role": "Operator"
+}
+
+###
+
+### Buscar operator por ID
+GET {{baseUrl}}/operators/{{operatorId}}
+Authorization: Bearer {{authToken}}
+
+###
+
+### Promover Operator para Admin
+POST {{baseUrl}}/operators/{{ownerId}}/promote/{{operatorId}}
+Authorization: Bearer {{authToken}}
+
+###
+
+### Confirmar promoção
+GET {{baseUrl}}/operators/{{operatorId}}
+Authorization: Bearer {{authToken}}
+
+###
+
+### Rebaixar Admin para Operator novamente
+POST {{baseUrl}}/operators/{{ownerId}}/demote/{{operatorId}}
+Authorization: Bearer {{authToken}}
+
+###
+
+### Desativar operator
+POST {{baseUrl}}/operators/{{ownerId}}/deactivate/{{operatorId}}
+Authorization: Bearer {{authToken}}
+
+###
+
+### Confirmar desativação
+GET {{baseUrl}}/operators/{{operatorId}}
+Authorization: Bearer {{authToken}}
+
+###
+
+### Reativar operator
+POST {{baseUrl}}/operators/{{ownerId}}/activate/{{operatorId}}
+Authorization: Bearer {{authToken}}
+
+###
+
+# ── Validações ────────────────────────────────────────────────
+
+### Login com senha errada (deve retornar erro)
+POST {{baseUrl}}/operators/login
+Content-Type: application/json
+
+{
+  "email": "owner@neoparking.com",
+  "password": "senhaErrada"
+}
+
+###
+
+### Criar operator sem token (deve retornar 401)
+POST {{baseUrl}}/operators/{{ownerId}}
+Content-Type: application/json
+
+{
+  "name": "Sem Token",
+  "email": "semtoken@neoparking.com",
+  "password": "Teste123!",
+  "role": "Operator"
+}
+
+###
+
+### Buscar operator inexistente (deve retornar 404)
+GET {{baseUrl}}/operators/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{authToken}}

@@ -1,0 +1,132 @@
+@baseUrl = http://localhost:8080
+
+# Billing exige autenticação (mesmo JWT do Management) — faz login aqui pra deixar o arquivo autossuficiente.
+@authToken = {{login.response.body.token}}
+
+# OwnerId aqui não tem FK real com o Management (BCs isolados, bancos separados) — qualquer Guid serve.
+@ownerId = 11111111-1111-1111-1111-111111111111
+
+@policyId = {{definePolicy.response.body.id}}
+
+# Entrada/saída de veículo NÃO acontece aqui — é responsabilidade do Access
+# (ver NeoParking.Access.http). Cole abaixo o id retornado por lá para
+# consultar o ticket e a Fee calculada pelo Billing.
+@ticketId = df81ce90-e2b2-44c4-9c34-ad9b8dce88ba
+
+# ── Autenticação ──────────────────────────────────────────────
+
+### Login como Owner (precisa já existir — ver NeoParking.Management.http)
+# @name login
+POST {{baseUrl}}/operators/login
+Content-Type: application/json
+
+{
+  "email": "owner@neoparking.com",
+  "password": "SenhaForte123!"
+}
+
+###
+
+# ── Política de tarifação (taxa mínima + valor/hora) ────────────
+
+### Definir a primeira política de tarifação
+# taxa mínima R$10 cobre a primeira hora, R$4/hora excedente, 10min de carência grátis
+# @name definePolicy
+POST {{baseUrl}}/billing/pricing-policies
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "ownerId": "{{ownerId}}",
+  "minimumFee": 10.00,
+  "hourlyRate": 4.00,
+  "minimumFeeCoverageMinutes": 60,
+  "gracePeriodMinutes": 10
+}
+
+###
+
+### Consultar a política vigente
+GET {{baseUrl}}/billing/pricing-policies/active
+Authorization: Bearer {{authToken}}
+
+###
+
+### Redefinir a tarifação (encerra a anterior automaticamente e cria uma nova revisão)
+# @name redefinePolicy
+POST {{baseUrl}}/billing/pricing-policies
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "ownerId": "{{ownerId}}",
+  "minimumFee": 12.00,
+  "hourlyRate": 5.00,
+  "minimumFeeCoverageMinutes": 60,
+  "gracePeriodMinutes": 15
+}
+
+###
+
+### Confirmar que a política vigente agora é a nova
+GET {{baseUrl}}/billing/pricing-policies/active
+Authorization: Bearer {{authToken}}
+
+###
+
+### Histórico completo de revisões — mostra que a antiga (R$10/R$4) foi encerrada
+GET {{baseUrl}}/billing/pricing-policies/history
+Authorization: Bearer {{authToken}}
+
+###
+
+### Consultar qual política estava vigente em um instante específico do passado
+GET {{baseUrl}}/billing/pricing-policies/effective-at?at=2026-01-01T10:00:00Z
+Authorization: Bearer {{authToken}}
+
+###
+
+# ── Tickets (somente consulta) ───────────────────────────────────
+#
+# Billing não abre nem fecha tickets — quem registra entrada/saída na
+# cancela é o Access (NeoParking.Access.http). Fluxo pra testar ponta a
+# ponta:
+#   1. Rode "Registrar entrada" e "Registrar saída" em NeoParking.Access.http
+#   2. Copie o "id" da resposta e cole na variável @ticketId no topo deste arquivo
+#   3. Aguarde ~10s (intervalo do outbox processor do Access) para o evento
+#      chegar até o Billing e a Fee ser calculada
+#   4. Rode as consultas abaixo
+
+### Consultar o ticket e a Fee calculada
+GET {{baseUrl}}/billing/tickets/{{ticketId}}
+Authorization: Bearer {{authToken}}
+
+###
+
+### Histórico de cobranças (fee history) — o valor efetivamente congelado em cada ticket fechado
+GET {{baseUrl}}/billing/tickets/fee-history
+Authorization: Bearer {{authToken}}
+
+###
+
+### Histórico de cobranças filtrado por período
+GET {{baseUrl}}/billing/tickets/fee-history?from=2026-01-01T00:00:00Z&to=2026-01-31T23:59:59Z
+Authorization: Bearer {{authToken}}
+
+###
+
+# ── Validações ────────────────────────────────────────────────
+
+### Consultar ticket inexistente (deve retornar 404)
+GET {{baseUrl}}/billing/tickets/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{authToken}}
+
+###
+
+### Consultar política vigente sem token (deve retornar 401)
+GET {{baseUrl}}/billing/pricing-policies/active
+
+###
+
+### Consultar ticket sem token (deve retornar 401)
+GET {{baseUrl}}/billing/tickets/{{ticketId}}

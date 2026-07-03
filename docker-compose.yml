@@ -52,6 +52,13 @@ services:
       Jwt__Issuer: neoparking
       Jwt__Audience: neoparking
       Jwt__ExpireMinutes: "60"
+      Billing__ConnectionString: >-
+        Server=mysql;
+        Database=neoparking_billing;
+        Uid=root;
+        Pwd=${MYSQL_ROOT_PASSWORD:-password};
+        AllowPublicKeyRetrieval=true;
+        SslMode=none;
     ports:
       - "${API_PORT:-8080}:8080"
 

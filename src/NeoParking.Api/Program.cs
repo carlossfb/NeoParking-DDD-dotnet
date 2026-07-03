@@ -1,101 +1,62 @@
-using System.Text;
+using System.Reflection;
 using MediatR;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
-using NeoParking.Access.Infrastructure;
-using NeoParking.Api;
+using Microsoft.OpenApi.Models;
 using NeoParking.Api.Endpoints;
+using NeoParking.Api.Extensions;
 using NeoParking.Api.Middleware;
-using NeoParking.Management.Application;
-using NeoParking.Management.Infrastructure;
-using NeoParking.Shared.Kernel.Events;
-using NeoParking.Shared.Kernel.Exceptions;
-using NeoParking.Shared.Kernel.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-// OpenTelemetry — ativa tracing nativo do ASP.NET e HttpClient
-builder.Services.AddOpenTelemetry()
-    .ConfigureResource(resource => resource
-        .AddService(serviceName: "neoparking-api", serviceVersion: "1.0.0"))
-    .WithTracing(tracing => tracing
-        .AddAspNetCoreInstrumentation()
-        .AddHttpClientInstrumentation());
-
-// HttpClient com propagação automática de traceparent
-builder.Services.AddHttpClient();
-
-// MediatR
-builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssemblies(AppDomain.CurrentDomain.GetAssemblies()));
-
-// Observabilidade
-builder.Services.AddScoped<ICorrelationIdProvider, HttpCorrelationIdProvider>();
-builder.Services.AddScoped<IEventDispatcher, MediatREventDispatcher>();
-
-builder.Services.AddAccessModule(builder.Configuration);
-builder.Services.AddManagementModule(builder.Configuration);
-
-builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
-
-// JWT Authentication
-var jwtSecret = builder.Configuration["Jwt:Secret"]
-    ?? throw new InvalidOperationException("Jwt:Secret not configured.");
-
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer           = true,
-            ValidIssuer              = builder.Configuration["Jwt:Issuer"] ?? "neoparking",
-            ValidateAudience         = true,
-            ValidAudience            = builder.Configuration["Jwt:Audience"] ?? "neoparking",
-            ValidateLifetime         = true,
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
-        };
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Informe apenas o token — sem o prefixo 'Bearer '. Ex: eyJhbGciOi..."
     });
 
-builder.Services.AddAuthorization();
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+
+builder.Services.AddNeoParkingObservability();
+
+// AppDomain.CurrentDomain.GetAssemblies() só retorna assemblies JÁ carregadas no processo —
+// e, em .NET, uma assembly só é carregada na primeira vez que algo dela é efetivamente
+// tocado. Como esta linha roda ANTES de AddNeoParkingModules (que é o primeiro ponto que
+// toca Access/Billing/Management de verdade), dependendo do timing de carregamento do
+// runtime os handlers de Billing e Management podem não estar disponíveis ainda — e
+// IMediator.Publish() para uma notificação sem handlers não lança exceção nenhuma, só não
+// faz nada. É exatamente esse tipo de falha silenciosa que fazia o TicketOpenedHandler do
+// Billing nunca rodar. Listando as assemblies explicitamente, elas são sempre encontradas
+// não importa a ordem de carregamento.
+builder.Services.AddMediatR(cfg =>
+    cfg.RegisterServicesFromAssemblies(
+        Assembly.GetExecutingAssembly(),
+        typeof(NeoParking.Access.Infrastructure.AccessModule).Assembly,
+        typeof(NeoParking.Billing.Infrastructure.BillingModule).Assembly,
+        typeof(NeoParking.Management.Infrastructure.ManagementModule).Assembly));
+
+builder.Services.AddNeoParkingModules(builder.Configuration);
+builder.Services.AddNeoParkingAuthentication(builder.Configuration);
 
 var app = builder.Build();
 
 app.UseMiddleware<RequestLoggingMiddleware>();
-
-app.UseExceptionHandler(errorApp =>
-{
-    errorApp.Run(async context =>
-    {
-        var exception = context.Features
-            .Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
-
-        context.Response.ContentType = "application/json";
-        context.Response.StatusCode = exception switch
-        {
-            NotFoundException => StatusCodes.Status404NotFound,
-            DomainException   => StatusCodes.Status422UnprocessableEntity,
-            _                 => StatusCodes.Status500InternalServerError
-        };
-
-        var message = exception switch
-        {
-            NotFoundException or DomainException => exception.Message,
-            _ => "An unexpected error occurred"
-        };
-
-        await context.Response.WriteAsJsonAsync(new
-        {
-            status = context.Response.StatusCode,
-            error  = message
-        });
-    });
-});
+app.UseNeoParkingExceptionHandling();
 
 if (app.Environment.IsDevelopment())
 {
@@ -108,13 +69,14 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapClientEndpoints();
+app.MapTicketEndpoints();
 app.MapManagementEndpoints();
+app.MapBillingEndpoints(); // <- registre aqui quando os endpoints do Billing existirem
 
 var isDesignTime = Environment.GetEnvironmentVariable("EF_DESIGN_TIME") == "1";
 if (!isDesignTime)
 {
-    AccessModule.InitializeDatabase(app.Services, builder.Configuration);
-    ManagementModule.InitializeDatabase(app.Services);
+    app.Services.InitializeNeoParkingDatabases(builder.Configuration);
 }
 
 app.Run();

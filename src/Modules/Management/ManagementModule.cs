@@ -23,10 +23,12 @@ public static class ManagementModule
         services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
         services.AddScoped<OperatorService>();
 
-        // Registra como concreto E como interface — o AccessOutboxProcessor resolve AccessOutboxRepository,
-        // o ManagementOutboxProcessor resolve ManagementOutboxRepository; sem colisão no DI
+        // Registra como concreto E como interface própria do módulo — o AccessOutboxProcessor
+        // resolve AccessOutboxRepository, o ManagementOutboxProcessor resolve ManagementOutboxRepository;
+        // e agora IManagementOutboxRepository é um tipo distinto de IAccessOutboxRepository/IBillingOutboxRepository,
+        // então não há mais colisão via IOutboxRepository compartilhada no DI.
         services.AddScoped<ManagementOutboxRepository>();
-        services.AddScoped<IOutboxRepository>(sp => sp.GetRequiredService<ManagementOutboxRepository>());
+        services.AddScoped<IManagementOutboxRepository>(sp => sp.GetRequiredService<ManagementOutboxRepository>());
 
         services.AddHostedService<ManagementOutboxProcessor>();
 

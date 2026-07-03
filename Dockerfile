@@ -8,6 +8,7 @@ COPY src/Shared/NeoParking.Shared.Kernel/NeoParking.Shared.Kernel.csproj   src/S
 COPY src/Modules/Access/NeoParking.Access.csproj                            src/Modules/Access/
 COPY src/Modules/Management/NeoParking.Management.csproj                    src/Modules/Management/
 COPY src/NeoParking.Api/NeoParking.Api.csproj                               src/NeoParking.Api/
+COPY src/Modules/Billing/NeoParking.Billing.csproj                          src/Modules/Billing/
 
 # restore apenas os projetos de produção (testes ficam fora da imagem)
 RUN dotnet restore src/NeoParking.Api/NeoParking.Api.csproj

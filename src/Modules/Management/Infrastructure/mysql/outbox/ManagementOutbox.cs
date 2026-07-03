@@ -4,10 +4,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NeoParking.Management.Application;
 using NeoParking.Shared.Kernel.Events;
 using NeoParking.Shared.Kernel.Outbox;
 
-public sealed class ManagementOutboxRepository : IOutboxRepository
+public sealed class ManagementOutboxRepository : IManagementOutboxRepository
 {
     private readonly ManagementDbContext _context;
 
@@ -91,7 +92,11 @@ public sealed class ManagementOutboxProcessor : BackgroundService
             {
                 _logger.LogError(ex,
                     "Failed to dispatch {Type} ({Id}). Will retry.", message.Type, message.Id);
-                break;
+
+                // Não damos break aqui: uma mensagem "poison" não pode travar as mensagens
+                // seguintes do lote pra sempre. Ela continua sendo reprocessada a cada ciclo
+                // (não é marcada como publicada), mas as outras seguem seu fluxo normal.
+                continue;
             }
         }
 
