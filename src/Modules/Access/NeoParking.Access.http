@@ -1,0 +1,339 @@
+@baseUrl = http://localhost:8080
+
+# Access exige autenticação (mesmo JWT do Management) — faz login aqui pra deixar o arquivo autossuficiente.
+@authToken = {{login.response.body.token}}
+
+@clientId = {{createClient.response.body.id}}
+@vehicleId = {{registerVehicle.response.body.id}}
+@ticketId = {{registerEntry.response.body.id}}
+
+# ── Autenticação ──────────────────────────────────────────────
+
+### Login como Owner (precisa já existir — ver NeoParking.Management.http)
+# @name login
+POST {{baseUrl}}/operators/login
+Content-Type: application/json
+
+{
+  "email": "owner@neoparking.com",
+  "password": "SenhaForte123!"
+}
+
+###
+
+# ── Clientes ─────────────────────────────────────────────────
+
+### Criar cliente sem veículos
+# @name createClient
+POST {{baseUrl}}/clients
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "João Silva",
+  "phoneNumber": "+5511999999999",
+  "cpf": "11144477735"
+}
+
+###
+
+### Criar cliente com veículos
+POST {{baseUrl}}/clients
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "Maria Oliveira",
+  "phoneNumber": "+5521987654321",
+  "cpf": "98765432100",
+  "vehicles": [
+    { "plate": "ABC1234" },
+    { "plate": "XYZ9876" }
+  ]
+}
+
+###
+
+### Listar todos os clientes
+GET {{baseUrl}}/clients
+Authorization: Bearer {{authToken}}
+
+###
+
+### Buscar cliente por ID (usa o id do createClient)
+GET {{baseUrl}}/clients/{{clientId}}
+Authorization: Bearer {{authToken}}
+
+###
+
+### Atualizar cliente
+PATCH {{baseUrl}}/clients/{{clientId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "João Silva Atualizado",
+  "phoneNumber": "+5511988888888"
+}
+
+###
+
+### Buscar cliente atualizado
+GET {{baseUrl}}/clients/{{clientId}}
+Authorization: Bearer {{authToken}}
+
+###
+
+# ── Veículos ──────────────────────────────────────────────────
+
+### Registrar veículo em cliente existente (formato antigo)
+# @name registerVehicle
+POST {{baseUrl}}/clients/{{clientId}}/vehicles
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "plate": "DEF5678"
+}
+
+###
+
+### Registrar veículo formato Mercosul
+POST {{baseUrl}}/clients/{{clientId}}/vehicles
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "plate": "ABC1D24"
+}
+
+###
+
+### Buscar cliente e confirmar veículo registrado
+GET {{baseUrl}}/clients/{{clientId}}
+Authorization: Bearer {{authToken}}
+
+###
+
+### Remover veículo (usa o id do registerVehicle)
+DELETE {{baseUrl}}/clients/{{clientId}}/vehicles/{{vehicleId}}
+Authorization: Bearer {{authToken}}
+
+###
+
+### Buscar cliente e confirmar veículo removido
+GET {{baseUrl}}/clients/{{clientId}}
+Authorization: Bearer {{authToken}}
+
+###
+
+### Registrar veículo com placa inválida (deve retornar erro)
+POST {{baseUrl}}/clients/{{clientId}}/vehicles
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "plate": "INVALIDA"
+}
+
+###
+
+### Registrar veículo em cliente inexistente (deve retornar erro)
+POST {{baseUrl}}/clients/00000000-0000-0000-0000-000000000000/vehicles
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "plate": "ABC1234"
+}
+
+###
+
+### Remover veículo inexistente (deve retornar erro)
+DELETE {{baseUrl}}/clients/{{clientId}}/vehicles/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{authToken}}
+
+###
+
+# ── Tickets (entrada/saída na cancela) ───────────────────────────
+#
+# Access é quem registra entrada e saída de veículos. Ao abrir/fechar um
+# ticket, um evento de integração é publicado no outbox (a cada ~10s) para
+# o Billing calcular e congelar a Fee — ver NeoParking.Billing.http.
+
+### Registrar entrada de um veículo avulso (sem cliente vinculado)
+# @name registerEntry
+POST {{baseUrl}}/access/tickets
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "plate": "ABC1234"
+}
+
+###
+
+### Tentar registrar uma segunda entrada pra mesma placa (deve retornar erro — já tem ticket aberto)
+POST {{baseUrl}}/access/tickets
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "plate": "ABC1234"
+}
+
+###
+
+### Registrar entrada vinculada a um cliente (usa o id do createClient)
+POST {{baseUrl}}/access/tickets
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "plate": "XYZ9876",
+  "clientId": "{{clientId}}"
+}
+
+###
+
+### Consultar o ticket aberto
+GET {{baseUrl}}/access/tickets/{{ticketId}}
+Authorization: Bearer {{authToken}}
+
+###
+
+### Registrar saída agora
+# @name registerExit
+POST {{baseUrl}}/access/tickets/{{ticketId}}/exit
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{}
+
+###
+
+### Confirmar que o ticket foi fechado
+GET {{baseUrl}}/access/tickets/{{ticketId}}
+Authorization: Bearer {{authToken}}
+
+###
+
+### Registrar entrada + saída retroativa com horário explícito (simula uma permanência de 2h30)
+# @name registerEntryRetro
+POST {{baseUrl}}/access/tickets
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "plate": "DEF5678"
+}
+
+###
+
+POST {{baseUrl}}/access/tickets/{{registerEntryRetro.response.body.id}}/exit
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "exitAt": "2026-01-01T12:30:00Z"
+}
+
+###
+
+# ── Validações (Tickets) ─────────────────────────────────────────
+
+### Registrar entrada com placa inválida (deve retornar erro)
+POST {{baseUrl}}/access/tickets
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "plate": "INVALIDA"
+}
+
+###
+
+### Registrar saída de ticket já fechado (deve retornar erro)
+POST {{baseUrl}}/access/tickets/{{ticketId}}/exit
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{}
+
+###
+
+### Registrar saída de ticket inexistente (deve retornar 404)
+POST {{baseUrl}}/access/tickets/00000000-0000-0000-0000-000000000000/exit
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{}
+
+###
+
+### Consultar ticket inexistente (deve retornar 404)
+GET {{baseUrl}}/access/tickets/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{authToken}}
+
+###
+
+### Registrar entrada sem token (deve retornar 401)
+POST {{baseUrl}}/access/tickets
+Content-Type: application/json
+
+{
+  "plate": "ABC1234"
+}
+
+###
+
+# ── Validações ────────────────────────────────────────────────
+
+### Criar cliente com CPF inválido (deve retornar erro)
+POST {{baseUrl}}/clients
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "Teste Inválido",
+  "phoneNumber": "+5511999999999",
+  "cpf": "00000000000"
+}
+
+###
+
+### Criar cliente com telefone inválido (deve retornar erro)
+POST {{baseUrl}}/clients
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "Teste Inválido",
+  "phoneNumber": "123",
+  "cpf": "11144477735"
+}
+
+###
+
+### Buscar cliente com ID inexistente (deve retornar 404)
+GET {{baseUrl}}/clients/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{authToken}}
+
+###
+
+### Listar clientes sem token (deve retornar 401)
+GET {{baseUrl}}/clients
+
+###
+
+# ── Limpeza ───────────────────────────────────────────────────
+
+### Deletar cliente
+DELETE {{baseUrl}}/clients/{{clientId}}
+Authorization: Bearer {{authToken}}
+
+###
+
+### Confirmar que foi deletado (deve retornar 404)
+GET {{baseUrl}}/clients/{{clientId}}
+Authorization: Bearer {{authToken}}

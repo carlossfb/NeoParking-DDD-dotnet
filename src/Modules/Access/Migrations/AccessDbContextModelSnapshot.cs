@@ -50,6 +50,46 @@ namespace NeoParking.Access.Migrations
                     b.ToTable("clients", (string)null);
                 });
 
+            modelBuilder.Entity("NeoParking.Access.Domain.Ticket", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("ClientId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("client_id");
+
+                    b.Property<DateTime>("EntryAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("entry_at");
+
+                    b.Property<DateTime?>("ExitAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("exit_at");
+
+                    b.Property<string>("Plate")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("varchar(7)")
+                        .HasColumnName("plate");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Plate")
+                        .HasDatabaseName("ix_tickets_plate");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_tickets_status");
+
+                    b.ToTable("tickets", (string)null);
+                });
+
             modelBuilder.Entity("NeoParking.Access.Domain.Vehicle", b =>
                 {
                     b.Property<Guid>("Id")

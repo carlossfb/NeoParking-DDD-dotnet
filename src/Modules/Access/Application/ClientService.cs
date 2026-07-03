@@ -9,13 +9,13 @@ using NeoParking.Shared.Kernel.Outbox;
 public sealed class ClientService : IClientService
 {
     private readonly IClientRepository _repository;
-    private readonly IOutboxRepository _outbox;
+    private readonly IAccessOutboxRepository _outbox;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICorrelationIdProvider _correlationIdProvider;
 
     public ClientService(
         IClientRepository repository,
-        IOutboxRepository outbox,
+        IAccessOutboxRepository outbox,
         IUnitOfWork unitOfWork,
         ICorrelationIdProvider correlationIdProvider)
     {

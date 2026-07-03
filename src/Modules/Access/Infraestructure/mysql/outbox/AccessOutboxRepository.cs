@@ -1,9 +1,10 @@
 namespace NeoParking.Access.Infrastructure;
 
 using Microsoft.EntityFrameworkCore;
+using NeoParking.Access.Application;
 using NeoParking.Shared.Kernel.Outbox;
 
-public sealed class AccessOutboxRepository : IOutboxRepository
+public sealed class AccessOutboxRepository : IAccessOutboxRepository
 {
     private readonly AccessDbContext _context;
 

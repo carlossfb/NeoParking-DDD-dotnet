@@ -17,13 +17,23 @@ public sealed record Plate
         if (string.IsNullOrWhiteSpace(raw))
             throw new DomainException("Plate cannot be empty");
 
-        var normalized = raw.Trim().ToUpperInvariant().Replace("-", "");
+        var normalized = Normalize(raw);
 
         if (!MercosulPattern.IsMatch(normalized) && !LegacyPattern.IsMatch(normalized))
             throw new DomainException($"Invalid plate format: '{raw}'");
 
         return new Plate(normalized);
     }
+
+    /// <summary>
+    /// Normalização textual (trim/uppercase/sem hífen) SEM validar o formato — Create()
+    /// continua sendo o único jeito de obter uma Plate válida de fato. Isto existe à parte
+    /// porque a busca de tickets por placa (ver TicketService.ListAsync) precisa normalizar
+    /// entradas parciais do usuário (ex.: "abc" pra um Contains), que não são uma placa
+    /// completa e válida — Create() rejeitaria antes de chegar na query. Internal porque só
+    /// a Infrastructure (mesmo assembly) precisa disso.
+    /// </summary>
+    internal static string Normalize(string raw) => raw.Trim().ToUpperInvariant().Replace("-", "");
 
     public override string ToString() => Value;
 }

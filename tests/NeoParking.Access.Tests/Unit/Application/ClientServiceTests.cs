@@ -11,7 +11,7 @@ using NeoParking.Shared.Kernel.Outbox;
 public class ClientServiceTests
 {
     private readonly Mock<IClientRepository> _mockRepository = new();
-    private readonly Mock<IOutboxRepository> _mockOutbox = new();
+    private readonly Mock<IAccessOutboxRepository> _mockOutbox = new();
     private readonly Mock<IUnitOfWork> _mockUnitOfWork = new();
     private readonly Mock<ICorrelationIdProvider> _mockCorrelation = new();
     private readonly ClientService _service;

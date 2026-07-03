@@ -66,7 +66,12 @@ public sealed class AccessOutboxProcessor : BackgroundService
             {
                 _logger.LogError(ex,
                     "Failed to dispatch {Type} ({Id}). Will retry on next cycle.", message.Type, message.Id);
-                break;
+
+                // Não damos break aqui: uma mensagem "poison" (ex.: TicketClosed sem pricing policy
+                // vigente naquele instante) não pode travar as mensagens seguintes do lote pra sempre.
+                // Ela continua sendo reprocessada a cada ciclo (não é marcada como publicada), mas as
+                // outras seguem seu fluxo normal.
+                continue;
             }
         }
 

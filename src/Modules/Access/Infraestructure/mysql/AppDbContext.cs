@@ -9,6 +9,7 @@ public sealed class AccessDbContext : DbContext
 {
     public DbSet<Client> Clients { get; set; }
     public DbSet<Vehicle> Vehicles { get; set; }
+    public DbSet<Ticket> Tickets { get; set; }
     public DbSet<OutboxMessage> OutboxMessages { get; set; }
 
     public AccessDbContext(DbContextOptions<AccessDbContext> options) : base(options) { }
@@ -70,6 +71,39 @@ public sealed class AccessDbContext : DbContext
                     (a, b) => a!.Value == b!.Value,
                     c => c.Value.GetHashCode(),
                     c => Plate.Create(c.Value)));
+        });
+
+        modelBuilder.Entity<Ticket>(builder =>
+        {
+            builder.ToTable("tickets");
+            builder.HasKey(t => t.Id);
+
+            builder.Property(t => t.Plate)
+                .HasColumnName("plate")
+                .HasMaxLength(7)
+                .IsRequired()
+                .HasConversion(
+                    plate => plate.Value,
+                    value => Plate.Create(value))
+                .Metadata.SetValueComparer(new ValueComparer<Plate>(
+                    (a, b) => a!.Value == b!.Value,
+                    c => c.Value.GetHashCode(),
+                    c => Plate.Create(c.Value)));
+
+            builder.Property(t => t.ClientId).HasColumnName("client_id");
+            builder.Property(t => t.EntryAt).HasColumnName("entry_at").IsRequired();
+            builder.Property(t => t.ExitAt).HasColumnName("exit_at");
+
+            builder.Property(t => t.Status)
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .IsRequired();
+
+            builder.HasIndex(t => t.Plate)
+                .HasDatabaseName("ix_tickets_plate");
+
+            builder.HasIndex(t => t.Status)
+                .HasDatabaseName("ix_tickets_status");
         });
 
         modelBuilder.Entity<OutboxMessage>(builder =>
