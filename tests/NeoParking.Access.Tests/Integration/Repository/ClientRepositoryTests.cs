@@ -69,6 +69,17 @@ public class ClientRepositoryTests : IClassFixture<MySqlFixture>
         await repo.AddAsync(client);
         await ctx.SaveChangesAsync();
     }
+    private static async Task UpdateAndSaveAsync(AccessDbContext ctx, MySqlClientRepository repo, Client client)
+    {
+        await repo.UpdateAsync(client);
+        await ctx.SaveChangesAsync();
+    }
+
+    private static async Task DeleteAndSaveAsync(AccessDbContext ctx, MySqlClientRepository repo, Client client)
+    {
+        await repo.DeleteAsync(client);
+        await ctx.SaveChangesAsync();
+    }
 
     [Fact]
     public async Task AddAsync_WithValidClient_ShouldPersistClient()
@@ -106,7 +117,7 @@ public class ClientRepositoryTests : IClassFixture<MySqlFixture>
         await ctx1.DisposeAsync();
 
         var (ctx2, repo2) = CreateFresh();
-        await repo2.DeleteAsync((await repo2.GetByIdAsync(client.Id))!);
+        await DeleteAndSaveAsync(ctx2, repo2, (await repo2.GetByIdAsync(client.Id))!);
         await ctx2.DisposeAsync();
 
         var (ctx3, repo3) = CreateFresh();
@@ -125,7 +136,7 @@ public class ClientRepositoryTests : IClassFixture<MySqlFixture>
         var (ctx2, repo2) = CreateFresh();
         var saved = await repo2.GetByIdAsync(client.Id);
         saved!.RegisterVehicle(Plate.Create("ABC1D24"));
-        await repo2.UpdateAsync(saved);
+        await UpdateAndSaveAsync(ctx2, repo2, saved);
         await ctx2.DisposeAsync();
 
         var (ctx3, repo3) = CreateFresh();
@@ -143,7 +154,7 @@ public class ClientRepositoryTests : IClassFixture<MySqlFixture>
         await AddAndSaveAsync(ctx1, repo1, client);
         var saved = await repo1.GetByIdAsync(client.Id);
         saved!.RegisterVehicle(Plate.Create("ABC1234"));
-        await repo1.UpdateAsync(saved);
+        await UpdateAndSaveAsync(ctx1, repo1, saved);
         await ctx1.DisposeAsync();
 
         var (ctx2, repo2) = CreateFresh();
@@ -167,13 +178,13 @@ public class ClientRepositoryTests : IClassFixture<MySqlFixture>
         await AddAndSaveAsync(ctx1, repo1, client);
         var saved = await repo1.GetByIdAsync(client.Id);
         saved!.RegisterVehicle(Plate.Create("ABC1234"));
-        await repo1.UpdateAsync(saved);
+        await UpdateAndSaveAsync(ctx1, repo1, saved);
         await ctx1.DisposeAsync();
 
         var (ctx2, repo2) = CreateFresh();
         var withVehicle = await repo2.GetByIdAsync(client.Id);
         withVehicle!.RemoveVehicle(withVehicle.Vehicles[0].Id);
-        await repo2.UpdateAsync(withVehicle);
+        await UpdateAndSaveAsync(ctx2, repo2, withVehicle);
         await ctx2.DisposeAsync();
 
         var (ctx3, repo3) = CreateFresh();
@@ -190,13 +201,13 @@ public class ClientRepositoryTests : IClassFixture<MySqlFixture>
         await AddAndSaveAsync(ctx1, repo1, client);
         var saved = await repo1.GetByIdAsync(client.Id);
         saved!.RegisterVehicle(Plate.Create("ABC1234"));
-        await repo1.UpdateAsync(saved);
+        await UpdateAndSaveAsync(ctx1, repo1, saved);
         await ctx1.DisposeAsync();
 
         var (ctx2, repo2) = CreateFresh();
         var withVehicle = await repo2.GetByIdAsync(client.Id);
         withVehicle!.RegisterVehicle(Plate.Create("ABC1D23"));
-        await repo2.UpdateAsync(withVehicle);
+        await UpdateAndSaveAsync(ctx2, repo2, withVehicle);
         await ctx2.DisposeAsync();
 
         var (ctx3, repo3) = CreateFresh();
