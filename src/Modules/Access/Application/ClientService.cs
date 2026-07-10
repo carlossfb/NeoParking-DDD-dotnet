@@ -66,6 +66,7 @@ public sealed class ClientService : IClientService
 
         client.Update(dto.Name, dto.PhoneNumber, dto.Cpf);
         await _repository.UpdateAsync(client);
+        await _unitOfWork.SaveChangesAsync(); 
         return ToResponse(client);
     }
 
@@ -75,6 +76,7 @@ public sealed class ClientService : IClientService
             ?? throw new NotFoundException(nameof(Client), clientId);
 
         await _repository.DeleteAsync(client);
+        await _unitOfWork.SaveChangesAsync(); 
     }
 
     private static ClientResponseDTO ToResponse(Client client) =>
@@ -94,6 +96,7 @@ public sealed class ClientService : IClientService
 
         var vehicle = client.RegisterVehicle(Plate.Create(dto.Plate));
         await _repository.UpdateAsync(client);
+        await _unitOfWork.SaveChangesAsync(); 
         return new VehicleResponseDTO(vehicle.Id, vehicle.Plate.Value);
     }
 
@@ -104,5 +107,6 @@ public sealed class ClientService : IClientService
 
         client.RemoveVehicle(vehicleId);
         await _repository.UpdateAsync(client);
+        await _unitOfWork.SaveChangesAsync(); 
     }
 }
