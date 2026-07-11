@@ -1,7 +1,6 @@
 namespace NeoParking.Api.Extensions;
 
 using NeoParking.Api;
-using NeoParking.Shared.Kernel.Events;
 using NeoParking.Shared.Kernel.Observability;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -25,7 +24,6 @@ public static class ObservabilityExtensions
         services.AddHttpClient();
 
         services.AddScoped<ICorrelationIdProvider, HttpCorrelationIdProvider>();
-        services.AddScoped<IEventDispatcher, MediatREventDispatcher>();
 
         return services;
     }
