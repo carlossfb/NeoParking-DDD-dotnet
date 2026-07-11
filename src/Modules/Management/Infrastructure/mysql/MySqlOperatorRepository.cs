@@ -14,7 +14,7 @@ public sealed class MySqlOperatorRepository : IOperatorRepository
     public async Task AddAsync(OperatorUser user)
     {
         await _context.Operators.AddAsync(user);
-        await _context.SaveChangesAsync();
+       
     }
 
     public async Task<OperatorUser?> GetByIdAsync(Guid id)
@@ -24,10 +24,10 @@ public sealed class MySqlOperatorRepository : IOperatorRepository
         => await _context.Operators
             .FirstOrDefaultAsync(u => u.Email == email.ToLowerInvariant());
 
-    public async Task UpdateAsync(OperatorUser user)
+    public Task UpdateAsync(OperatorUser user)
     {
         _context.Operators.Update(user);
-        await _context.SaveChangesAsync();
+        return Task.CompletedTask;
     }
 
     public async Task<bool> ExistsOwnerAsync()

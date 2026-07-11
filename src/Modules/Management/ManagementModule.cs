@@ -20,6 +20,7 @@ public static class ManagementModule
             options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
         services.AddScoped<IOperatorRepository, MySqlOperatorRepository>();
+        services.AddScoped<IUnitOfWork, ManagementUnitOfWork>();
         services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
         services.AddScoped<OperatorService>();
 
