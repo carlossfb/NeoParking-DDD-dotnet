@@ -12,11 +12,12 @@ public class OperatorServiceTests
     private readonly Mock<IOperatorRepository> _repo = new();
     private readonly Mock<IPasswordHasher> _hasher = new();
     private readonly OperatorService _service;
+    private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
     public OperatorServiceTests()
     {
         _hasher.Setup(h => h.Hash(It.IsAny<string>())).Returns("hashed");
-        _service = new OperatorService(_repo.Object, _hasher.Object);
+        _service = new OperatorService(_repo.Object, _hasher.Object, _unitOfWork.Object);
     }
 
     private static OperatorUser MakeUser(OperatorRole role, Guid? id = null)

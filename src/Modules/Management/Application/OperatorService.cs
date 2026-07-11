@@ -8,11 +8,13 @@ public sealed class OperatorService
 {
     private readonly IOperatorRepository _repo;
     private readonly IPasswordHasher     _hasher;
+    private readonly IUnitOfWork         _unitOfWork;
 
-    public OperatorService(IOperatorRepository repo, IPasswordHasher hasher)
+    public OperatorService(IOperatorRepository repo, IPasswordHasher hasher, IUnitOfWork unitOfWork)
     {
         _repo   = repo;
         _hasher = hasher;
+        _unitOfWork = unitOfWork;
     }
 
     // ── autenticação ──────────────────────────────────────────────────────────
@@ -51,6 +53,7 @@ public sealed class OperatorService
         var owner = OperatorUser.Create(request.Name, request.Email, hash, OperatorRole.Owner);
 
         await _repo.AddAsync(owner);
+        await _unitOfWork.SaveChangesAsync();
         return ToResponse(owner);
     }
 
@@ -82,6 +85,7 @@ public sealed class OperatorService
         var user = OperatorUser.Create(request.Name, request.Email, hash, targetRole);
 
         await _repo.AddAsync(user);
+        await _unitOfWork.SaveChangesAsync();
         return ToResponse(user);
     }
 
@@ -97,6 +101,7 @@ public sealed class OperatorService
         var target = await GetExistingAsync(targetId);
         target.PromoteToAdmin();
         await _repo.UpdateAsync(target);
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task DemoteToOperatorAsync(Guid requesterId, Guid targetId)
@@ -109,6 +114,7 @@ public sealed class OperatorService
         var target = await GetExistingAsync(targetId);
         target.DemoteToOperator();
         await _repo.UpdateAsync(target);
+        await _unitOfWork.SaveChangesAsync();
     }
 
     // ── ativação / desativação ────────────────────────────────────────────────
@@ -127,6 +133,7 @@ public sealed class OperatorService
 
         target.Deactivate();
         await _repo.UpdateAsync(target);
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task ActivateAsync(Guid requesterId, Guid targetId)
@@ -139,6 +146,7 @@ public sealed class OperatorService
         var target = await GetExistingAsync(targetId);
         target.Activate();
         await _repo.UpdateAsync(target);
+        await _unitOfWork.SaveChangesAsync();
     }
 
     // ── consulta ─────────────────────────────────────────────────────────────
