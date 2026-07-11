@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NeoParking.Billing.Application;
-using NeoParking.Shared.Kernel.Events;
+using MediatR;
 using NeoParking.Shared.Kernel.Outbox;
 
 public sealed class BillingOutboxRepository : IBillingOutboxRepository
@@ -66,8 +66,7 @@ public sealed class BillingOutboxProcessor : BackgroundService
 
         // Resolve o tipo concreto para não pegar o IOutboxRepository de outro BC por engano.
         var outbox     = scope.ServiceProvider.GetRequiredService<BillingOutboxRepository>();
-        var dispatcher = scope.ServiceProvider.GetRequiredService<IEventDispatcher>();
-
+        var publisher  = scope.ServiceProvider.GetRequiredService<IPublisher>();
         var pending = await outbox.GetPendingAsync();
         if (pending.Count == 0) return;
 
@@ -80,7 +79,7 @@ public sealed class BillingOutboxProcessor : BackgroundService
             try
             {
                 var domainEvent = message.Deserialize();
-                await dispatcher.DispatchAsync(domainEvent, cancellationToken);
+                await publisher.Publish(domainEvent, cancellationToken);
 
                 published.Add(message);
 

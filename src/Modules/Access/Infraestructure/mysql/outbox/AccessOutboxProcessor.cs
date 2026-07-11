@@ -3,7 +3,7 @@ namespace NeoParking.Access.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using NeoParking.Shared.Kernel.Events;
+using MediatR;
 using NeoParking.Shared.Kernel.Outbox;
 
 public sealed class AccessOutboxProcessor : BackgroundService
@@ -38,7 +38,7 @@ public sealed class AccessOutboxProcessor : BackgroundService
 
         // Resolve o tipo concreto para não pegar o IOutboxRepository do Management por engano
         var outbox     = scope.ServiceProvider.GetRequiredService<AccessOutboxRepository>();
-        var dispatcher = scope.ServiceProvider.GetRequiredService<IEventDispatcher>();
+        var publisher  = scope.ServiceProvider.GetRequiredService<IPublisher>();
 
         var pending = await outbox.GetPendingAsync(batchSize: 50);
 
@@ -54,7 +54,7 @@ public sealed class AccessOutboxProcessor : BackgroundService
             try
             {
                 var domainEvent = message.Deserialize();
-                await dispatcher.DispatchAsync(domainEvent, cancellationToken);
+                await publisher.Publish(domainEvent, cancellationToken);
 
                 published.Add(message);
 
