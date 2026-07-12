@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NeoParking.Access.Application;
 using NeoParking.Access.Domain;
 using NeoParking.Shared.Kernel.Outbox;
+using Microsoft.Extensions.Logging;
 
 public enum DatabaseProvider { MySQL, MongoDB }
 
@@ -29,6 +30,7 @@ public static class AccessModule
                 services.AddScoped<IClientRepository, MySqlClientRepository>();
                 services.AddScoped<ITicketRepository, MySqlTicketRepository>();
 
+                services.AddScoped<OutboxRepository<AccessDbContext>>();
                 services.AddScoped<AccessOutboxRepository>();
                 services.AddScoped<IAccessOutboxRepository>(sp => sp.GetRequiredService<AccessOutboxRepository>());
 
@@ -36,7 +38,11 @@ public static class AccessModule
 
                 services.AddScoped<ITicketService, TicketService>();
 
-                services.AddHostedService<AccessOutboxProcessor>();
+                services.AddHostedService<OutboxProcessor<AccessDbContext>>(sp =>
+                    new OutboxProcessor<AccessDbContext>(
+                        sp.GetRequiredService<IServiceScopeFactory>(),
+                        sp.GetRequiredService<ILogger<OutboxProcessor<AccessDbContext>>>(),
+                        moduleName: "Access"));
                 break;
             case DatabaseProvider.MongoDB:
                 services.AddSingleton(_ => new MongoDbContext(connectionString));

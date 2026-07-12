@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NeoParking.Billing.Application;
 using NeoParking.Shared.Kernel.Outbox;
+using Microsoft.Extensions.Logging;
 
 public static class BillingModule
 {
@@ -29,10 +30,15 @@ public static class BillingModule
         // Registra como concreto E como interface própria do módulo — cada BC resolve seu próprio
         // outbox (IBillingOutboxRepository vs IAccessOutboxRepository vs IManagementOutboxRepository),
         // então não há mais colisão via IOutboxRepository compartilhada no DI.
+        services.AddScoped<OutboxRepository<BillingDbContext>>();
         services.AddScoped<BillingOutboxRepository>();
         services.AddScoped<IBillingOutboxRepository>(sp => sp.GetRequiredService<BillingOutboxRepository>());
 
-        services.AddHostedService<BillingOutboxProcessor>();
+        services.AddHostedService<OutboxProcessor<BillingDbContext>>(sp =>
+            new OutboxProcessor<BillingDbContext>(
+                sp.GetRequiredService<IServiceScopeFactory>(),
+                sp.GetRequiredService<ILogger<OutboxProcessor<BillingDbContext>>>(),
+                moduleName: "Billing"));
 
         return services;
     }

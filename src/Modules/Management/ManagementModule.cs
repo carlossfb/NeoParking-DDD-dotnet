@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NeoParking.Management.Application;
 using NeoParking.Shared.Kernel.Outbox;
+using Microsoft.Extensions.Logging;
 
 public static class ManagementModule
 {
@@ -28,10 +29,15 @@ public static class ManagementModule
         // resolve AccessOutboxRepository, o ManagementOutboxProcessor resolve ManagementOutboxRepository;
         // e agora IManagementOutboxRepository é um tipo distinto de IAccessOutboxRepository/IBillingOutboxRepository,
         // então não há mais colisão via IOutboxRepository compartilhada no DI.
+        services.AddScoped<OutboxRepository<ManagementDbContext>>();
         services.AddScoped<ManagementOutboxRepository>();
         services.AddScoped<IManagementOutboxRepository>(sp => sp.GetRequiredService<ManagementOutboxRepository>());
 
-        services.AddHostedService<ManagementOutboxProcessor>();
+        services.AddHostedService<OutboxProcessor<ManagementDbContext>>(sp =>
+            new OutboxProcessor<ManagementDbContext>(
+                sp.GetRequiredService<IServiceScopeFactory>(),
+                sp.GetRequiredService<ILogger<OutboxProcessor<ManagementDbContext>>>(),
+                moduleName: "Management"));
 
         return services;
     }

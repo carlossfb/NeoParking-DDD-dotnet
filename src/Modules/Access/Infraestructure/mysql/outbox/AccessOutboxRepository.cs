@@ -1,38 +1,21 @@
 namespace NeoParking.Access.Infrastructure;
 
-using Microsoft.EntityFrameworkCore;
 using NeoParking.Access.Application;
 using NeoParking.Shared.Kernel.Outbox;
 
 public sealed class AccessOutboxRepository : IAccessOutboxRepository
 {
-    private readonly AccessDbContext _context;
+    private readonly OutboxRepository<AccessDbContext> _inner;
 
     public AccessOutboxRepository(AccessDbContext context)
-    {
-        _context = context;
-    }
+        => _inner = new OutboxRepository<AccessDbContext>(context);
 
-    public async Task AddAsync(OutboxMessage message)
-    {
-        await _context.OutboxMessages.AddAsync(message);
-        // sem SaveChanges — quem chama é responsável pela transação
-    }
+    public Task AddAsync(OutboxMessage message)
+        => _inner.AddAsync(message);
 
-    public async Task<IReadOnlyList<OutboxMessage>> GetPendingAsync(int batchSize = 50)
-    {
-        return await _context.OutboxMessages
-            .Where(m => m.PublishedAt == null)
-            .OrderBy(m => m.CreatedAt)
-            .Take(batchSize)
-            .ToListAsync();
-    }
+    public Task<IReadOnlyList<OutboxMessage>> GetPendingAsync(int batchSize = 50)
+        => _inner.GetPendingAsync(batchSize);
 
-    public async Task MarkAsPublishedAsync(IEnumerable<OutboxMessage> messages)
-    {
-        foreach (var message in messages)
-            message.MarkAsPublished();
-
-        await _context.SaveChangesAsync();
-    }
+    public Task MarkAsPublishedAsync(IEnumerable<OutboxMessage> messages)
+        => _inner.MarkAsPublishedAsync(messages);
 }
