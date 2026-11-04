@@ -20,19 +20,17 @@ public sealed class OperatorService
     // ── autenticação ──────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Valida credenciais e retorna o operador. Lança DomainException se inválido ou inativo.
+    /// Valida credenciais e retorna o operador. E-mail inexistente, senha errada e conta
+    /// inativa produzem a mesma exceção, para não revelar o estado da conta.
     /// Gerar o token JWT é responsabilidade da camada de API (infraestrutura de transporte).
     /// </summary>
     public async Task<OperatorUser> LoginAsync(LoginRequest request)
     {
         var user = await _repo.GetByEmailAsync(request.Email)
-            ?? throw new DomainException("Invalid credentials.");
+            ?? throw new InvalidCredentialsException();
 
-        if (!user.IsActive)
-            throw new DomainException("Account is inactive.");
-
-        if (!_hasher.Verify(request.Password, user.PasswordHash.Value))
-            throw new DomainException("Invalid credentials.");
+        if (!_hasher.Verify(request.Password, user.PasswordHash.Value) || !user.IsActive)
+            throw new InvalidCredentialsException();
 
         return user;
     }
