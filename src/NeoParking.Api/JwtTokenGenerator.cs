@@ -5,11 +5,11 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
-using NeoParking.Management.Domain;
+using NeoParking.Management.Application;
 
 public interface IJwtTokenGenerator
 {
-    string Generate(OperatorUser user);
+    string Generate(OperatorResponseDTO user);
 }
 
 public sealed class JwtTokenGenerator : IJwtTokenGenerator
@@ -19,7 +19,7 @@ public sealed class JwtTokenGenerator : IJwtTokenGenerator
     public JwtTokenGenerator(IConfiguration configuration)
         => _configuration = configuration;
 
-    public string Generate(OperatorUser user)
+    public string Generate(OperatorResponseDTO user)
     {
         var secret  = _configuration["Jwt:Secret"]
             ?? throw new InvalidOperationException("Jwt:Secret not configured.");
@@ -34,7 +34,7 @@ public sealed class JwtTokenGenerator : IJwtTokenGenerator
         {
             new Claim(JwtRegisteredClaimNames.Sub,   user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim(ClaimTypes.Role,               user.Role.ToString()),
+            new Claim(ClaimTypes.Role,               user.Role),
             new Claim(JwtRegisteredClaimNames.Jti,   Guid.NewGuid().ToString())
         };
 

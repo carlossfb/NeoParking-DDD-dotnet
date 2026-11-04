@@ -288,4 +288,16 @@ public class OperatorServiceTests
                 .Should().Be("Invalid credentials.");
         }
     }
+
+    [Fact]
+    public async Task LoginAsync_WithValidCredentials_ShouldReturnTheOperatorData()
+    {
+        var user = MakeUser(OperatorRole.Admin, Guid.NewGuid());
+        _repo.Setup(r => r.GetByEmailAsync(user.Email)).ReturnsAsync(user);
+        _hasher.Setup(h => h.Verify("right", user.PasswordHash.Value)).Returns(true);
+
+        var result = await _service.LoginAsync(new LoginRequest(user.Email, "right"));
+
+        result.Should().Be(new OperatorResponseDTO(user.Id, user.Name, user.Email, "Admin", user.IsActive));
+    }
 }

@@ -204,6 +204,19 @@ public class DomainArchitectureTests
             .Should().BeEmpty("portas de repositório ficam em Application");
     }
 
+    /// <summary>
+    /// TD-405: a Api conversa com Management pela Application, sem tocar no agregado.
+    /// </summary>
+    [Fact]
+    public void Api_ShouldNotDependOnManagementDomain()
+    {
+        var result = Types.InAssembly(typeof(NeoParking.Api.IJwtTokenGenerator).Assembly)
+            .ShouldNot().HaveDependencyOn("NeoParking.Management.Domain")
+            .GetResult();
+
+        (result.FailingTypeNames ?? []).Should().BeEmpty();
+    }
+
     private static void AssertNoViolations(PredicateList selectedTypes, Func<PredicateList, ConditionList> rule)
     {
         selectedTypes.GetTypes().Should().NotBeEmpty("uma regra sem tipos selecionados passaria sem verificar nada");
