@@ -167,8 +167,8 @@ public class ClientRepositoryTests : IClassFixture<MySqlFixture>
             await repo2.UpdateAsync(reloaded);
         };
 
-        await act.Should().ThrowAsync<NeoParking.Shared.Kernel.Exceptions.DomainException>()
-            .WithMessage("*ABC1234*");
+        (await act.Should().ThrowAsync<NeoParking.Shared.Kernel.Exceptions.DomainException>())
+            .Which.Message.Should().NotContain("ABC1234");
         await ctx2.DisposeAsync();
     }
 

@@ -50,7 +50,7 @@ public sealed class Client : Entity
             throw new DomainException("Plate is required");
 
         if (_vehicles.Any(v => v.Plate.Value == plate.Value))
-            throw new DomainException($"Plate {plate.Value} is already registered");
+            throw new DomainException("This plate is already registered for this client.");
 
         var vehicle = Vehicle.Create(plate, Id);
         _vehicles.Add(vehicle);

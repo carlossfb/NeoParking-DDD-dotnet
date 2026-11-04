@@ -64,7 +64,7 @@ public class TicketServiceTests
 
         var act = async () => await _service.RegisterEntryAsync(new RegisterEntryRequest("ABC1234"));
 
-        await act.Should().ThrowAsync<DomainException>().WithMessage("*ABC1234*");
+        (await act.Should().ThrowAsync<DomainException>()).Which.Message.Should().NotContain("ABC1234");
         _mockRepository.Verify(r => r.AddAsync(It.IsAny<Ticket>()), Times.Never);
     }
 

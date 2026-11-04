@@ -18,7 +18,9 @@ public static class ObservabilityExtensions
             .ConfigureResource(resource => resource
                 .AddService(serviceName: "neoparking-api", serviceVersion: "1.0.0"))
             .WithTracing(tracing => tracing
-                .AddAspNetCoreInstrumentation()
+                .AddAspNetCoreInstrumentation(options =>
+                    options.EnrichWithHttpResponse = (activity, response) =>
+                        activity.SetTag("url.path", RouteLabel.For(response.HttpContext)))
                 .AddHttpClientInstrumentation());
 
         services.AddHttpClient();

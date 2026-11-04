@@ -1,6 +1,7 @@
 namespace NeoParking.Billing.Infrastructure;
 
 using NeoParking.Shared.Kernel.Configuration;
+using NeoParking.Shared.Kernel.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,7 +21,7 @@ public static class BillingModule
         connectionString = MySqlConnectionStrings.WithPassword(connectionString, configuration);
 
         services.AddDbContext<BillingDbContext>(options =>
-            options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+            options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)).WithoutDatabaseErrorValuesInLogs());
 
         services.AddScoped<IPricingPolicyRepository, MySqlPricingPolicyRepository>();
         services.AddScoped<ITicketRepository, MySqlTicketRepository>();

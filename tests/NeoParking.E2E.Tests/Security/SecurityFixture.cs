@@ -26,6 +26,7 @@ public sealed class SecurityFixture : IAsyncLifetime
     private readonly ApiFixture _api = new();
 
     public HttpClient Client { get; private set; } = null!;
+    public LogCapture Logs => _api.Logs;
     public Actor Owner { get; private set; } = null!;
     public Actor Admin { get; private set; } = null!;
     public Actor Operator { get; private set; } = null!;

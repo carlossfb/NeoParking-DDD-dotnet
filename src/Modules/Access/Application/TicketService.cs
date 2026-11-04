@@ -37,7 +37,7 @@ public sealed class TicketService : ITicketService
 
         var existingOpen = await _tickets.GetOpenByPlateAsync(plate.Value);
         if (existingOpen is not null)
-            throw new ConflictException($"Vehicle '{plate.Value}' already has an open ticket.");
+            throw new ConflictException("This vehicle already has an open ticket.");
 
         var ticket = Ticket.RegisterEntry(plate, request.ClientId);
 
@@ -77,8 +77,7 @@ public sealed class TicketService : ITicketService
     public async Task<TicketResponseDTO> RegisterExitByPlateAsync(
         string plate, RegisterExitByPlateRequest request, Guid operatorId)
     {
-        // Placa e motivo não entram nas mensagens: exceções são registradas em log.
-        var ticket = await _tickets.GetOpenByPlateAsync(ParsePlateWithoutEchoing(plate).Value)
+        var ticket = await _tickets.GetOpenByPlateAsync(Plate.Create(plate).Value)
             ?? throw new NotFoundException("No open ticket was found for this plate.");
 
         ticket.RegisterLostTicketExit(operatorId, request.Reason, request.ExitAt);
@@ -122,18 +121,6 @@ public sealed class TicketService : ITicketService
             : null;
 
         return ticket ?? throw new NotFoundException("No ticket was found for this code.");
-    }
-
-    private static Plate ParsePlateWithoutEchoing(string plate)
-    {
-        try
-        {
-            return Plate.Create(plate);
-        }
-        catch (DomainException)
-        {
-            throw new DomainException("Invalid plate format.");
-        }
     }
 
     private async Task<TicketResponseDTO> PersistExitAsync(Ticket ticket)

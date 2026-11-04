@@ -104,6 +104,6 @@ public class ClientServiceTests
 
         var act = () => client.RegisterVehicle(Plate.Create("ABC1234"));
 
-        act.Should().Throw<DomainException>().WithMessage("*ABC1234*");
+        act.Should().Throw<DomainException>().Which.Message.Should().NotContain("ABC1234");
     }
 }

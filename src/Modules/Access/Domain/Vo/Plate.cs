@@ -20,7 +20,7 @@ public sealed record Plate
         var normalized = Normalize(raw);
 
         if (!MercosulPattern.IsMatch(normalized) && !LegacyPattern.IsMatch(normalized))
-            throw new DomainException($"Invalid plate format: '{raw}'");
+            throw new DomainException("Invalid plate format.");
 
         return new Plate(normalized);
     }

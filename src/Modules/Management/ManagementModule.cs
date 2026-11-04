@@ -1,6 +1,7 @@
 namespace NeoParking.Management.Infrastructure;
 
 using NeoParking.Shared.Kernel.Configuration;
+using NeoParking.Shared.Kernel.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,7 +20,7 @@ public static class ManagementModule
         connectionString = MySqlConnectionStrings.WithPassword(connectionString, configuration);
 
         services.AddDbContext<ManagementDbContext>(options =>
-            options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+            options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)).WithoutDatabaseErrorValuesInLogs());
 
         services.AddScoped<IOperatorRepository, MySqlOperatorRepository>();
         services.AddScoped<IUnitOfWork, ManagementUnitOfWork>();

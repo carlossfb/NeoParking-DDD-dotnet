@@ -2,6 +2,8 @@ namespace NeoParking.E2E.Tests;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Testcontainers.MySql;
 
 /// <summary>
@@ -22,6 +24,8 @@ public sealed class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
 
     // Gerado a cada execução: nenhum segredo fica versionado.
     private readonly string _jwtSecret = $"{Guid.NewGuid():N}{Guid.NewGuid():N}";
+
+    public LogCapture Logs { get; } = new();
 
     public async Task InitializeAsync()
     {
@@ -46,6 +50,7 @@ public sealed class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Billing:ConnectionString", ConnectionString("neoparking_billing"));
         builder.UseSetting("MYSQL_PASSWORD", DbPassword);
         builder.UseSetting("Jwt:Secret", _jwtSecret);
+        builder.ConfigureLogging(logging => logging.Services.AddSingleton<ILoggerProvider>(Logs));
     }
 
     public new async Task DisposeAsync()
