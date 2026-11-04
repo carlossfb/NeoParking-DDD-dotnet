@@ -1,5 +1,6 @@
-namespace NeoParking.Access.Domain;
+namespace NeoParking.Access.Application;
 
+using NeoParking.Access.Domain;
 using NeoParking.Shared.Kernel.Primitives;
 
 public interface ITicketRepository

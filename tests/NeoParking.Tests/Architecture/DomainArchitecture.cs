@@ -180,7 +180,28 @@ public class DomainArchitectureTests
             .Select(repository => repository.FullName)
             .ToList();
 
-        withoutPort.Should().BeEmpty("todo repositório concreto deve implementar uma porta de Domain ou Application");
+        withoutPort.Should().BeEmpty("todo repositório concreto deve implementar uma porta de Application");
+    }
+
+    /// <summary>
+    /// TD-404: os três contextos mantêm as portas de repositório em Application.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(ContextNames))]
+    public void RepositoryPorts_ShouldResideInApplication(string contextName)
+    {
+        var context = BoundedContexts[contextName];
+
+        var ports = context.Types()
+            .That().AreInterfaces()
+            .And().HaveNameEndingWith("Repository")
+            .GetTypes()
+            .ToList();
+
+        ports.Should().NotBeEmpty("a regra precisa encontrar portas para ter valor");
+        ports.Where(port => port.Namespace != context.Application)
+            .Select(port => port.FullName)
+            .Should().BeEmpty("portas de repositório ficam em Application");
     }
 
     private static void AssertNoViolations(PredicateList selectedTypes, Func<PredicateList, ConditionList> rule)
@@ -207,6 +228,6 @@ public class DomainArchitectureTests
         public PredicateList ApplicationTypes() => Types().That().ResideInNamespaceStartingWith(Application);
 
         public bool IsPort(Type candidate) =>
-            candidate.Namespace is { } ns && (ns.StartsWith(Domain) || ns.StartsWith(Application));
+            candidate.Namespace is { } ns && ns.StartsWith(Application);
     }
 }
