@@ -47,6 +47,10 @@ namespace NeoParking.Access.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Cpf")
+                        .IsUnique()
+                        .HasDatabaseName("ux_clients_cpf");
+
                     b.ToTable("clients", (string)null);
                 });
 
@@ -108,6 +112,10 @@ namespace NeoParking.Access.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ClientId");
+
+                    b.HasIndex("Plate")
+                        .IsUnique()
+                        .HasDatabaseName("ux_vehicles_plate");
 
                     b.ToTable("vehicles", (string)null);
                 });

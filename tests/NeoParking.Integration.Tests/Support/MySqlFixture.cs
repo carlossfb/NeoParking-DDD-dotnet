@@ -41,10 +41,16 @@ public sealed class MySqlFixture : IAsyncLifetime
         return databases;
     }
 
+    public async Task<MySqlConnection> OpenAsync()
+    {
+        var connection = new MySqlConnection(ConnectionString(""));
+        await connection.OpenAsync();
+        return connection;
+    }
+
     public async Task ExecuteAsync(string sql)
     {
-        await using var connection = new MySqlConnection(ConnectionString(""));
-        await connection.OpenAsync();
+        await using var connection = await OpenAsync();
         await using var command = new MySqlCommand(sql, connection);
         await command.ExecuteNonQueryAsync();
     }

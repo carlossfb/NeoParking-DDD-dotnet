@@ -7,7 +7,7 @@ public static class ExceptionHandlingExtensions
 {
     /// <summary>
     /// Middleware global de exceções — traduz exceções de domínio conhecidas
-    /// (credenciais, permissão, não encontrado, regra de negócio) em respostas HTTP padronizadas.
+    /// (credenciais, permissão, não encontrado, conflito, regra de negócio) em respostas HTTP padronizadas.
     /// Qualquer exceção não mapeada vira 500, sem vazar detalhes internos.
     /// </summary>
     public static WebApplication UseNeoParkingExceptionHandling(this WebApplication app)
@@ -25,6 +25,7 @@ public static class ExceptionHandlingExtensions
                     InvalidCredentialsException => StatusCodes.Status401Unauthorized,
                     ForbiddenException          => StatusCodes.Status403Forbidden,
                     NotFoundException           => StatusCodes.Status404NotFound,
+                    ConflictException           => StatusCodes.Status409Conflict,
                     DomainException             => StatusCodes.Status422UnprocessableEntity,
                     _                           => StatusCodes.Status500InternalServerError
                 };

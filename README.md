@@ -427,6 +427,39 @@ curl -X POST http://localhost:8080/operators/owner \
   -d '{"name":"Carlos","email":"carlos@neoparking.com","password":"ChangeMe123!"}'
 ```
 
+### Upgrading an existing database
+
+The `AddUniqueConstraints` migrations enforce one Owner, one open ticket per plate, one active pricing policy, and globally unique vehicle plates and client CPFs. If existing data breaks a rule, the migration fails with a message saying which one, changes nothing and never deletes data. The API does not start until this is resolved.
+
+Before deploying, list what needs fixing. The script only reads:
+
+```bash
+docker compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' < scripts/mysql/detect-duplicates.sql
+```
+
+Fix each row manually, then start the API again.
+
+Requests that lose a uniqueness race, or that break one of these rules, return `409 Conflict`.
+
+### Outbox retries and replay
+
+A message that fails is retried with exponential backoff (10 s up to 15 min). After 10 failed attempts it stops being retried, with `DeadLetteredAt` and `LastError` set. An event that cannot be processed yet retries indefinitely instead: a `TicketClosed` received before the Owner defines the first pricing policy waits for that policy, so the charge is not lost.
+
+Find dead-lettered messages in `outbox_messages`, `management_outbox_messages` and `billing_outbox_messages`:
+
+```sql
+SELECT Id, Type, AttemptCount, LastError, DeadLetteredAt FROM neoparking_access.outbox_messages
+ WHERE DeadLetteredAt IS NOT NULL;
+```
+
+After fixing the cause in `LastError`, put them back in the queue:
+
+```bash
+docker compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' < scripts/mysql/outbox-replay.sql
+```
+
+The next outbox cycle, within 10 seconds, publishes them again. Handlers are idempotent, so a redelivery has no duplicate effect.
+
 ### Adding a new Bounded Context
 
 ```bash

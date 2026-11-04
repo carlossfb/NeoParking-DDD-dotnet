@@ -116,12 +116,12 @@ public class AuthorizationMatrixTests
     }
 
     [Fact]
-    public async Task OwnerBootstrap_ShouldBePublic_AndRejectASecondOwnerAsBusinessRule()
+    public async Task OwnerBootstrap_ShouldBePublic_AndRejectASecondOwnerAsConflict()
     {
         var response = await _fixture.SendAsync(HttpMethod.Post, "/operators/owner",
             body: new { name = "Other", email = SecurityFixture.UniqueEmail(), password = SecurityFixture.Password });
 
-        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
 
     private static HttpStatusCode Expected(Row row, string actor)

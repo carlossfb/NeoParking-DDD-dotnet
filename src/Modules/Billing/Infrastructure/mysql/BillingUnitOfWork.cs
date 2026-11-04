@@ -1,6 +1,7 @@
 namespace NeoParking.Billing.Infrastructure;
 
 using NeoParking.Billing.Application;
+using NeoParking.Shared.Kernel.Persistence;
 
 public sealed class BillingUnitOfWork : IUnitOfWork
 {
@@ -9,5 +10,5 @@ public sealed class BillingUnitOfWork : IUnitOfWork
     public BillingUnitOfWork(BillingDbContext context) => _context = context;
 
     public Task SaveChangesAsync(CancellationToken cancellationToken = default)
-        => _context.SaveChangesAsync(cancellationToken);
+        => _context.SaveChangesOrConflictAsync(cancellationToken);
 }

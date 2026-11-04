@@ -1,6 +1,7 @@
 namespace NeoParking.Access.Infrastructure;
 
 using NeoParking.Access.Application;
+using NeoParking.Shared.Kernel.Persistence;
 
 public sealed class AccessUnitOfWork : IUnitOfWork
 {
@@ -10,5 +11,5 @@ public sealed class AccessUnitOfWork : IUnitOfWork
         => _context = context;
 
     public Task SaveChangesAsync(CancellationToken cancellationToken = default)
-        => _context.SaveChangesAsync(cancellationToken);
+        => _context.SaveChangesOrConflictAsync(cancellationToken);
 }

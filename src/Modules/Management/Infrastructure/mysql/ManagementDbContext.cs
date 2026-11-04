@@ -44,6 +44,8 @@ public sealed class ManagementDbContext : DbContext
                     c => c.Value.GetHashCode(),
                     c => PasswordHash.FromHash(c.Value)));
 
+            // Um único Owner: índice funcional ux_management_operators_owner, criado na
+            // migration AddUniqueConstraints. O EF não representa esse tipo de índice no modelo.
             builder.Property(u => u.Role)
                 .HasConversion<string>()
                 .HasMaxLength(20)

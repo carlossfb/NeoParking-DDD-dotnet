@@ -46,6 +46,10 @@ public sealed class AccessDbContext : DbContext
                     c => c.Value.GetHashCode(),
                     c => PhoneNumber.CreateBR(c.Value)));
 
+            builder.HasIndex(c => c.Cpf)
+                .IsUnique()
+                .HasDatabaseName("ux_clients_cpf");
+
             builder.HasMany(c => c.Vehicles)
                 .WithOne()
                 .HasForeignKey(v => v.ClientId)
@@ -71,6 +75,10 @@ public sealed class AccessDbContext : DbContext
                     (a, b) => a!.Value == b!.Value,
                     c => c.Value.GetHashCode(),
                     c => Plate.Create(c.Value)));
+
+            builder.HasIndex(v => v.Plate)
+                .IsUnique()
+                .HasDatabaseName("ux_vehicles_plate");
         });
 
         modelBuilder.Entity<Ticket>(builder =>
@@ -104,6 +112,9 @@ public sealed class AccessDbContext : DbContext
 
             builder.HasIndex(t => t.Status)
                 .HasDatabaseName("ix_tickets_status");
+
+            // Um ticket aberto por placa: índice funcional ux_tickets_open_plate, criado na
+            // migration AddUniqueConstraints. O EF não representa esse tipo de índice no modelo.
         });
 
         modelBuilder.Entity<OutboxMessage>(builder =>

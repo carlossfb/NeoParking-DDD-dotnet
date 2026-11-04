@@ -1,6 +1,7 @@
 namespace NeoParking.Management.Infrastructure;
 
 using NeoParking.Management.Application;
+using NeoParking.Shared.Kernel.Persistence;
 
 public sealed class ManagementUnitOfWork : IUnitOfWork
 {
@@ -10,5 +11,5 @@ public sealed class ManagementUnitOfWork : IUnitOfWork
         => _context = context;
 
     public Task SaveChangesAsync(CancellationToken cancellationToken = default)
-        => _context.SaveChangesAsync(cancellationToken);
+        => _context.SaveChangesOrConflictAsync(cancellationToken);
 }
