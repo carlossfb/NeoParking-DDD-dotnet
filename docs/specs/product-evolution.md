@@ -67,6 +67,19 @@ O README não traz linha de base. As metas propostas devem ser recalibradas com 
 - `README:94`: incluir a franquia, porque "recurring fee rather than per visit" não cobre o uso acima dela.
 - `README:38`: definir "free zone" conforme N6.
 
+### 1.1.1 Decisões do usuário (2026-11-04)
+
+| # | Decisão | Consequência |
+|---|---|---|
+| N10 | **Placa e documento são únicos globalmente, e cada placa tem um único cliente responsável.** Não há fluxo próprio de transferência. | Confirma a D4 da spec de débito técnico. |
+| N11 | **O registro é de cliente responsável, não de proprietário.** A propriedade do veículo não é verificada. | Evita guardar CRLV ou consultar base oficial. Compartilhamento e frota fora do modelo de empresa ficam para quando houver demanda real, trocando o índice por tabela de vínculos. |
+| N12 | **O cliente tem `Type` (`Individual`, `Company`) e `Document` (CPF ou CNPJ, conforme o tipo).** Avulso continua sem documento. Estrangeiro fica fora do escopo por agora. | Afeta C4 e C5. |
+| N13 | **CNPJ alfanumérico é aceito:** coluna de texto e validação sem assumir só dígitos. | Evita migração futura. |
+| N14 | **CPF e CNPJ recebem a mesma proteção:** criptografia, máscara e fora dos logs. | Onda 6 da spec de débito técnico. |
+| N15 | **Retenção e anonimização de inativos ficam pendentes de definição jurídica.** | Registrado como TD-606, sem implementação. |
+
+**Dependência:** a Onda 6 vem antes de EVO-0, C1, C4 e C5.
+
 ### 1.2 Recomendações aprovadas
 
 O usuário aprovou R1 e R2 explicitamente ("aprovo cota e 15 min"), e as demais por delegação ("de resto segue suas recomendações"). Como R3 foi tratada na mesma resposta, conta como decisão do usuário; R4, R5 e R6 são aprovações por delegação.
@@ -113,11 +126,12 @@ O usuário aprovou R1 e R2 explicitamente ("aprovo cota e 15 min"), e as demais 
 | Ordem | Capacidade | Por que nesta posição | Depende de |
 |---|---|---|---|
 | 1 | **C2:** Ticket com código e validação na saída | É do core (N1), resolve uma dor declarada, tem menos dependências e dá ao pagamento uma forma de achar o ticket | Onda 1 |
-| Pré | **EVO-0:** entrega por consumidor no outbox | Occupancy será o segundo consumidor de eventos de ticket | Onda 3 |
-| 2 | **C1:** Ocupação e disponibilidade | Outra dor declarada, mas de subdomínio de suporte (`ADR:11`); não envolve dinheiro nem hardware. A cota é configurada aqui, mas só faz efeito em C4, quando existir mensalista | EVO-0 |
+| Pré | **Onda 6:** privacidade do cliente | Tipo e documento são a base de C4 e C5, e mudá-los depois sai mais caro | C2, Onda 3 |
+| Pré | **EVO-0:** entrega por consumidor no outbox | Occupancy será o segundo consumidor de eventos de ticket | Onda 3, Onda 6 |
+| 2 | **C1:** Ocupação e disponibilidade | Outra dor declarada, mas de subdomínio de suporte (`ADR:11`); não envolve dinheiro nem hardware. A cota é configurada aqui, mas só faz efeito em C4, quando existir mensalista | EVO-0, Onda 6 |
 | 3 | **C3:** Pagamento de ticket antes da saída | Fecha a receita por uso (`README:46`), sem depender de gateway; ativa o bloqueio de saída por pagamento | C2, Onda 3 |
-| 4 | **C4:** Subscriber, planos, franquia e cobrança recorrente | Segunda fonte de receita; reutiliza o `Payment` e a cotação de C3 para mensalidade e excedente | C3 |
-| 5 | **C5:** Credenciais RFID/QR e permissão de acesso | A permissão depende do estado da assinatura (`README:87`); exige decidir hardware | C4 |
+| 4 | **C4:** Subscriber, planos, franquia e cobrança recorrente | Segunda fonte de receita; reutiliza o `Payment` e a cotação de C3 para mensalidade e excedente | C3, Onda 6 |
+| 5 | **C5:** Credenciais RFID/QR e permissão de acesso | A permissão depende do estado da assinatura (`README:87`); exige decidir hardware | C4, Onda 6 |
 | 6 | **C6:** Regras especiais e multas | O README só diz que *podem* existir (`README:96`); não há regra definida | C3 e uma regra concreta |
 | 7 | **C7:** Área do ticket | Sem modelo de áreas ou vagas no README; só faz sentido se o negócio pedir | Pergunta P17 |
 
@@ -535,7 +549,7 @@ Com isso, um plano novo é só dado, e `FeeCalculator` e `PricingPolicy` não mu
 6. Token de operador não acessa `/access/gate/entry`, e identidade de dispositivo não acessa outras rotas.
 7. O valor da credencial não aparece em logs nem em respostas após o cadastro.
 
-**Aprovado por delegação:** P9 (credencial por veículo) e, de P10, atendimento manual em queda e restrição do CPF. **Pergunta aberta:** P10 (equipamento).
+**Aprovado por delegação:** P9 (credencial por veículo) e, de P10, atendimento manual em queda. **Documento:** N12 e N14, com a proteção entregue na Onda 6; a C5 usa o documento só mascarado. **Pergunta aberta:** P10 (equipamento).
 
 ---
 
@@ -647,6 +661,7 @@ Todos seguem sendo módulos do mesmo monólito (`README:123`), com novo contrato
 | **Onda 3**, consistência | Índices únicos, resposta 409, dead-letter e testes reais de atomicidade antes de cobrar valores; o TD-305 é a base de EVO-0 | EVO-0, C1, C3, C4, C5, C6 |
 | **Onda 4**, limpeza | D1 define o banco de Occupancy; serve de referência aos novos módulos, com portas no mesmo lugar | Occupancy e Subscription, de preferência |
 | **Onda 5**, documentação | README, ADRs e context map precisam incluir cada capacidade à medida que ela entrar | Sem bloqueio; atualizar a cada entrega |
+| **Onda 6**, privacidade | Tipo, documento protegido e logs limpos são a base do cliente; depois disso a mudança sai mais cara | EVO-0, C1, C4, C5 |
 
 **C3 também precisa** que a Onda 1 tenha o autor vindo do token, porque a liberação manual e o pagamento são auditados por ele.
 
@@ -682,4 +697,6 @@ Não têm recomendação ou dependem de informação que só o negócio tem.
 | P7 | Mensalista inadimplente ou vencido? | Cobrar como avulso, com tolerância no plano, e reativar ao pagar | Aprovada por delegação |
 | P8 | Ticket antes da primeira tarifa? | Exigir tarifa antes de operar; sentinela só como proteção, e remover se nunca ocorrer em produção | Aprovada por delegação |
 | P9 | Assinatura e RFID pertencem a quem? | Assinatura por Client, credencial por veículo, um veículo no pátio por assinatura | Aprovada por delegação |
-| P10, parte | Em caso de queda, e o CPF? | Atendimento manual; restringir e mascarar CPF, com análise de LGPD antes de C5 | Aprovada por delegação |
+| P10, parte | Em caso de queda, e o CPF? | Atendimento manual; documento mascarado e protegido conforme N14 (Onda 6). A retenção depende de definição jurídica (N15) | Aprovada por delegação; proteção por decisão do usuário |
+| P18 | Um veículo pode estar vinculado a mais de um cliente? | Não: cada placa tem um único cliente responsável | Decisão do usuário (N10) |
+| P19 | Empresas e estrangeiros podem ser clientes? | Empresas sim, com CNPJ; estrangeiros fora do escopo por agora | Decisão do usuário (N12) |
