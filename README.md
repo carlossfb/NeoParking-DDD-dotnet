@@ -573,7 +573,7 @@ dotnet test --logger "console;verbosity=detailed"
 
 ## 14. How to Contribute
 
-This project follows **Git Flow**. Below is the standard path for shipping a feature, plus how releases and hotfixes are handled.
+This project follows **Git Flow**. Below is the standard path for shipping a feature, plus how releases and hotfixes are handled. GitHub enforces only what [What GitHub enforces](#what-github-enforces) lists; the rest is convention.
 
 ### Branches
 
@@ -597,27 +597,17 @@ Branch name pattern: `feature/{kebab-case-name}` — short, descriptive, no tick
 
 ### Working on the feature
 
-Commit as often as needed during development — these intermediate commits won't survive in `develop`'s history (see squash below), so don't over-engineer commit messages here. Push regularly so the branch is backed up and visible to reviewers:
+Commit as often as needed during development, using the convention below. Push regularly so the branch is backed up and visible to reviewers:
 
 ```bash
 git push -u origin feature/operator-password-reset
 ```
 
-### Finishing the feature: squash merge into `develop`
+### Finishing the feature
 
-**Why squash for features:** the value of "how I got here" lives in the Pull Request itself (GitHub/GitLab preserves every commit, comment, and review there permanently). What matters for `develop`'s own history is being **readable and revertable** — one commit per feature means `git log --oneline` stays clean, and reverting a whole feature is a single `git revert <hash>` instead of untangling a chain of WIP commits.
+Open a Pull Request from `feature/{name}` into `develop`. CI runs on it automatically.
 
-```bash
-git checkout develop
-git pull origin develop
-git merge --squash feature/operator-password-reset
-git commit -m "feat(management): add operator password reset flow"
-git push origin develop
-git branch -d feature/operator-password-reset
-git push origin --delete feature/operator-password-reset
-```
-
-Or, if working through a Pull Request (recommended for any non-trivial change): open the PR from `feature/{name}` into `develop`, and use the platform's **"Squash and merge"** button — it does exactly the above and keeps the PR discussion linked to the resulting commit.
+> **Pending decision: merge strategy for features.** Squash merge or merge commit has not been chosen yet. Earlier versions of this guide asked for squash, while the pull requests merged into `develop` so far used merge commits.
 
 ### Commit message convention
 
@@ -633,7 +623,7 @@ docs(readme): document gitflow workflow
 
 ### Releases: merge commit into `main`
 
-Unlike features, releases represent a real, immutable point in history — every commit on a release branch should be traceable, since the tag on `main` must match exactly what was shipped. **No squashing here.**
+Releases represent a real, immutable point in history — every commit on a release branch should be traceable, since the tag on `main` must match exactly what was shipped. **No squashing here.**
 
 ```bash
 git checkout develop
@@ -685,16 +675,24 @@ git push origin --delete hotfix/1.2.1
 
 | Flow | Strategy | Reason |
 |---|---|---|
-| `feature` → `develop` | Squash merge | Day-to-day commits are noisy; PR keeps the detailed history |
+| `feature` → `develop` | Pending decision | See [Finishing the feature](#finishing-the-feature) |
 | `release` → `main` / `develop` | Merge commit (`--no-ff`) | Release history must be traceable commit-by-commit against the tag |
 | `hotfix` → `main` / `develop` | Merge commit (`--no-ff`) | Same as release — urgent fixes need full traceability |
 
-Before opening a PR or merging into `develop`, make sure:
+### What GitHub enforces
+
+| Branch | Rule |
+|---|---|
+| `develop` | None. It has no branch protection |
+| `main` | A pull request with one approving review; admins can bypass it. CI is not a required check |
+
+CI runs on pull requests to both branches, but a red result does not block a merge. All three merge methods are enabled.
+
+Before opening a PR, make sure:
 
 ```bash
 dotnet build
 dotnet test --filter "Category!=Integration"
-dotnet test tests/NeoParking.Tests --filter "Category=Architecture"
 ```
 
 ---
