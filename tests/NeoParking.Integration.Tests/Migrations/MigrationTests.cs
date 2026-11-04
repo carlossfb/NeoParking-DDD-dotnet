@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using MySqlConnector;
+using NeoParking.Access.Application;
 using NeoParking.Access.Infrastructure;
 using NeoParking.Billing.Infrastructure;
 using NeoParking.Integration.Tests.Support;
@@ -17,6 +18,7 @@ using NeoParking.Shared.Kernel.Outbox;
 public sealed class MigrationTests
 {
     private const string BeforeUnique = "AddOutboxRetry";
+    private const string BeforeTicketCode = "AddUniqueConstraints";
 
     private const string Now = "'2026-01-01 00:00:00'";
 
@@ -211,6 +213,77 @@ public sealed class MigrationTests
             "vehicles.plate", "clients.cpf", "tickets.open_plate",
             "management_operators.owner", "billing_pricing_policies.active"
         ]);
+    }
+
+    [Fact]
+    public async Task FromScratch_ShouldCreateTheTicketCodeIndex_AndMatchTheAccessModel()
+    {
+        var databases = await _mysql.CreateDatabasesAsync();
+        await using var host = await ModuleHost.CreateMigratedAsync(databases);
+
+        (await UniqueIndexesAsync(databases.Access)).Should().Contain("ux_tickets_code");
+        await host.UseAsync<AccessDbContext>(c =>
+        {
+            c.Database.HasPendingModelChanges().Should().BeFalse();
+            return Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public async Task ExistingTickets_ShouldReceiveCodes_WithTheRestrictedUser_WithoutChangingEntryAt()
+    {
+        var databases = await _mysql.CreateDatabasesAsync();
+        var restricted = await RestrictedUserAsync(databases);
+        await using var host = ModuleHost.Create(restricted);
+        await MigrateAccessToAsync(host, BeforeTicketCode);
+        await _mysql.ExecuteAsync(
+            TicketInsert(databases.Access, "ABC1234", "Open")
+            + TicketInsert(databases.Access, "ABC1234", "Closed")
+            + TicketInsert(databases.Access, "XYZ9876", "Closed"));
+
+        await host.UseAsync<AccessDbContext>(c => c.Database.MigrateAsync());
+
+        var codes = await ReadFirstColumnAsync($"SELECT code FROM {databases.Access}.tickets");
+        codes.Should().HaveCount(3).And.OnlyHaveUniqueItems()
+            .And.OnlyContain(c => System.Text.RegularExpressions.Regex.IsMatch(c, "^[0-9A-F]{20}$"));
+        (await CountAsync($"{databases.Access}.tickets WHERE entry_at = {Now}")).Should().Be(3);
+        (await CountAsync($"{databases.Access}.tickets WHERE exit_method IS NULL")).Should().Be(3);
+
+        // O ticket aberto antes da migração sai pelo código recebido.
+        var openCode = (await ReadFirstColumnAsync(
+            $"SELECT code FROM {databases.Access}.tickets WHERE Status = 'Open'")).Single();
+        var closed = await host.UseAsync<ITicketService, TicketResponseDTO>(s =>
+            s.RegisterExitByCodeAsync(openCode, new RegisterExitRequest()));
+        closed.Status.Should().Be("Closed");
+    }
+
+    [Fact]
+    public async Task RemovingTheTicketCode_ShouldBeReversible()
+    {
+        var databases = await _mysql.CreateDatabasesAsync();
+        await using var host = await ModuleHost.CreateMigratedAsync(databases);
+
+        await MigrateAccessToAsync(host, BeforeTicketCode);
+
+        (await UniqueIndexesAsync(databases.Access)).Should().NotContain("ux_tickets_code");
+        (await ReadFirstColumnAsync(
+            "SELECT COLUMN_NAME FROM information_schema.COLUMNS "
+            + $"WHERE TABLE_SCHEMA = '{databases.Access}' AND TABLE_NAME = 'tickets'"))
+            .Should().NotContain(["code", "exit_method", "exit_reason", "exit_operator_id"]);
+    }
+
+    /// <summary>Usuário com acesso só aos schemas do teste, como o neoparking_app do compose.</summary>
+    private async Task<TestDatabases> RestrictedUserAsync(TestDatabases databases)
+    {
+        var user = "app_" + Guid.NewGuid().ToString("N")[..12];
+        await _mysql.ExecuteAsync(
+            $"CREATE USER '{user}'@'%' IDENTIFIED BY '{MySqlFixture.RootPassword}'; "
+            + $"GRANT ALL PRIVILEGES ON {databases.Access}.* TO '{user}'@'%'; "
+            + $"GRANT ALL PRIVILEGES ON {databases.Management}.* TO '{user}'@'%'; "
+            + $"GRANT ALL PRIVILEGES ON {databases.Billing}.* TO '{user}'@'%';");
+
+        var forRoot = databases.ConnectionStringFor;
+        return databases with { ConnectionStringFor = name => forRoot(name).Replace("Uid=root", $"Uid={user}") };
     }
 
     private static Task MigrateAccessToAsync(ModuleHost host, string migration) =>

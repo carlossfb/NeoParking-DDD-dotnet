@@ -3,7 +3,10 @@ namespace NeoParking.E2E.Tests.Security;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using NeoParking.Access.Domain;
+using NeoParking.Access.Infrastructure;
 using NeoParking.Management.Application;
 
 [CollectionDefinition(Name)]
@@ -123,6 +126,14 @@ public sealed class SecurityFixture : IAsyncLifetime
         var login = await Client.PostAsJsonAsync("/operators/login", new { email, password = Password });
         login.EnsureSuccessStatusCode();
         return (await login.Content.ReadFromJsonAsync<TokenResponse>())!.Token;
+    }
+
+    /// <summary>Lê o ticket direto do banco, para conferir dados que a API não devolve.</summary>
+    public async Task<Ticket> ReadAccessTicketAsync(Guid id)
+    {
+        using var scope = _api.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AccessDbContext>();
+        return await context.Tickets.AsNoTracking().SingleAsync(t => t.Id == id);
     }
 
     private async Task<T> WithServiceAsync<T>(Func<OperatorService, Task<T>> action)

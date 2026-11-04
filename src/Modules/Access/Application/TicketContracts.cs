@@ -8,6 +8,8 @@ public sealed record RegisterEntryRequest(string Plate, Guid? ClientId = null);
 
 public sealed record RegisterExitRequest(DateTime? ExitAt = null);
 
+public sealed record RegisterExitByPlateRequest(string Reason, DateTime? ExitAt = null);
+
 /// <summary>
 /// Filtro de listagem de tickets — visão operacional (quem está no pátio, histórico de
 /// entradas). Todos os campos são opcionais. Page é 1-based.
@@ -24,8 +26,10 @@ public sealed record ListTicketsRequest(
 
 public sealed record TicketResponseDTO(
     Guid Id,
+    string Code,
     string Plate,
     Guid? ClientId,
     DateTime EntryAt,
     DateTime? ExitAt,
-    string Status);
+    string Status,
+    string? ExitMethod);

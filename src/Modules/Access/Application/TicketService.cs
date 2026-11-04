@@ -62,17 +62,32 @@ public sealed class TicketService : ITicketService
 
         ticket.RegisterExit(request.ExitAt);
 
-        await _tickets.UpdateAsync(ticket);
-        await _outbox.AddAsync(OutboxMessage.Create(new TicketClosedIntegrationEvent(
-            TicketId:      ticket.Id,
-            Plate:         ticket.Plate.Value,
-            ExitAt:        ticket.ExitAt!.Value,
-            CorrelationId: _correlationIdProvider.GetCorrelationId())));
-
-        await _unitOfWork.SaveChangesAsync();
-
-        return ToResponse(ticket);
+        return await PersistExitAsync(ticket);
     }
+
+    public async Task<TicketResponseDTO> RegisterExitByCodeAsync(string code, RegisterExitRequest request)
+    {
+        var ticket = await FindByCodeAsync(code);
+
+        ticket.RegisterExit(request.ExitAt, ExitMethod.Code);
+
+        return await PersistExitAsync(ticket);
+    }
+
+    public async Task<TicketResponseDTO> RegisterExitByPlateAsync(
+        string plate, RegisterExitByPlateRequest request, Guid operatorId)
+    {
+        // Placa e motivo não entram nas mensagens: exceções são registradas em log.
+        var ticket = await _tickets.GetOpenByPlateAsync(ParsePlateWithoutEchoing(plate).Value)
+            ?? throw new NotFoundException("No open ticket was found for this plate.");
+
+        ticket.RegisterLostTicketExit(operatorId, request.Reason, request.ExitAt);
+
+        return await PersistExitAsync(ticket);
+    }
+
+    public async Task<TicketResponseDTO> GetByCodeAsync(string code) =>
+        ToResponse(await FindByCodeAsync(code));
 
     public async Task<TicketResponseDTO> GetByIdAsync(Guid ticketId)
     {
@@ -99,6 +114,50 @@ public sealed class TicketService : ITicketService
             result.TotalCount);
     }
 
+    private async Task<Ticket> FindByCodeAsync(string code)
+    {
+        // Um código malformado é um código que não existe; ele também não é repetido na mensagem.
+        var ticket = TicketCode.TryParse(code, out var parsed)
+            ? await _tickets.GetByCodeAsync(parsed!)
+            : null;
+
+        return ticket ?? throw new NotFoundException("No ticket was found for this code.");
+    }
+
+    private static Plate ParsePlateWithoutEchoing(string plate)
+    {
+        try
+        {
+            return Plate.Create(plate);
+        }
+        catch (DomainException)
+        {
+            throw new DomainException("Invalid plate format.");
+        }
+    }
+
+    private async Task<TicketResponseDTO> PersistExitAsync(Ticket ticket)
+    {
+        await _tickets.UpdateAsync(ticket);
+        await _outbox.AddAsync(OutboxMessage.Create(new TicketClosedIntegrationEvent(
+            TicketId:      ticket.Id,
+            Plate:         ticket.Plate.Value,
+            ExitAt:        ticket.ExitAt!.Value,
+            CorrelationId: _correlationIdProvider.GetCorrelationId())));
+
+        try
+        {
+            await _unitOfWork.SaveChangesAsync();
+        }
+        catch (ConflictException)
+        {
+            // Outra saída encerrou o ticket depois da leitura; o evento dela é o único publicado.
+            throw new DomainException("Ticket is already closed.");
+        }
+
+        return ToResponse(ticket);
+    }
+
     private static TicketResponseDTO ToResponse(Ticket ticket) =>
-        new(ticket.Id, ticket.Plate.Value, ticket.ClientId, ticket.EntryAt, ticket.ExitAt, ticket.Status.ToString());
+        new(ticket.Id, ticket.Code.Value, ticket.Plate.Value, ticket.ClientId, ticket.EntryAt, ticket.ExitAt, ticket.Status.ToString(), ticket.ExitMethod?.ToString());
 }

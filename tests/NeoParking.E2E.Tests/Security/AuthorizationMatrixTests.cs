@@ -71,6 +71,13 @@ public class AuthorizationMatrixTests
         ["GET /access/tickets"] = new(Minimum.AnyOperator, HttpStatusCode.OK, _ => Task.FromResult(Get("/access/tickets"))),
         ["GET /access/tickets/{id}"] = new(Minimum.AnyOperator, HttpStatusCode.OK, async f => Get($"/access/tickets/{await SeedTicketAsync(f)}")),
 
+        ["GET /access/tickets/by-code/{code}"] = new(Minimum.AnyOperator, HttpStatusCode.OK, async f =>
+            Get($"/access/tickets/by-code/{(await SeedTicketWithCodeAsync(f)).Code}")),
+        ["POST /access/tickets/by-code/{code}/exit"] = new(Minimum.AnyOperator, HttpStatusCode.OK, async f =>
+            Post($"/access/tickets/by-code/{(await SeedTicketWithCodeAsync(f)).Code}/exit", new { })),
+        ["POST /access/tickets/by-plate/{plate}/exit"] = new(Minimum.AnyOperator, HttpStatusCode.OK, async f =>
+            Post($"/access/tickets/by-plate/{(await SeedTicketWithCodeAsync(f)).Plate}/exit", new { reason = "Ticket perdido" })),
+
         ["GET /billing/pricing-policies/active"] = new(Minimum.AnyOperator, HttpStatusCode.OK, _ =>
             Task.FromResult(Get("/billing/pricing-policies/active"))),
         ["GET /billing/pricing-policies/history"] = new(Minimum.OwnerOrAdmin, HttpStatusCode.OK, _ =>
@@ -165,5 +172,14 @@ public class AuthorizationMatrixTests
         var response = await f.SendAsync(HttpMethod.Post, "/access/tickets", f.Owner.Token,
             new { plate = SecurityFixture.UniquePlate() });
         return (await f.ReadAsync<SecurityFixture.IdResponse>(response)).Id;
+    }
+
+    private sealed record SeededTicket(string Code, string Plate);
+
+    private static async Task<SeededTicket> SeedTicketWithCodeAsync(SecurityFixture f)
+    {
+        var response = await f.SendAsync(HttpMethod.Post, "/access/tickets", f.Owner.Token,
+            new { plate = SecurityFixture.UniquePlate() });
+        return await f.ReadAsync<SeededTicket>(response);
     }
 }

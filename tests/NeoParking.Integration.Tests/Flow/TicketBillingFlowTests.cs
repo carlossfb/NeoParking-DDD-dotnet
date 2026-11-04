@@ -83,6 +83,27 @@ public sealed class TicketBillingFlowTests
         billed.Fee!.Amount.Should().Be(10m);
     }
 
+    [Theory]
+    [InlineData("code")]
+    [InlineData("plate")]
+    public async Task ExitByAnyMethod_ShouldFreezeASingleFee(string method)
+    {
+        await using var host = await ModuleHost.CreateMigratedAsync(await _mysql.CreateDatabasesAsync());
+        await DefinePolicyAsync(host);
+        var opened = await host.UseAsync<ITicketService, NeoParking.Access.Application.TicketResponseDTO>(s =>
+            s.RegisterEntryAsync(new RegisterEntryRequest("ABC1D23")));
+
+        await host.UseAsync<ITicketService>(s => method == "code"
+            ? s.RegisterExitByCodeAsync(opened.Code, new RegisterExitRequest())
+            : s.RegisterExitByPlateAsync("ABC1D23", new RegisterExitByPlateRequest("Ticket perdido"), Guid.NewGuid()));
+        await host.AccessOutbox(NoDelay).ProcessOnceAsync();
+
+        var billed = await GetBilledAsync(host, opened.Id);
+        billed.Status.Should().Be("Closed");
+        billed.Fee!.Amount.Should().Be(10m);
+        (await host.UseAsync<AccessContext, int>(c => c.OutboxMessages.CountAsync())).Should().Be(2, "one opened, one closed");
+    }
+
     private static Task DefinePolicyAsync(ModuleHost host) =>
         host.UseAsync<PricingPolicyService>(s => s.DefineAsync(
             Guid.NewGuid(), new DefinePricingPolicyRequest(10m, 4m)));
