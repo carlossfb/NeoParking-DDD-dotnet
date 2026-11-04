@@ -45,6 +45,7 @@ ScaffoldingReadMe.txt
 # Environment files
 *.env
 .env*
+!.env.example
 
 # ASP.NET generated
 appsettings.Development.json

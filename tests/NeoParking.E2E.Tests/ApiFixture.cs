@@ -6,11 +6,12 @@ using Testcontainers.MySql;
 
 /// <summary>
 /// Sobe a API real contra um MySQL em container, com os três bancos de scripts/mysql/init.sql.
-/// As migrations reais rodam no boot da aplicação (Program.cs).
+/// As migrations reais rodam no boot da aplicação (Program.cs), com o usuário restrito da aplicação.
 /// </summary>
 public sealed class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private const string DbPassword = "e2e-test-only";
+    private const string AppUser = "neoparking_app";
 
     // Mesma imagem do docker-compose.yml.
     private readonly MySqlContainer _mysql = new MySqlBuilder()
@@ -26,9 +27,13 @@ public sealed class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
     {
         await _mysql.StartAsync();
 
-        var result = await _mysql.ExecScriptAsync(await File.ReadAllTextAsync(FindInitScript()));
+        var script = await File.ReadAllTextAsync(FindMySqlScript("init.sql"))
+            + $"\nCREATE USER '{AppUser}'@'%' IDENTIFIED BY '{DbPassword}';\n"
+            + await File.ReadAllTextAsync(FindMySqlScript("app-grants.sql"));
+
+        var result = await _mysql.ExecScriptAsync(script);
         if (result.ExitCode != 0)
-            throw new InvalidOperationException($"init.sql failed: {result.Stderr}");
+            throw new InvalidOperationException($"MySQL setup failed: {result.Stderr}");
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -51,17 +56,17 @@ public sealed class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
 
     private string ConnectionString(string database) =>
         $"Server={_mysql.Hostname};Port={_mysql.GetMappedPublicPort(MySqlBuilder.MySqlPort)};" +
-        $"Database={database};Uid=root;Pwd={DbPassword};AllowPublicKeyRetrieval=true;SslMode=none;";
+        $"Database={database};Uid={AppUser};Pwd={DbPassword};AllowPublicKeyRetrieval=true;SslMode=none;";
 
-    private static string FindInitScript()
+    private static string FindMySqlScript(string name)
     {
         for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
         {
-            var script = Path.Combine(dir.FullName, "scripts", "mysql", "init.sql");
+            var script = Path.Combine(dir.FullName, "scripts", "mysql", name);
             if (File.Exists(script))
                 return script;
         }
 
-        throw new FileNotFoundException("scripts/mysql/init.sql not found above the test output directory.");
+        throw new FileNotFoundException($"scripts/mysql/{name} not found above the test output directory.");
     }
 }

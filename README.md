@@ -257,12 +257,12 @@ Management issues JWTs on successful login (`POST /operators/login`). Tokens car
 |---|---|---|
 | `POST /operators/login` | No | Entry point — credentials exchanged for a token |
 | `POST /operators/owner` | No | One-time bootstrap of the single Owner account |
-| `POST /operators/{requesterId}` (create operator) | Yes | Only Owner/Admin may create accounts |
-| `GET /operators/{id}` | Yes | Internal data |
-| `POST /operators/{requesterId}/promote/{targetId}` | Yes | Owner-only |
-| `POST /operators/{requesterId}/demote/{targetId}` | Yes | Owner-only |
-| `POST /operators/{requesterId}/deactivate/{targetId}` | Yes | Owner/Admin only |
-| `POST /operators/{requesterId}/activate/{targetId}` | Yes | Owner/Admin only |
+| `POST /operators` (create operator) | Yes | Owner/Admin; Admin creates only Operator. The requester comes from the token |
+| `GET /operators/{id}` | Yes | Owner/Admin |
+| `POST /operators/{targetId}/promote` | Yes | Owner-only |
+| `POST /operators/{targetId}/demote` | Yes | Owner-only |
+| `POST /operators/{targetId}/deactivate` | Yes | Owner/Admin; Admin acts only on Operator |
+| `POST /operators/{targetId}/activate` | Yes | Owner/Admin; Admin acts only on Operator |
 
 Role-based business rules (e.g. only the Owner can create an Admin) are enforced in `OperatorService`, not just at the HTTP layer — the same invariants hold even if called from another internal context.
 
@@ -271,7 +271,7 @@ Role-based business rules (e.g. only the Owner can create an Admin) are enforced
 ```json
 {
   "Jwt": {
-    "Secret": "REPLACE_WITH_A_LONG_RANDOM_SECRET",
+    "Secret": "<at least 32 random bytes>",
     "Issuer": "neoparking",
     "Audience": "neoparking",
     "ExpireMinutes": "60"
@@ -344,7 +344,19 @@ snyk test --file=Neoparking.sln
 ### Running locally with Docker Compose (recommended)
 
 ```bash
+cp .env.example .env   # then replace every CHANGE_ME value
 docker compose up -d --build
+```
+
+Compose refuses to start if a required variable is missing, and the API refuses to boot outside Development if `JWT_SECRET` is a placeholder or shorter than 32 bytes. Port 3306 is not published; add `-f docker-compose.yml -f docker-compose.expose-db.yml` to reach MySQL from the host.
+
+The API connects as `neoparking_app`, which only has access to the project schemas. MySQL creates this user only on an empty volume. On an existing volume, run this once as root, or recreate the volume if its data can be discarded:
+
+```sql
+CREATE USER 'neoparking_app'@'%' IDENTIFIED BY '<MYSQL_APP_PASSWORD>';
+GRANT ALL PRIVILEGES ON neoparking_access.*     TO 'neoparking_app'@'%';
+GRANT ALL PRIVILEGES ON neoparking_management.* TO 'neoparking_app'@'%';
+GRANT ALL PRIVILEGES ON neoparking_billing.*    TO 'neoparking_app'@'%';
 ```
 
 This starts MySQL with separate schemas for each Bounded Context (`neoparking_access`, `neoparking_management`, created via `scripts/mysql/init.sql`) and the API, applying EF Core migrations automatically on boot.
@@ -356,7 +368,7 @@ This starts MySQL with separate schemas for each Bounded Context (`neoparking_ac
 ```bash
 docker run -d \
   --name neoparking-mysql \
-  -e MYSQL_ROOT_PASSWORD=password \
+  -e MYSQL_ROOT_PASSWORD=<password> \
   -e MYSQL_DATABASE=neoparking_access \
   -p 3306:3306 \
   mysql:8
@@ -370,13 +382,13 @@ Create `src/NeoParking.Api/appsettings.Development.json` (gitignored):
 {
   "Access": {
     "DatabaseProvider": "MySQL",
-    "ConnectionString": "Server=localhost;Database=neoparking_access;Uid=root;Pwd=password;AllowPublicKeyRetrieval=true;SslMode=none;"
+    "ConnectionString": "Server=localhost;Database=neoparking_access;Uid=root;Pwd=<password>;AllowPublicKeyRetrieval=true;SslMode=none;"
   },
   "Management": {
-    "ConnectionString": "Server=localhost;Database=neoparking_management;Uid=root;Pwd=password;AllowPublicKeyRetrieval=true;SslMode=none;"
+    "ConnectionString": "Server=localhost;Database=neoparking_management;Uid=root;Pwd=<password>;AllowPublicKeyRetrieval=true;SslMode=none;"
   },
   "Jwt": {
-    "Secret": "REPLACE_WITH_A_LONG_RANDOM_SECRET_AT_LEAST_32_CHARS",
+    "Secret": "<at least 32 random bytes>",
     "Issuer": "neoparking",
     "Audience": "neoparking",
     "ExpireMinutes": "60"
