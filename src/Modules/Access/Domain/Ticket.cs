@@ -25,15 +25,28 @@ public sealed class Ticket : Entity
     public DateTime? ExitAt { get; private set; }
     public TicketStatus Status { get; private set; }
 
+    /// <summary>Código único da sessão, o mesmo no ticket físico e no digital.</summary>
+    public TicketCode Code { get; private set; }
+
+    public ExitMethod? ExitMethod { get; private set; }
+
+    /// <summary>Preenchidos só na saída por placa, que dispensa o ticket e por isso é auditada.</summary>
+    public string? ExitReason { get; private set; }
+    public Guid? ExitOperatorId { get; private set; }
+
+    public const int ExitReasonMaxLength = 500;
+
     // Construtor para EF Core
     private Ticket() : base(Guid.Empty)
     {
         Plate = null!;
+        Code = null!;
     }
 
     private Ticket(Plate plate, Guid? clientId, DateTime entryAt) : base()
     {
         Plate    = plate;
+        Code     = TicketCode.Generate();
         ClientId = clientId;
         EntryAt  = entryAt;
         Status   = TicketStatus.Open;
@@ -41,12 +54,14 @@ public sealed class Ticket : Entity
 
     private Ticket(
         Guid id,
+        TicketCode code,
         Plate plate,
         Guid? clientId,
         DateTime entryAt,
         DateTime? exitAt,
         TicketStatus status) : base(id)
     {
+        Code     = code;
         Plate    = plate;
         ClientId = clientId;
         EntryAt  = entryAt;
@@ -67,13 +82,36 @@ public sealed class Ticket : Entity
 
     /// <summary>Reconstitui a partir do banco sem revalidar nem gerar novo Id.</summary>
     public static Ticket Reconstitute(
-        Guid id, Plate plate, Guid? clientId, DateTime entryAt, DateTime? exitAt, TicketStatus status)
-        => new(id, plate, clientId, entryAt, exitAt, status);
+        Guid id, TicketCode code, Plate plate, Guid? clientId, DateTime entryAt, DateTime? exitAt, TicketStatus status)
+        => new(id, code, plate, clientId, entryAt, exitAt, status);
 
     // ── comportamentos ───────────────────────────────────────────────────────
 
     /// <summary>Registra a saída do veículo na cancela.</summary>
-    public void RegisterExit(DateTime? exitAt = null)
+    public void RegisterExit(DateTime? exitAt = null, ExitMethod method = Domain.ExitMethod.TicketId)
+        => Close(exitAt, method);
+
+    /// <summary>Saída pela placa, quando o ticket se perdeu: exige motivo e autor.</summary>
+    public void RegisterLostTicketExit(Guid operatorId, string reason, DateTime? exitAt = null)
+    {
+        if (operatorId == Guid.Empty)
+            throw new DomainException("The operator is required.");
+
+        var trimmedReason = reason?.Trim();
+
+        if (string.IsNullOrEmpty(trimmedReason))
+            throw new DomainException("The reason is required for an exit by plate.");
+
+        if (trimmedReason.Length > ExitReasonMaxLength)
+            throw new DomainException($"The reason must have at most {ExitReasonMaxLength} characters.");
+
+        Close(exitAt, Domain.ExitMethod.Plate);
+
+        ExitReason     = trimmedReason;
+        ExitOperatorId = operatorId;
+    }
+
+    private void Close(DateTime? exitAt, ExitMethod method)
     {
         if (Status == TicketStatus.Closed)
             throw new DomainException("Ticket is already closed.");
@@ -83,7 +121,8 @@ public sealed class Ticket : Entity
         if (resolvedExitAt <= EntryAt)
             throw new DomainException("Exit time must be after entry time.");
 
-        ExitAt = resolvedExitAt;
-        Status = TicketStatus.Closed;
+        ExitAt     = resolvedExitAt;
+        Status     = TicketStatus.Closed;
+        ExitMethod = method;
     }
 }
