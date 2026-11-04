@@ -56,6 +56,26 @@ Content-Type: application/json
 
 ###
 
+### Criar empresa com CNPJ alfanumérico
+POST {{baseUrl}}/clients
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "Empresa Exemplo",
+  "phoneNumber": "+5511999999999",
+  "type": "Company",
+  "document": "12ABC34501DE35"
+}
+
+###
+
+### Ler o documento completo (só Owner e Admin; a leitura fica registrada)
+GET {{baseUrl}}/clients/{{createClient.response.body.$.id}}/document
+Authorization: Bearer {{authToken}}
+
+###
+
 ### Listar todos os clientes
 GET {{baseUrl}}/clients
 Authorization: Bearer {{authToken}}

@@ -108,7 +108,11 @@ Owns the relationship with the parking's customers and the parking session: clie
 
 Each ticket has a unique, opaque code (20 hexadecimal characters from a cryptographic source), the same for a printed or a digital ticket. A ticket closes by id, by code, or by plate when it was lost; the exit by plate requires a reason and records the reason and the operator from the token. Whichever method is used, a ticket publishes a single `TicketClosed`, even when two exits run at the same time.
 
-Vehicle plates and client CPFs are globally unique. This assumes there is no dedicated vehicle transfer flow: a plate is removed from the old client and registered on the new one. **This assumption is still pending business confirmation.**
+A client is an `Individual` with a CPF or a `Company` with a CNPJ, which may be alphanumeric. Walk-in drivers have no document. Foreigners without a CPF are out of scope for now.
+
+Vehicle plates and client documents are globally unique: each plate has a single responsible client, and there is no dedicated transfer flow, so a plate is removed from the old client and registered on the new one. The client is the one responsible for the vehicle at the parking; ownership is not verified.
+
+Documents stay encrypted in the database and masked in every response (`***.444.777-**`, `**.***.345/01DE-**`). See [Client documents](#client-documents).
 
 ### Billing
 
@@ -154,7 +158,7 @@ NeoParking-DDD-dotnet/
 │   ├── Modules/
 │   │   ├── Access/                          # Single project per Bounded Context
 │   │   │   ├── AccessModule.cs
-│   │   │   ├── Domain/                      # Client, Vehicle, Ticket; Cpf, Plate, PhoneNumber
+│   │   │   ├── Domain/                      # Client, Vehicle, Ticket; Document, Plate, PhoneNumber
 │   │   │   ├── Application/                 # ClientService, TicketService, ports, DTOs
 │   │   │   ├── Infrastructure/mysql/        # EF Core, repositories, outbox
 │   │   │   └── Migrations/
@@ -281,6 +285,7 @@ Management issues JWTs on successful login (`POST /operators/login`). Tokens car
 | `POST /operators/{targetId}/promote`, `/demote` | | | | ✅ |
 | `POST /operators/{targetId}/activate`, `/deactivate` | | | ✅ Admin acts only on Operator | |
 | `POST /clients`, `GET /clients`, `GET /clients/{id}`, `PATCH /clients/{id}` | | ✅ | | |
+| `GET /clients/{id}/document` | | | ✅ | |
 | `POST /clients/{id}/vehicles`, `DELETE /clients/{id}/vehicles/{vehicleId}` | | ✅ | | |
 | `DELETE /clients/{id}` | | | ✅ | |
 | `POST /access/tickets`, `POST /access/tickets/{id}/exit` | | ✅ | | |
@@ -317,6 +322,7 @@ Outside Management, role and state come from the token alone. **A deactivated or
 |---|---|---|
 | `MYSQL_PASSWORD` | Yes | `.env`; applied to every connection string at boot |
 | `Jwt__Secret` | Yes | `.env`. Outside Development, placeholders and values under 32 bytes stop the boot |
+| `DOCUMENT_ENCRYPTION_KEY`, `DOCUMENT_HMAC_KEY` | Yes | `.env`. Two different keys of 64 hexadecimal characters; anything else stops the boot |
 | `MYSQL_ROOT_PASSWORD` | MySQL container only | `.env`; never passed to the API |
 | `Access:ConnectionString` | Yes, without password | `docker-compose.yml` or `appsettings.Development.json` |
 | `Billing:ConnectionString` | Yes, without password | Same |
@@ -370,6 +376,8 @@ snyk test --file=Neoparking.sln
 - **Vulnerability Remediation** — Immediate patching of high/critical CVEs
 - **No Secrets in Code** — Secrets come only from the environment or the gitignored `.env`
 - **Password Storage** — Operator passwords are hashed with BCrypt; plaintext is never persisted (`PasswordHash` value object)
+- **Client Documents** — CPF and CNPJ are encrypted at rest and masked in responses; see [Client documents](#client-documents)
+- **Logs and Traces** — Record the route pattern, never the real path; plates and documents stay out of logs, traces and error messages
 - **Token-Based Auth** — Every endpoint except login and Owner bootstrap requires a valid JWT, validated against issuer, audience, signature, and expiry
 
 ---
@@ -386,7 +394,7 @@ snyk test --file=Neoparking.sln
 
 ```bash
 cp .env.example .env          # the only place with secrets; gitignored
-openssl rand -hex 32          # run once per CHANGE_ME and paste each value in .env
+openssl rand -hex 32          # run once per CHANGE_ME and paste each value in .env, each one different
 docker compose up -d --build
 ```
 
@@ -394,7 +402,7 @@ This starts MySQL with one schema per Bounded Context (`neoparking_access`, `neo
 
 > **Windows checkout:** with `core.autocrlf=true`, `entrypoint.sh` gets CRLF line endings and the API container restarts with `exec /entrypoint.sh: no such file or directory`. Until this is fixed in the repository, convert the file before building, from Git Bash or WSL: `sed -i 's/\r$//' entrypoint.sh`.
 
-`docker-compose.yml` has no secret values: it copies `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD` and `Jwt__Secret` from `.env` or the shell. If one is missing, startup fails: MySQL logs the missing `MYSQL_ROOT_PASSWORD` or `MYSQL_PASSWORD`, and the API reports the missing `Jwt__Secret`. If MySQL initialized a new volume without `MYSQL_PASSWORD`, the application user was not created: fix `.env` and run `docker compose down -v` if the volume has no data to keep. Port 3306 is not published; add `-f docker-compose.yml -f docker-compose.expose-db.yml` to reach MySQL from the host.
+`docker-compose.yml` has no secret values: it copies `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD`, `Jwt__Secret`, `DOCUMENT_ENCRYPTION_KEY` and `DOCUMENT_HMAC_KEY` from `.env` or the shell. If one is missing, startup fails: MySQL logs the missing `MYSQL_ROOT_PASSWORD` or `MYSQL_PASSWORD`, and the API reports the missing `Jwt__Secret`. If MySQL initialized a new volume without `MYSQL_PASSWORD`, the application user was not created: fix `.env` and run `docker compose down -v` if the volume has no data to keep. Port 3306 is not published; add `-f docker-compose.yml -f docker-compose.expose-db.yml` to reach MySQL from the host.
 
 The API connects as `neoparking_app`, which only has access to the project schemas. MySQL creates this user only on an empty volume. On an existing volume, run this once as root, or recreate the volume if its data can be discarded:
 
@@ -465,11 +473,21 @@ curl -H "Authorization: Bearer $TOKEN" $BASE_URL/clients
 
 ### Upgrading an existing database
 
+**Client documents.** Stop every running API, back up the database, and add `DOCUMENT_ENCRYPTION_KEY` and `DOCUMENT_HMAC_KEY` to the environment. Keep a copy of both keys outside the database and its backups. At boot, the API then:
+
+1. Renames `clients.cpf` to `document`, marks existing clients as `Individual`, and adds the encrypted columns.
+2. Encrypts each document and checks every row against the plain text. It can be run again: rows already done are kept.
+3. Only then removes the plain-text column and moves the unique index to `document_hmac`.
+
+If a row has an invalid document, or the keys cannot read one already encrypted, the boot stops with the client ids and no document values, and the plain-text column stays. Fix those rows or restore the original keys, then start again. `dotnet ef database update` cannot encrypt, so it refuses to remove the column while any row is unprotected.
+
+**Backups taken before this migration, and any binary logs from that period, still contain documents in plain text.** Protect them and expire them according to your retention policy. Reverting this migration is refused when there are clients: restore a backup instead.
+
 The `AddTicketCode` migration needs no preparation: every existing ticket, open or closed, receives a code, and only the new columns change. Tickets closed before it have no exit method recorded.
 
-The `AddUniqueConstraints` migrations enforce one Owner, one open ticket per plate, one active pricing policy, and globally unique vehicle plates and client CPFs. If existing data breaks a rule, the migration fails with a message saying which one, changes nothing and never deletes data. The API does not start until this is resolved.
+The `AddUniqueConstraints` migrations enforce one Owner, one open ticket per plate, one active pricing policy, and globally unique vehicle plates and client documents. If existing data breaks a rule, the migration fails with a message saying which one, changes nothing and never deletes data. The API does not start until this is resolved.
 
-Before deploying, list what needs fixing. The script only reads:
+Before deploying, on a database still older than that migration, list what needs fixing. The script only reads, and its output shows CPFs in plain text, so do not save it:
 
 ```bash
 docker compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' < scripts/mysql/detect-duplicates.sql
@@ -478,6 +496,18 @@ docker compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' < scr
 Fix each row manually, then start the API again.
 
 Requests that lose a uniqueness race, or that break one of these rules, return `409 Conflict`.
+
+### Client documents
+
+`POST /clients` takes `type` (`Individual` or `Company`) and `document`. `PATCH /clients/{id}` takes `document` alone to keep the type; changing `type` requires a document of the new type. Every client response returns the document masked.
+
+`GET /clients/{id}/document` returns the full value to Owner and Admin, with `Cache-Control: no-store`, and first records who read it, in `neoparking_access.client_document_accesses` (client, operator from the token, and time, never the value). There is no route to read this table, and it keeps the records after a client is deleted. There is no search by document.
+
+In the database, `document_encrypted` holds AES-256-GCM with a random nonce, in the format `v1.<base64>`, where `v1` is the key version. `document_hmac` holds an HMAC-SHA256 with its own key, including the type, and carries the unique index.
+
+**Losing `DOCUMENT_ENCRYPTION_KEY` makes every document unrecoverable, and a backup of the database does not help.** Changing `DOCUMENT_HMAC_KEY` makes uniqueness stop matching the existing rows. Key rotation is not implemented yet: the version in the value allows it, but changing either key today breaks reads or uniqueness.
+
+Name and phone number are still stored in plain text. How long to keep data of inactive clients is pending a legal definition.
 
 ### Outbox retries and replay
 
@@ -553,8 +583,8 @@ Unit tests are the largest layer. E2E is next, ahead of integration, because it 
 | Layer | Scope | Where | Tool |
 |---|---|---|---|
 | Unit | Domain entities, value objects, Application services, JWT and boot configuration | `tests/NeoParking.{Access,Billing,Management}.Tests/Unit`, and the tests without a container in `tests/NeoParking.E2E.Tests` | xUnit + Moq + FluentAssertions |
-| Integration | Repositories, outbox, migrations, uniqueness, Access-to-Billing flow, on real MySQL | `tests/NeoParking.Access.Tests/Integration`, `tests/NeoParking.Integration.Tests` | xUnit + Testcontainers |
-| E2E | Authorization matrix, security rules, conflicts and the smoke flow, over HTTP on the real API with real MySQL | `tests/NeoParking.E2E.Tests` | `WebApplicationFactory` + Testcontainers |
+| Integration | Repositories, outbox, migrations, document protection, uniqueness, Access-to-Billing flow, on real MySQL | `tests/NeoParking.Access.Tests/Integration`, `tests/NeoParking.Integration.Tests` | xUnit + Testcontainers |
+| E2E | Authorization matrix, security rules, conflicts, privacy of logs and responses, and the smoke flow, over HTTP on the real API with real MySQL | `tests/NeoParking.E2E.Tests` | `WebApplicationFactory` + Testcontainers |
 | Architecture | Layer and cross-BC dependency rules | `tests/NeoParking.Tests` | NetArchTest |
 | Manual | Requests to try by hand against a running API; not automated | `.http` files in `src/` | REST Client |
 

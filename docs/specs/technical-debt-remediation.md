@@ -404,6 +404,8 @@ Aprovada pelo usuário em 2026-11-04. Vem antes de EVO-0, C1, C4 e C5, porque es
 - **Requisito:** expandir, preencher e só então remover, de forma idempotente e retomável. A coluna em texto puro só sai depois do preenchimento concluído e verificado. Uma falha no meio não perde dados e tem mensagem clara.
 - **Aceite:** com o usuário restrito, testes cobrem o banco do zero, dados da versão anterior e falha seguida de nova tentativa.
 
+**Decisões tomadas na implementação:** registradas no ADR-007 e no README: a migração roda no boot da API, a reversão com clientes é recusada e a rotação de chave não foi implementada.
+
 **TD-606: Retenção e anonimização de inativos (pendente de definição jurídica)**
 - **Evidência:** nada define por quanto tempo guardar dados de clientes inativos.
 - **Requisito:** definir prazo e base legal com o jurídico; só então implementar a anonimização. **Não implementar antes disso.**
