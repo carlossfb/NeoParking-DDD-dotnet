@@ -53,6 +53,20 @@ public sealed class ClientService : IClientService
         return client is null ? null : ToResponse(client);
     }
 
+    /// <summary>Único caminho até o documento completo: só devolve depois de gravar quem o leu.</summary>
+    public async Task<ClientDocumentResponseDTO> RevealDocumentAsync(Guid clientId, Guid operatorId)
+    {
+        var client = await _repository.GetByIdAsync(clientId)
+            ?? throw new NotFoundException(nameof(Client), clientId);
+
+        var document = client.Document;
+
+        await _repository.AddDocumentAccessAsync(ClientDocumentAccess.Record(clientId, operatorId));
+        await _unitOfWork.SaveChangesAsync();
+
+        return new ClientDocumentResponseDTO(document.Type.ToString(), document.Value);
+    }
+
     public async Task<IEnumerable<ClientResponseDTO>> GetAllClientsAsync()
     {
         var clients = await _repository.GetAllAsync();
@@ -98,7 +112,7 @@ public sealed class ClientService : IClientService
             client.Name,
             client.PhoneNumber.Value,
             client.Type.ToString(),
-            client.DocumentValue,
+            client.Document.Masked,
             client.Vehicles
                 .Select(v => new VehicleResponseDTO(v.Id, v.Plate.Value))
                 .ToList());

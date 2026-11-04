@@ -11,6 +11,7 @@ public sealed class AccessDbContext : DbContext
     public DbSet<Vehicle> Vehicles { get; set; }
     public DbSet<Ticket> Tickets { get; set; }
     public DbSet<OutboxMessage> OutboxMessages { get; set; }
+    public DbSet<ClientDocumentAccess> ClientDocumentAccesses { get; set; }
 
     public AccessDbContext(DbContextOptions<AccessDbContext> options) : base(options) { }
 
@@ -145,6 +146,17 @@ public sealed class AccessDbContext : DbContext
 
             // Um ticket aberto por placa: índice funcional ux_tickets_open_plate, criado na
             // migration AddUniqueConstraints. O EF não representa esse tipo de índice no modelo.
+        });
+
+        // Sem chave estrangeira: o registro de quem leu um documento sobrevive à exclusão do cliente.
+        modelBuilder.Entity<ClientDocumentAccess>(builder =>
+        {
+            builder.ToTable("client_document_accesses");
+            builder.HasKey(a => a.Id);
+            builder.Property(a => a.ClientId).HasColumnName("client_id");
+            builder.Property(a => a.OperatorId).HasColumnName("operator_id");
+            builder.Property(a => a.AccessedAt).HasColumnName("accessed_at");
+            builder.HasIndex(a => a.ClientId).HasDatabaseName("ix_client_document_accesses_client_id");
         });
 
         modelBuilder.Entity<OutboxMessage>(builder =>

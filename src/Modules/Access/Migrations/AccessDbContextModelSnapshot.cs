@@ -60,6 +60,32 @@ namespace NeoParking.Access.Migrations
                     b.ToTable("clients", (string)null);
                 });
 
+            modelBuilder.Entity("NeoParking.Access.Domain.ClientDocumentAccess", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("AccessedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("accessed_at");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("client_id");
+
+                    b.Property<Guid>("OperatorId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("operator_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId")
+                        .HasDatabaseName("ix_client_document_accesses_client_id");
+
+                    b.ToTable("client_document_accesses", (string)null);
+                });
+
             modelBuilder.Entity("NeoParking.Access.Domain.Ticket", b =>
                 {
                     b.Property<Guid>("Id")

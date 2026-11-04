@@ -51,6 +51,7 @@ public class AuthorizationMatrixTests
         ["POST /clients"] = new(Minimum.AnyOperator, HttpStatusCode.Created, _ => Task.FromResult(Post("/clients", NewClient()))),
         ["GET /clients"] = new(Minimum.AnyOperator, HttpStatusCode.OK, _ => Task.FromResult(Get("/clients"))),
         ["GET /clients/{id}"] = new(Minimum.AnyOperator, HttpStatusCode.OK, async f => Get($"/clients/{await SeedClientAsync(f)}")),
+        ["GET /clients/{id}/document"] = new(Minimum.OwnerOrAdmin, HttpStatusCode.OK, async f => Get($"/clients/{await SeedClientAsync(f)}/document")),
         ["PATCH /clients/{id}"] = new(Minimum.AnyOperator, HttpStatusCode.OK, async f =>
             new Call(HttpMethod.Patch, $"/clients/{await SeedClientAsync(f)}", new { name = "Atualizado" })),
         ["POST /clients/{id}/vehicles"] = new(Minimum.AnyOperator, HttpStatusCode.Created, async f =>

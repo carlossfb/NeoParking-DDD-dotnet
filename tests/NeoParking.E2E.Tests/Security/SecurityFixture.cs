@@ -156,6 +156,14 @@ public sealed class SecurityFixture : IAsyncLifetime
         return await context.Tickets.AsNoTracking().SingleAsync(t => t.Id == id);
     }
 
+    /// <summary>Lê a auditoria direto do banco: não há rota que a exponha.</summary>
+    public async Task<List<ClientDocumentAccess>> ReadDocumentAccessesAsync(Guid clientId)
+    {
+        using var scope = _api.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AccessDbContext>();
+        return await context.ClientDocumentAccesses.AsNoTracking().Where(a => a.ClientId == clientId).ToListAsync();
+    }
+
     private async Task<T> WithServiceAsync<T>(Func<OperatorService, Task<T>> action)
     {
         using var scope = _api.Services.CreateScope();
