@@ -106,6 +106,8 @@ All contexts are modules of the same monolith, each with its own MySQL schema.
 
 Owns the relationship with the parking's customers and the parking session: clients, their vehicles, and tickets (entry and exit). Publishes integration events through the outbox so other contexts can react without coupling to Access's internals.
 
+Each ticket has a unique, opaque code (20 hexadecimal characters from a cryptographic source), the same for a printed or a digital ticket. A ticket closes by id, by code, or by plate when it was lost; the exit by plate requires a reason and records the reason and the operator from the token. Whichever method is used, a ticket publishes a single `TicketClosed`, even when two exits run at the same time.
+
 Vehicle plates and client CPFs are globally unique. This assumes there is no dedicated vehicle transfer flow: a plate is removed from the old client and registered on the new one. **This assumption is still pending business confirmation.**
 
 ### Billing
@@ -283,6 +285,8 @@ Management issues JWTs on successful login (`POST /operators/login`). Tokens car
 | `DELETE /clients/{id}` | | | ✅ | |
 | `POST /access/tickets`, `POST /access/tickets/{id}/exit` | | ✅ | | |
 | `GET /access/tickets`, `GET /access/tickets/{id}` | | ✅ | | |
+| `GET /access/tickets/by-code/{code}`, `POST /access/tickets/by-code/{code}/exit` | | ✅ | | |
+| `POST /access/tickets/by-plate/{plate}/exit` (reason required) | | ✅ | | |
 | `GET /billing/pricing-policies/active` | | ✅ | | |
 | `GET /billing/pricing-policies/history`, `/effective-at` | | | ✅ | |
 | `POST /billing/pricing-policies` | | | | ✅ |
@@ -460,6 +464,8 @@ curl -H "Authorization: Bearer $TOKEN" $BASE_URL/clients
 ```
 
 ### Upgrading an existing database
+
+The `AddTicketCode` migration needs no preparation: every existing ticket, open or closed, receives a code, and only the new columns change. Tickets closed before it have no exit method recorded.
 
 The `AddUniqueConstraints` migrations enforce one Owner, one open ticket per plate, one active pricing policy, and globally unique vehicle plates and client CPFs. If existing data breaks a rule, the migration fails with a message saying which one, changes nothing and never deletes data. The API does not start until this is resolved.
 
