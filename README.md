@@ -153,7 +153,7 @@ NeoParking-DDD-dotnet/
 │   │   │   ├── NeoParking.Access.csproj      # Single project per BC
 │   │   │   ├── Domain/                       # Client, Vehicle, VOs (Cpf, Plate, PhoneNumber)
 │   │   │   ├── Application/                  # ClientService, DTOs, interfaces
-│   │   │   ├── Infraestructure/               # EF Core (MySQL), outbox processor
+│   │   │   ├── Infrastructure/                # EF Core (MySQL), outbox processor
 │   │   │   └── Migrations/
 │   │   │
 │   │   └── Management/                       # Management Bounded Context — the gatekeeper
