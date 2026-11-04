@@ -68,6 +68,7 @@ public sealed class ManagementDbContext : DbContext
 
             builder.Property(o => o.CreatedAt).IsRequired();
             builder.Property(o => o.PublishedAt).IsRequired(false);
+            builder.Property(o => o.LastError).HasMaxLength(OutboxMessage.LastErrorMaxLength);
 
             builder.HasIndex(o => o.PublishedAt)
                 .HasDatabaseName("ix_management_outbox_published_at");

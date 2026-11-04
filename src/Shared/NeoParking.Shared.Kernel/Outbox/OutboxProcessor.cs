@@ -19,15 +19,18 @@ public sealed class OutboxProcessor<TContext> : BackgroundService where TContext
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<OutboxProcessor<TContext>> _logger;
     private readonly string _moduleName;
+    private readonly OutboxRetryPolicy _retryPolicy;
 
     public OutboxProcessor(
         IServiceScopeFactory scopeFactory,
         ILogger<OutboxProcessor<TContext>> logger,
-        string moduleName)
+        string moduleName,
+        OutboxRetryPolicy? retryPolicy = null)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
         _moduleName = moduleName;
+        _retryPolicy = retryPolicy ?? OutboxRetryPolicy.Default;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -36,19 +39,32 @@ public sealed class OutboxProcessor<TContext> : BackgroundService where TContext
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            await ProcessAsync(stoppingToken);
+            try
+            {
+                await ProcessOnceAsync(stoppingToken);
+            }
+            catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
+            {
+                // Banco fora do ar, por exemplo. Uma exceção aqui encerraria o host inteiro.
+                _logger.LogError(ex, "{Module} outbox cycle failed. Will retry.", _moduleName);
+            }
+
             await Task.Delay(Interval, stoppingToken);
         }
     }
 
-    private async Task ProcessAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// Um ciclo do outbox. Cada mensagem é entregue em um escopo próprio e tem o resultado salvo
+    /// em seguida: uma escrita que falhou em um handler não contamina a mensagem seguinte, e uma
+    /// queda no meio do lote não repete as entregas já registradas.
+    /// </summary>
+    public async Task ProcessOnceAsync(CancellationToken cancellationToken = default)
     {
         using var scope = _scopeFactory.CreateScope();
 
         // Resolve o repositório concreto do módulo (ex.: AccessOutboxRepository), não a interface
         // compartilhada IOutboxRepository, para não pegar o outbox de outro BC por engano.
-        var outbox    = scope.ServiceProvider.GetRequiredService<OutboxRepository<TContext>>();
-        var publisher = scope.ServiceProvider.GetRequiredService<IPublisher>();
+        var outbox = scope.ServiceProvider.GetRequiredService<OutboxRepository<TContext>>();
 
         var pending = await outbox.GetPendingAsync();
         if (pending.Count == 0)
@@ -56,35 +72,39 @@ public sealed class OutboxProcessor<TContext> : BackgroundService where TContext
 
         _logger.LogInformation("{Module} outbox: processing {Count} message(s).", _moduleName, pending.Count);
 
-        var published = new List<OutboxMessage>();
-
         foreach (var message in pending)
         {
             try
             {
                 var domainEvent = message.Deserialize();
+
+                using var deliveryScope = _scopeFactory.CreateScope();
+                var publisher = deliveryScope.ServiceProvider.GetRequiredService<IPublisher>();
                 await publisher.Publish(domainEvent, cancellationToken);
 
-                published.Add(message);
+                message.MarkAsPublished();
 
                 _logger.LogDebug(
                     "Dispatched {Type} ({Id}) correlationId: {CorrelationId}.",
                     message.Type, message.Id, domainEvent.CorrelationId);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
             {
-                _logger.LogError(ex,
-                    "Failed to dispatch {Type} ({Id}). Will retry.", message.Type, message.Id);
+                // Sem break: uma mensagem com erro não pode travar as seguintes do lote. O backoff
+                // tira a mensagem dos próximos ciclos, então ela também não ocupa o lote.
+                message.RegisterFailure(ex, _retryPolicy, DateTime.UtcNow);
 
-                // Não damos break aqui: uma mensagem "poison" (ex.: TicketClosed sem pricing policy
-                // vigente naquele instante) não pode travar as mensagens seguintes do lote pra sempre.
-                // Ela continua sendo reprocessada a cada ciclo (não é marcada como publicada), mas as
-                // outras seguem seu fluxo normal.
-                continue;
+                if (message.DeadLetteredAt is null)
+                    _logger.LogWarning(ex,
+                        "Failed to dispatch {Type} ({Id}), attempt {Attempt}. Next attempt at {NextAttemptAt:O}.",
+                        message.Type, message.Id, message.AttemptCount, message.NextAttemptAt);
+                else
+                    _logger.LogError(ex,
+                        "Dead-lettered {Type} ({Id}) after {Attempt} attempts. See scripts/mysql/outbox-replay.sql.",
+                        message.Type, message.Id, message.AttemptCount);
             }
-        }
 
-        if (published.Count > 0)
-            await outbox.MarkAsPublishedAsync(published);
+            await outbox.SaveAsync(cancellationToken);
+        }
     }
 }

@@ -2,15 +2,22 @@ namespace NeoParking.Shared.Kernel.Outbox;
 
 using System.Text.Json;
 using NeoParking.Shared.Kernel.Events;
+using NeoParking.Shared.Kernel.Exceptions;
 
 public class OutboxMessage : IOutboxMessage
 {
+    public const int LastErrorMaxLength = 2000;
+
     public Guid Id { get; private set; }
     public string Type { get; private set; }
     public string Payload { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime? PublishedAt { get; private set; }
     public bool IsPublished => PublishedAt.HasValue;
+    public int AttemptCount { get; private set; }
+    public string? LastError { get; private set; }
+    public DateTime? NextAttemptAt { get; private set; }
+    public DateTime? DeadLetteredAt { get; private set; }
 
     // construtor para EF Core
     private OutboxMessage()
@@ -62,5 +69,27 @@ public class OutboxMessage : IOutboxMessage
             return;
 
         PublishedAt = DateTime.UtcNow;
+        NextAttemptAt = null;
+    }
+
+    /// <summary>
+    /// Agenda a próxima tentativa ou, esgotado o limite, manda a mensagem para dead-letter.
+    /// <see cref="RetryLaterException"/> nunca esgota: a mensagem espera a condição externa mudar.
+    /// </summary>
+    public void RegisterFailure(Exception error, OutboxRetryPolicy policy, DateTime now)
+    {
+        AttemptCount++;
+
+        var description = $"{error.GetType().Name}: {error.Message}";
+        LastError = description.Length <= LastErrorMaxLength ? description : description[..LastErrorMaxLength];
+
+        if (error is not RetryLaterException && AttemptCount >= policy.MaxAttempts)
+        {
+            DeadLetteredAt = now;
+            NextAttemptAt = null;
+            return;
+        }
+
+        NextAttemptAt = now + policy.DelayFor(AttemptCount);
     }
 }

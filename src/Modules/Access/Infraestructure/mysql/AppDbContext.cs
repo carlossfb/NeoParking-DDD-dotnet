@@ -121,6 +121,7 @@ public sealed class AccessDbContext : DbContext
 
             builder.Property(o => o.CreatedAt).IsRequired();
             builder.Property(o => o.PublishedAt).IsRequired(false);
+            builder.Property(o => o.LastError).HasMaxLength(OutboxMessage.LastErrorMaxLength);
 
             // índice para o worker buscar mensagens pendentes eficientemente
             builder.HasIndex(o => o.PublishedAt)

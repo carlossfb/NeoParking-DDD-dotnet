@@ -22,11 +22,17 @@ public sealed class OutboxRepository<TContext> : IOutboxRepository where TContex
         => await _context.Set<OutboxMessage>().AddAsync(message);
 
     public async Task<IReadOnlyList<OutboxMessage>> GetPendingAsync(int batchSize = 50)
-        => await _context.Set<OutboxMessage>()
-            .Where(m => m.PublishedAt == null)
+    {
+        var now = DateTime.UtcNow;
+
+        return await _context.Set<OutboxMessage>()
+            .Where(m => m.PublishedAt == null
+                && m.DeadLetteredAt == null
+                && (m.NextAttemptAt == null || m.NextAttemptAt <= now))
             .OrderBy(m => m.CreatedAt)
             .Take(batchSize)
             .ToListAsync();
+    }
 
     public async Task MarkAsPublishedAsync(IEnumerable<OutboxMessage> messages)
     {
@@ -35,4 +41,8 @@ public sealed class OutboxRepository<TContext> : IOutboxRepository where TContex
 
         await _context.SaveChangesAsync();
     }
+
+    /// <summary>Persiste o resultado de uma entrega (publicada ou falha) registrado na mensagem.</summary>
+    public Task SaveAsync(CancellationToken cancellationToken = default)
+        => _context.SaveChangesAsync(cancellationToken);
 }
