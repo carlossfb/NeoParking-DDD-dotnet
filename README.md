@@ -434,7 +434,7 @@ Requests that lose a uniqueness race, or that break one of these rules, return `
 
 A message that fails is retried with exponential backoff (10 s up to 15 min). After 10 failed attempts it stops being retried, with `DeadLetteredAt` and `LastError` set. An event that cannot be processed yet retries indefinitely instead: a `TicketClosed` received before the Owner defines the first pricing policy waits for that policy, so the charge is not lost.
 
-Find dead-lettered messages in `outbox_messages`, `management_outbox_messages` and `billing_outbox_messages`:
+Find dead-lettered messages in `outbox_messages` and `billing_outbox_messages`:
 
 ```sql
 SELECT Id, Type, AttemptCount, LastError, DeadLetteredAt FROM neoparking_access.outbox_messages

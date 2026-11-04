@@ -7,10 +7,6 @@ UPDATE neoparking_access.outbox_messages
    SET DeadLetteredAt = NULL, NextAttemptAt = NULL, AttemptCount = 0
  WHERE DeadLetteredAt IS NOT NULL;
 
-UPDATE neoparking_management.management_outbox_messages
-   SET DeadLetteredAt = NULL, NextAttemptAt = NULL, AttemptCount = 0
- WHERE DeadLetteredAt IS NOT NULL;
-
 UPDATE neoparking_billing.billing_outbox_messages
    SET DeadLetteredAt = NULL, NextAttemptAt = NULL, AttemptCount = 0
  WHERE DeadLetteredAt IS NOT NULL;

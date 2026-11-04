@@ -30,7 +30,7 @@ public static class BillingModule
         services.AddScoped<TicketService>();
 
         // Registra como concreto E como interface própria do módulo — cada BC resolve seu próprio
-        // outbox (IBillingOutboxRepository vs IAccessOutboxRepository vs IManagementOutboxRepository),
+        // outbox (IBillingOutboxRepository vs IAccessOutboxRepository),
         // então não há mais colisão via IOutboxRepository compartilhada no DI.
         services.AddScoped<OutboxRepository<BillingDbContext>>();
         services.AddScoped<BillingOutboxRepository>();
