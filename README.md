@@ -45,14 +45,14 @@ The main revenue of NeoParking comes from two sources: walk-in customers in the 
 
 **Payment Models Volatility**: Subscription, monthly, and daily payment models are subject to frequent changes due to market conditions and business strategy adjustments. However, the **hourly payment model remains the core stable revenue stream** and serves as the foundation for all pricing calculations.
 
-**Pricing Strategy**: The hourly model acts as the base unit, with other models being derivatives or packages of hourly rates with discounts or special conditions.
+**Pricing Strategy**: The hourly model is the base unit for walk-in customers. Subscribers pay a fixed price through their subscription, with no discount on hourly rates.
 
 ### Technical Assumptions
 
 **Scalability**: System designed for medium-scale operations (1000+ daily transactions)
 **Availability**: 99.5% uptime requirement with graceful degradation
 **Data Consistency**: Eventual consistency acceptable between contexts
-**Integration**: REST APIs for external systems, domain events for internal communication
+**Integration**: REST APIs for external systems, integration events for communication between contexts
 
 ---
 
@@ -100,21 +100,29 @@ As an initial step, I decided to understand a little more about the business dom
 
 ## 5. Bounded Contexts
 
+All contexts are modules of the same monolith, each with its own MySQL schema.
+
 ### Access
 
-Owns the relationship with the parking's customers — registering clients, their vehicles, and identification methods. Publishes integration events (e.g. `ClientRegisteredIntegrationEvent`) through the outbox pattern so other contexts can react without coupling to Access's internals.
+Owns the relationship with the parking's customers and the parking session: clients, their vehicles, and tickets (entry and exit). Publishes integration events through the outbox so other contexts can react without coupling to Access's internals.
+
+Vehicle plates and client CPFs are globally unique. This assumes there is no dedicated vehicle transfer flow: a plate is removed from the old client and registered on the new one. **This assumption is still pending business confirmation.**
+
+### Billing
+
+Owns pricing and fees. The Owner defines versioned pricing policies; Billing keeps its own view of each ticket, built from Access's events, and freezes the fee when the ticket closes.
 
 ### Management
 
-The **gatekeeper** of the system. Owns authentication and authorization for every internal user (`Operator`, `Admin`, `Owner`) who needs to operate any other module. No business module is meant to be reachable without first passing through Management's login and role checks.
+The **gatekeeper** of the system. Owns authentication and authorization for every internal user (`Operator`, `Admin`, `Owner`) who needs to operate any other module. No business module is reachable without a token issued by Management's login.
 
 - **Owner** — single, unique account, created once via a bootstrap endpoint. Cannot be demoted, deactivated, or duplicated.
 - **Admin** — created by the Owner; can create and manage Operators.
 - **Operator** — day-to-day staff account; cannot create or manage other accounts.
 
-Issues JWT tokens on successful login, consumed by every protected endpoint across the API via ASP.NET Core's standard `RequireAuthorization()` pipeline.
+Issues JWT tokens on successful login, validated by the API on every protected endpoint. Modules do not call Management.
 
-> Future Bounded Contexts (pricing, spot availability, subscriptions) will sit behind Management's authorization gate the same way Access does today.
+> Spot availability (Occupancy), subscriptions, payments, and RFID/QR credentials are not implemented yet. See [the product evolution spec](docs/specs/product-evolution.md).
 
 ---
 
@@ -124,7 +132,7 @@ The project follows a **Modular Monolith** with **Domain-Driven Design** tactica
 
 📋 **[View Complete ADRs →](docs/architecture-decisions.md)**
 
-![Arch](https://github.com/carlossfb/NeoParking-DDD/blob/main/docs/graph/arch.drawio.png)
+![Arch](docs/graph/arch.drawio.png)
 
 ### Solution Structure
 
@@ -132,106 +140,112 @@ The project follows a **Modular Monolith** with **Domain-Driven Design** tactica
 NeoParking-DDD-dotnet/
 ├── src/
 │   ├── Shared/
-│   │   └── NeoParking.Shared.Kernel/        # Base types shared across modules
-│   │       ├── Primitives/
-│   │       │   └── Entity.cs                # Base aggregate/entity class
-│   │       ├── Events/
-│   │       │   ├── IDomainEvent.cs
-│   │       │   ├── IEventDispatcher.cs
-│   │       │   └── ClientRegisteredIntegrationEvent.cs  # cross-BC contract
-│   │       ├── Outbox/
-│   │       │   ├── OutboxMessage.cs
-│   │       │   └── IOutboxRepository.cs
-│   │       ├── Observability/
-│   │       │   └── ICorrelationIdProvider.cs
-│   │       └── Exceptions/
-│   │           ├── DomainException.cs
-│   │           └── NotFoundException.cs
+│   │   └── NeoParking.Shared.Kernel/        # Primitives, contracts and the shared outbox
+│   │       ├── Configuration/               # .env loader, MySQL password handling
+│   │       ├── Events/                      # IDomainEvent and the integration event contracts
+│   │       ├── Exceptions/                  # Mapped to HTTP status codes by the API
+│   │       ├── Observability/               # ICorrelationIdProvider
+│   │       ├── Outbox/                      # OutboxMessage, OutboxRepository, OutboxProcessor
+│   │       ├── Persistence/                 # Unique-index conflict handling
+│   │       └── Primitives/                  # Entity, PagedResult
 │   │
 │   ├── Modules/
-│   │   ├── Access/                          # Access Bounded Context
-│   │   │   ├── NeoParking.Access.csproj      # Single project per BC
-│   │   │   ├── Domain/                       # Client, Vehicle, VOs (Cpf, Plate, PhoneNumber)
-│   │   │   ├── Application/                  # ClientService, DTOs, interfaces
-│   │   │   ├── Infrastructure/                # EF Core (MySQL), outbox processor
+│   │   ├── Access/                          # Single project per Bounded Context
+│   │   │   ├── AccessModule.cs
+│   │   │   ├── Domain/                      # Client, Vehicle, Ticket; Cpf, Plate, PhoneNumber
+│   │   │   ├── Application/                 # ClientService, TicketService, ports, DTOs
+│   │   │   ├── Infrastructure/mysql/        # EF Core, repositories, outbox
 │   │   │   └── Migrations/
 │   │   │
-│   │   └── Management/                       # Management Bounded Context — the gatekeeper
-│   │       ├── NeoParking.Management.csproj
-│   │       ├── Domain/                        # OperatorUser, OperatorRole, PasswordHash
-│   │       ├── Application/                   # OperatorService, IOperatorRepository, IPasswordHasher
-│   │       ├── Infrastructure/                # EF Core (MySQL), BCrypt hasher, outbox processor
+│   │   ├── Billing/
+│   │   │   ├── BillingModule.cs
+│   │   │   ├── Domain/                      # PricingPolicy, Ticket, Fee, FeeCalculator; Money
+│   │   │   ├── Application/                 # PricingPolicyService, TicketService, event handlers
+│   │   │   ├── Infrastructure/mysql/        # EF Core, repositories, outbox
+│   │   │   └── Migrations/
+│   │   │
+│   │   └── Management/
+│   │       ├── ManagementModule.cs
+│   │       ├── Domain/                      # OperatorUser, OperatorRole; PasswordHash
+│   │       ├── Application/                 # OperatorService, ports, contracts
+│   │       ├── Infrastructure/              # BCrypt hasher; mysql/ with EF Core and repository
 │   │       └── Migrations/
 │   │
-│   └── NeoParking.Api/                       # Web API — entrypoint and DI composition
-│       ├── Endpoints/
-│       │   ├── Endpoints.cs                   # Access endpoints
-│       │   └── ManagementEndpoints.cs         # Login, Owner bootstrap, Operator CRUD
+│   └── NeoParking.Api/                      # Entry point, endpoints and DI composition
+│       ├── Endpoints/                       # Client, Ticket, Management and Billing endpoints
+│       ├── Extensions/                      # Modules, auth policies, error handling, observability
 │       ├── Middleware/
-│       │   └── RequestLoggingMiddleware.cs
 │       ├── JwtTokenGenerator.cs
-│       ├── MediatREventDispatcher.cs
 │       ├── HttpCorrelationIdProvider.cs
 │       ├── Program.cs
 │       └── appsettings.json
 │
-├── tests/                                    # Decoupled from src/ — never shipped
-│   ├── NeoParking.Access.Tests/
-│   │   ├── Unit/
-│   │   └── Integration/                      # Testcontainers (MySQL)
-│   ├── NeoParking.Management.Tests/
-│   │   └── Unit/
-│   └── NeoParking.Tests/
-│       └── Architecture/                      # NetArchTest — cross-cutting rules
-│
+├── tests/                                   # Decoupled from src/ — never shipped (see Tests)
+├── scripts/mysql/                           # Schemas, grants, duplicate detection, outbox replay
+├── docker-compose.yml
+├── docker-compose.expose-db.yml
+├── .env.example
 └── Neoparking.sln
 ```
 
 ### Dependency Rules
 
+Layers are folders inside each module's project; architecture tests enforce the direction.
+
 ```
-NeoParking.Shared.Kernel        ← no dependencies
-NeoParking.Access.Domain        → Shared.Kernel
-NeoParking.Access.Application   → Domain
-NeoParking.Access.Infrastructure→ Domain + Application
-NeoParking.Management.Domain    → Shared.Kernel
-NeoParking.Management.Application → Domain
-NeoParking.Management.Infrastructure → Domain + Application
-NeoParking.Api                  → Access + Management (DI composition only)
+NeoParking.Shared.Kernel          contains primitives, contracts and shared outbox; depends on EF Core and MediatR
+NeoParking.{Access|Billing|Management}
+  Domain                          → Shared.Kernel
+  Application                     → Domain
+  Infrastructure                  → Domain + Application
+NeoParking.Api                    → Access + Billing + Management (endpoints and DI composition)
 ```
 
-Bounded Contexts never reference each other's projects directly. Cross-BC communication happens exclusively through integration events published to the outbox and defined in `Shared.Kernel/Events` — e.g. Management reacts to `ClientRegisteredIntegrationEvent` without depending on `NeoParking.Access`.
+Bounded Contexts never reference each other's projects. They communicate only through integration events published to the outbox and defined in `Shared.Kernel/Events`: Billing reacts to `TicketClosedIntegrationEvent` without depending on `NeoParking.Access`.
 
 ### Module Registration Pattern
 
-Each module exposes its services through extension methods, keeping `Program.cs` clean:
+Each module exposes its services through an extension method, and `AddNeoParkingModules` is the only place that calls them:
 
 ```csharp
 // Program.cs
-builder.Services.AddAccessModule(builder.Configuration);
-builder.Services.AddManagementModule(builder.Configuration);
+builder.Services.AddNeoParkingModules(builder.Configuration);
+
+// Extensions/ModuleExtensions.cs
+services.AddAccessModule(configuration);
+services.AddManagementModule(configuration);
+services.AddBillingModule(configuration);
 ```
 
-```csharp
-// AccessModule.cs / ManagementModule.cs
-public static IServiceCollection AddManagementModule(
-    this IServiceCollection services,
-    IConfiguration configuration)
-{
-    // registers ManagementDbContext (MySQL)
-    // registers IOperatorRepository → MySqlOperatorRepository
-    // registers IPasswordHasher → BcryptPasswordHasher
-    // registers OperatorService
-    // registers the outbox repository + background processor
-    return services;
-}
-```
+`InitializeNeoParkingDatabases` applies each module's migrations when the API boots.
 
 ---
 
 ## 7. Context Map
 
-![ContextMap](https://www.plantuml.com/plantuml/png/RLBDIWCn4BxdAOPwi8MjegKN3r9RL-n1MhJrv2KamngQJPPCgXRnWNmENynPTxTDGTX3-7w-6RxP2KKPuhQqWZR6LJB84WAgA5rX4Ju5mDG7ZM7chGzmCXwFQqYgJH7yrkaMplESuSS62Gu3N5oAhoHIXk3V_-9QnsWqOe4uXMbjGisuY_WHIHoczswKGgAEUd7zcJNeOWRF-6gKnGnMHcqm3deW2HfrwbyejQsaKxiaOkvN6Hm8Ne-NB9g4FPo6J8srh4WYbd9NyXgKmHqYDTPMbHhdcaKcxiuVf9C5rfOaP4qOE669eJH4nhisg7DnD_it_7p3kg8OaAki2uNejIUnvuV3QsZBkeB5_TCHq-ts3vKKqP0yj5Dhh90l0_pX6riyyRERWabNdU5eYLjVIkCWhvq4_UPEC-i9TGOOrTb0237X0Vph_G80)
+Solid lines exist in the code. Dashed lines and nodes are planned and do not exist yet.
+
+```mermaid
+flowchart LR
+    Access["Access (core)"]
+    Billing["Billing (generic)"]
+    Management["Management (generic)<br/>issues the JWT validated by the API"]
+    Occupancy["Occupancy (future)"]:::future
+    Subscription["Subscription (future)"]:::future
+
+    Access -->|"TicketOpened, TicketClosed"| Billing
+    Access -.->|"TicketOpened, TicketClosed"| Occupancy
+    Occupancy -.->|"capacity and quota limits"| Access
+    Subscription -.->|"Subscription events"| Access
+    Subscription -.->|"Subscription events"| Billing
+
+    classDef future stroke-dasharray: 5 5
+```
+
+- **Access → Billing:** Billing conforms to the event contracts Access publishes.
+- **Management:** provides identity to every module through the JWT, not through module calls or events, so it has no arrows.
+- **No consumer yet:** `ClientRegistered` (Access) and `PricingPolicyChanged` (Billing) are published, but nothing reacts to them.
+- **Payments (future):** planned inside Billing, not as a separate context.
 
 ---
 
@@ -241,57 +255,81 @@ public static IServiceCollection AddManagementModule(
 
 | Event | Published by | Consumed by | Purpose |
 |---|---|---|---|
-| `ClientRegisteredIntegrationEvent` | Access | Management | Notify other contexts a new client exists |
+| `ClientRegisteredIntegrationEvent` | Access | No consumer yet | A new client exists |
+| `TicketOpenedIntegrationEvent` | Access | Billing | Create Billing's view of the ticket |
+| `TicketClosedIntegrationEvent` | Access | Billing | Calculate and freeze the fee |
+| `PricingPolicyChangedIntegrationEvent` | Billing | No consumer yet | A pricing policy was defined or revised |
 
-Each Bounded Context owns its own outbox table and background processor. Domain events are dispatched in-process via MediatR (`IEventDispatcher` → `MediatREventDispatcher`); integration events crossing BC boundaries are additionally persisted to the outbox for at-least-once delivery.
+Access and Billing each own an outbox table and a background processor. A service writes the event to the outbox in the same transaction as its data. Every 10 seconds, the processor publishes pending messages in-process with MediatR, giving at-least-once delivery. Handlers are idempotent. Retries and replay are described in [Outbox retries and replay](#outbox-retries-and-replay).
 
 ---
 
 ## 9. Authentication & Authorization
 
-Management issues JWTs on successful login (`POST /operators/login`). Tokens carry the operator's id, email, and role as claims, validated on every request via ASP.NET Core's JWT Bearer middleware.
+Management issues JWTs on successful login (`POST /operators/login`). Tokens carry the operator's id (`sub`), email, and role, and are validated on every request by ASP.NET Core's JWT Bearer middleware.
 
 ### Endpoint protection
 
-| Endpoint | Auth required? | Reason |
-|---|---|---|
-| `POST /operators/login` | No | Entry point — credentials exchanged for a token |
-| `POST /operators/owner` | No | One-time bootstrap of the single Owner account |
-| `POST /operators` (create operator) | Yes | Owner/Admin; Admin creates only Operator. The requester comes from the token |
-| `GET /operators/{id}` | Yes | Owner/Admin |
-| `POST /operators/{targetId}/promote` | Yes | Owner-only |
-| `POST /operators/{targetId}/demote` | Yes | Owner-only |
-| `POST /operators/{targetId}/deactivate` | Yes | Owner/Admin; Admin acts only on Operator |
-| `POST /operators/{targetId}/activate` | Yes | Owner/Admin; Admin acts only on Operator |
+| Endpoint | Public | Any operator | Owner/Admin | Owner |
+|---|---|---|---|---|
+| `POST /operators/login` | ✅ | | | |
+| `POST /operators/owner` | ✅ | | | |
+| `POST /operators` | | | ✅ Admin creates only Operator | |
+| `GET /operators/{id}` | | | ✅ | |
+| `POST /operators/{targetId}/promote`, `/demote` | | | | ✅ |
+| `POST /operators/{targetId}/activate`, `/deactivate` | | | ✅ Admin acts only on Operator | |
+| `POST /clients`, `GET /clients`, `GET /clients/{id}`, `PATCH /clients/{id}` | | ✅ | | |
+| `POST /clients/{id}/vehicles`, `DELETE /clients/{id}/vehicles/{vehicleId}` | | ✅ | | |
+| `DELETE /clients/{id}` | | | ✅ | |
+| `POST /access/tickets`, `POST /access/tickets/{id}/exit` | | ✅ | | |
+| `GET /access/tickets`, `GET /access/tickets/{id}` | | ✅ | | |
+| `GET /billing/pricing-policies/active` | | ✅ | | |
+| `GET /billing/pricing-policies/history`, `/effective-at` | | | ✅ | |
+| `POST /billing/pricing-policies` | | | | ✅ |
+| `GET /billing/tickets/fee-history` | | | ✅ | |
+| `GET /billing/tickets/{id}` | | ✅ | | |
 
-Role-based business rules (e.g. only the Owner can create an Admin) are enforced in `OperatorService`, not just at the HTTP layer — the same invariants hold even if called from another internal context.
+Without a valid token, a protected endpoint returns `401`; with an insufficient role, `403`.
+
+In Management, the requester always comes from the token, and `OperatorService` checks their role and active state in the database. An inactive requester gets `403`, as does a token whose role is out of date.
+
+Outside Management, role and state come from the token alone. **A deactivated or demoted operator keeps access there until the token expires, up to 60 minutes** ([ADR-006](docs/architecture-decisions.md#adr-006-token-revocation)).
+
+**Owner bootstrap risk:** `POST /operators/owner` is public and works once. Whoever calls it first becomes the Owner, so run it before exposing the API.
+
+### Error responses
+
+| Status | When |
+|---|---|
+| `401` | Invalid credentials or missing token. Login gives the same response for an unknown email, a wrong password, and an inactive account |
+| `403` | Insufficient role or inactive requester |
+| `404` | Resource not found |
+| `409` | Conflict with a uniqueness rule |
+| `422` | Domain rule violated |
 
 ### Configuration
 
-```json
-{
-  "Jwt": {
-    "Secret": "<at least 32 random bytes>",
-    "Issuer": "neoparking",
-    "Audience": "neoparking",
-    "ExpireMinutes": "60"
-  }
-}
-```
+| Key | Required | Where |
+|---|---|---|
+| `MYSQL_PASSWORD` | Yes | `.env`; applied to every connection string at boot |
+| `Jwt__Secret` | Yes | `.env`. Outside Development, placeholders and values under 32 bytes stop the boot |
+| `MYSQL_ROOT_PASSWORD` | MySQL container only | `.env`; never passed to the API |
+| `Access:ConnectionString` | Yes, without password | `docker-compose.yml` or `appsettings.Development.json` |
+| `Billing:ConnectionString` | Yes, without password | Same |
+| `Management:ConnectionString` | Falls back to the Access connection string | Same |
+| `Jwt:Issuer`, `Jwt:Audience`, `Jwt:ExpireMinutes` | Yes | `appsettings.json`; also set in `docker-compose.yml` |
 
 ---
 
 ## 10. Architecture Tests
 
-The project enforces architectural boundaries through **NetArchTest**, ensuring DDD and Hexagonal Architecture rules are respected automatically in CI/CD.
+The project enforces architectural boundaries through **NetArchTest**, run in CI on every pull request to `develop` and `main`. For each Bounded Context, the rules in `tests/NeoParking.Tests/Architecture/DomainArchitecture.cs` check that:
 
-### Layer Separation Rules
-
-- **Domain Independence** — Domain layer has no external dependencies (EF Core, etc.)
-- **Application Isolation** — Application layer does not depend on Infrastructure
-- **Dependency Direction** — Domain never depends on Application or Infrastructure
-- **No Cross-BC Project References** — Access and Management never reference each other directly; only `Shared.Kernel`
-- **Repository Contracts** — All concrete repositories implement their respective interface (`IClientRepository`, `IOperatorRepository`)
+- **Domain Independence** — Domain only uses allowed libraries and has no dependency on Application, Infrastructure, MediatR or ASP.NET
+- **Application Isolation** — Application has no dependency on Infrastructure, ASP.NET, or persistence and crypto libraries, and uses MediatR only in event handlers
+- **No Cross-BC References** — A Bounded Context never depends on another one; only on `Shared.Kernel`
+- **Repository Ports** — Ports live in Application, and each concrete repository implements a port of its own context
+- **API Boundary** — The API does not depend on Management's Domain
 
 ### Running Architecture Tests
 
@@ -306,7 +344,7 @@ dotnet test tests/NeoParking.Tests --filter "Category=Architecture"
 The project implements security-first development practices with integrated vulnerability scanning and dependency management.
 
 ### Software Composition Analysis (SCA)
-a
+
 We use **Snyk** for continuous security monitoring of dependencies and transitive packages.
 
 ```bash
@@ -317,7 +355,6 @@ npm install -g snyk
 snyk auth
 
 # Scan for vulnerabilities
-# Scan for vulnerabilities
 dotnet restore
 snyk test --file=Neoparking.sln
 ```
@@ -327,9 +364,9 @@ snyk test --file=Neoparking.sln
 - **Dependency Pinning** — Explicit package versions to prevent supply chain attacks
 - **Regular Updates** — Monthly security updates for critical packages
 - **Vulnerability Remediation** — Immediate patching of high/critical CVEs
-- **No Secrets in Code** — Credentials via environment variables or `appsettings.Development.json` (gitignored)
+- **No Secrets in Code** — Secrets come only from the environment or the gitignored `.env`
 - **Password Storage** — Operator passwords are hashed with BCrypt; plaintext is never persisted (`PasswordHash` value object)
-- **Token-Based Auth** — All sensitive Management endpoints require a valid JWT, validated against issuer, audience, signature, and expiry
+- **Token-Based Auth** — Every endpoint except login and Owner bootstrap requires a valid JWT, validated against issuer, audience, signature, and expiry
 
 ---
 
@@ -349,7 +386,11 @@ openssl rand -hex 32          # run once per CHANGE_ME and paste each value in .
 docker compose up -d --build
 ```
 
-`docker-compose.yml` has no secret values: it copies `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD` and `Jwt__Secret` from `.env` or the shell. If one is missing, startup fails: MySQL logs the missing `MYSQL_ROOT_PASSWORD` or `MYSQL_PASSWORD`, and the API reports the missing `Jwt__Secret`. If MySQL initialized a new volume without `MYSQL_PASSWORD`, the application user was not created: fix `.env` and run `docker compose down -v` if the volume has no data to keep. Outside Development, the API also rejects a `Jwt__Secret` that is a placeholder or shorter than 32 bytes. Port 3306 is not published; add `-f docker-compose.yml -f docker-compose.expose-db.yml` to reach MySQL from the host.
+This starts MySQL with one schema per Bounded Context (`neoparking_access`, `neoparking_management`, `neoparking_billing`, created via `scripts/mysql/init.sql`) and the API on port **8080**, applying EF Core migrations on boot.
+
+> **Windows checkout:** with `core.autocrlf=true`, `entrypoint.sh` gets CRLF line endings and the API container restarts with `exec /entrypoint.sh: no such file or directory`. Until this is fixed in the repository, convert the file before building, from Git Bash or WSL: `sed -i 's/\r$//' entrypoint.sh`.
+
+`docker-compose.yml` has no secret values: it copies `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD` and `Jwt__Secret` from `.env` or the shell. If one is missing, startup fails: MySQL logs the missing `MYSQL_ROOT_PASSWORD` or `MYSQL_PASSWORD`, and the API reports the missing `Jwt__Secret`. If MySQL initialized a new volume without `MYSQL_PASSWORD`, the application user was not created: fix `.env` and run `docker compose down -v` if the volume has no data to keep. Port 3306 is not published; add `-f docker-compose.yml -f docker-compose.expose-db.yml` to reach MySQL from the host.
 
 The API connects as `neoparking_app`, which only has access to the project schemas. MySQL creates this user only on an empty volume. On an existing volume, run this once as root, or recreate the volume if its data can be discarded:
 
@@ -359,8 +400,6 @@ GRANT ALL PRIVILEGES ON neoparking_access.*     TO 'neoparking_app'@'%';
 GRANT ALL PRIVILEGES ON neoparking_management.* TO 'neoparking_app'@'%';
 GRANT ALL PRIVILEGES ON neoparking_billing.*    TO 'neoparking_app'@'%';
 ```
-
-This starts MySQL with separate schemas for each Bounded Context (`neoparking_access`, `neoparking_management`, created via `scripts/mysql/init.sql`) and the API, applying EF Core migrations automatically on boot.
 
 ### Running locally without Docker Compose
 
@@ -390,30 +429,34 @@ In Development, the API and `dotnet ef` read secrets from `.env`, without overri
 }
 ```
 
-**3. Run migrations**
-
-```bash
-dotnet ef database update \
-  --project src/Modules/Access/NeoParking.Access.csproj \
-  --startup-project src/NeoParking.Api/NeoParking.Api.csproj
-
-dotnet ef database update \
-  --project src/Modules/Management/NeoParking.Management.csproj \
-  --startup-project src/NeoParking.Api/NeoParking.Api.csproj
-```
-
-**4. Run the API**
+**3. Run the API**
 
 ```bash
 dotnet run --project src/NeoParking.Api/NeoParking.Api.csproj
 ```
 
-**5. Bootstrap the Owner account**
+The API listens on port **5114**, applies migrations on boot, and serves Swagger at `/swagger` (Development only).
+
+### First run: bootstrap and a protected call
+
+Use port 8080 with Docker Compose, or 5114 with `dotnet run`.
 
 ```bash
-curl -X POST http://localhost:8080/operators/owner \
+BASE_URL=http://localhost:8080
+
+# Create the single Owner. Do this before exposing the API
+curl -X POST $BASE_URL/operators/owner \
   -H "Content-Type: application/json" \
-  -d '{"name":"Carlos","email":"carlos@neoparking.com","password":"ChangeMe123!"}'
+  -d '{"name":"Owner","email":"owner@example.com","password":"<choose-a-password>"}'
+
+# Log in
+TOKEN=$(curl -s -X POST $BASE_URL/operators/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"owner@example.com","password":"<choose-a-password>"}' \
+  | sed -E 's/.*"token":"([^"]+)".*/\1/')
+
+# Call a protected endpoint
+curl -H "Authorization: Bearer $TOKEN" $BASE_URL/clients
 ```
 
 ### Upgrading an existing database
@@ -484,12 +527,12 @@ dotnet run --project src/NeoParking.Api/NeoParking.Api.csproj
 
 # Create migration for a specific module
 dotnet ef migrations add {Name} \
-  --project src/Modules/{Access|Management}/NeoParking.{Access|Management}.csproj \
+  --project src/Modules/{Access|Billing|Management}/NeoParking.{Access|Billing|Management}.csproj \
   --startup-project src/NeoParking.Api/NeoParking.Api.csproj
 
-# Apply migration
+# Apply migration (the API also does this on boot)
 dotnet ef database update \
-  --project src/Modules/{Access|Management}/NeoParking.{Access|Management}.csproj \
+  --project src/Modules/{Access|Billing|Management}/NeoParking.{Access|Billing|Management}.csproj \
   --startup-project src/NeoParking.Api/NeoParking.Api.csproj
 ```
 
@@ -497,52 +540,62 @@ dotnet ef database update \
 
 ## 13. Tests
 
-### Test Pyramid
+### Test Layers
 
-```
-        E2E (Few)
-       /          \
-  Integration (Some)
- /                  \
-Unit Tests (Many)
-```
+Unit tests are the largest layer. E2E is next, ahead of integration, because it covers every cell of the authorization matrix.
 
-| Layer | Scope | Tool |
-|---|---|---|
-| Unit | Domain entities, VOs, Application service | xUnit + Moq + FluentAssertions |
-| Integration | Repository + Outbox with real MySQL | xUnit + Testcontainers |
-| Architecture | Layer and cross-BC dependency rules | NetArchTest |
-| E2E | HTTP endpoints against running API | REST Client (`.http` file) |
+| Layer | Scope | Where | Tool |
+|---|---|---|---|
+| Unit | Domain entities, value objects, Application services, JWT and boot configuration | `tests/NeoParking.{Access,Billing,Management}.Tests/Unit`, and the tests without a container in `tests/NeoParking.E2E.Tests` | xUnit + Moq + FluentAssertions |
+| Integration | Repositories, outbox, migrations, uniqueness, Access-to-Billing flow, on real MySQL | `tests/NeoParking.Access.Tests/Integration`, `tests/NeoParking.Integration.Tests` | xUnit + Testcontainers |
+| E2E | Authorization matrix, security rules, conflicts and the smoke flow, over HTTP on the real API with real MySQL | `tests/NeoParking.E2E.Tests` | `WebApplicationFactory` + Testcontainers |
+| Architecture | Layer and cross-BC dependency rules | `tests/NeoParking.Tests` | NetArchTest |
+| Manual | Requests to try by hand against a running API; not automated | `.http` files in `src/` | REST Client |
 
-Tests are fully decoupled from production code under `tests/`, one project per Bounded Context plus a shared `NeoParking.Tests` project for architecture rules. No test assembly is referenced by, or shipped with, the API.
+Tests are fully decoupled from production code under `tests/`. No test assembly is referenced by, or shipped with, the API.
+
+`src/NeoParking.Api/NeoParking.Api.http` sends no token, so its protected requests return `401`. The `.http` files in `src/Modules/*` log in first.
 
 ### Running Tests
+
+CI runs these steps on every pull request to `develop` and `main`:
+
+```bash
+dotnet build Neoparking.sln --configuration Release
+
+# Unit
+dotnet test Neoparking.sln --configuration Release --no-build --filter "Category!=Integration&Category!=Architecture"
+
+# Architecture
+dotnet test Neoparking.sln --configuration Release --no-build --filter "Category=Architecture"
+
+# Integration and E2E: both carry Category=Integration and need Docker
+dotnet test Neoparking.sln --configuration Release --no-build --filter "Category=Integration"
+```
+
+Locally:
 
 ```bash
 # All tests
 dotnet test
 
-# Per Bounded Context
-dotnet test tests/NeoParking.Access.Tests
-dotnet test tests/NeoParking.Management.Tests
-
-# Architecture only
-dotnet test tests/NeoParking.Tests --filter "Category=Architecture"
-
-# Skip integration tests (no Docker/Testcontainers required)
+# Everything that needs no Docker
 dotnet test --filter "Category!=Integration"
+
+# One project
+dotnet test tests/NeoParking.Billing.Tests
 
 # With detailed output
 dotnet test --logger "console;verbosity=detailed"
 ```
 
-> Integration tests use Testcontainers and require a running Docker daemon reachable from wherever `dotnet test` executes (e.g. inside WSL if Docker only runs there).
+> Integration and E2E tests use Testcontainers and require a running Docker daemon reachable from wherever `dotnet test` executes (e.g. inside WSL if Docker only runs there).
 
 ---
 
 ## 14. How to Contribute
 
-This project follows **Git Flow**. Below is the standard path for shipping a feature, plus how releases and hotfixes are handled.
+This project follows **Git Flow**. Below is the standard path for shipping a feature, plus how releases and hotfixes are handled. GitHub enforces only what [What GitHub enforces](#what-github-enforces) lists; the rest is convention.
 
 ### Branches
 
@@ -566,27 +619,17 @@ Branch name pattern: `feature/{kebab-case-name}` — short, descriptive, no tick
 
 ### Working on the feature
 
-Commit as often as needed during development — these intermediate commits won't survive in `develop`'s history (see squash below), so don't over-engineer commit messages here. Push regularly so the branch is backed up and visible to reviewers:
+Commit as often as needed during development, using the convention below. Push regularly so the branch is backed up and visible to reviewers:
 
 ```bash
 git push -u origin feature/operator-password-reset
 ```
 
-### Finishing the feature: squash merge into `develop`
+### Finishing the feature
 
-**Why squash for features:** the value of "how I got here" lives in the Pull Request itself (GitHub/GitLab preserves every commit, comment, and review there permanently). What matters for `develop`'s own history is being **readable and revertable** — one commit per feature means `git log --oneline` stays clean, and reverting a whole feature is a single `git revert <hash>` instead of untangling a chain of WIP commits.
+Open a Pull Request from `feature/{name}` into `develop`. CI runs on it automatically.
 
-```bash
-git checkout develop
-git pull origin develop
-git merge --squash feature/operator-password-reset
-git commit -m "feat(management): add operator password reset flow"
-git push origin develop
-git branch -d feature/operator-password-reset
-git push origin --delete feature/operator-password-reset
-```
-
-Or, if working through a Pull Request (recommended for any non-trivial change): open the PR from `feature/{name}` into `develop`, and use the platform's **"Squash and merge"** button — it does exactly the above and keeps the PR discussion linked to the resulting commit.
+> **Pending decision: merge strategy for features.** Squash merge or merge commit has not been chosen yet. Earlier versions of this guide asked for squash, while the pull requests merged into `develop` so far used merge commits.
 
 ### Commit message convention
 
@@ -602,7 +645,7 @@ docs(readme): document gitflow workflow
 
 ### Releases: merge commit into `main`
 
-Unlike features, releases represent a real, immutable point in history — every commit on a release branch should be traceable, since the tag on `main` must match exactly what was shipped. **No squashing here.**
+Releases represent a real, immutable point in history — every commit on a release branch should be traceable, since the tag on `main` must match exactly what was shipped. **No squashing here.**
 
 ```bash
 git checkout develop
@@ -654,16 +697,24 @@ git push origin --delete hotfix/1.2.1
 
 | Flow | Strategy | Reason |
 |---|---|---|
-| `feature` → `develop` | Squash merge | Day-to-day commits are noisy; PR keeps the detailed history |
+| `feature` → `develop` | Pending decision | See [Finishing the feature](#finishing-the-feature) |
 | `release` → `main` / `develop` | Merge commit (`--no-ff`) | Release history must be traceable commit-by-commit against the tag |
 | `hotfix` → `main` / `develop` | Merge commit (`--no-ff`) | Same as release — urgent fixes need full traceability |
 
-Before opening a PR or merging into `develop`, make sure:
+### What GitHub enforces
+
+| Branch | Rule |
+|---|---|
+| `develop` | None. It has no branch protection |
+| `main` | A pull request with one approving review; admins can bypass it. CI is not a required check |
+
+CI runs on pull requests to both branches, but a red result does not block a merge. All three merge methods are enabled.
+
+Before opening a PR, make sure:
 
 ```bash
 dotnet build
 dotnet test --filter "Category!=Integration"
-dotnet test tests/NeoParking.Tests --filter "Category=Architecture"
 ```
 
 ---
