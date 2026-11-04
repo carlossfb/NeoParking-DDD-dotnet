@@ -57,6 +57,9 @@ public sealed class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
         builder.ConfigureLogging(logging => logging.Services.AddSingleton<ILoggerProvider>(Logs));
     }
 
+    /// <summary>Para o MySQL com a API no ar, para testar a queda do banco.</summary>
+    public Task StopDatabaseAsync() => _mysql.StopAsync();
+
     public new async Task DisposeAsync()
     {
         await base.DisposeAsync();

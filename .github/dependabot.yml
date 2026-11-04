@@ -1,0 +1,14 @@
+# README, Security Practices: atualizações mensais. O GitHub só lê este arquivo na branch padrão.
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: "/"
+    target-branch: develop
+    schedule:
+      interval: monthly
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    target-branch: develop
+    schedule:
+      interval: monthly

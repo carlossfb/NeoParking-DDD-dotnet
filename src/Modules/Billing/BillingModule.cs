@@ -23,6 +23,7 @@ public static class BillingModule
         services.AddDbContext<BillingDbContext>(options =>
             options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)).WithoutDatabaseErrorValuesInLogs());
 
+        services.AddSingleton<IDatabaseProbe>(new MySqlDatabaseProbe(connectionString));
         services.AddScoped<IPricingPolicyRepository, MySqlPricingPolicyRepository>();
         services.AddScoped<ITicketRepository, MySqlTicketRepository>();
         services.AddScoped<IUnitOfWork, BillingUnitOfWork>();

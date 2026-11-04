@@ -280,6 +280,7 @@ Management issues JWTs on successful login (`POST /operators/login`). Tokens car
 |---|---|---|---|---|
 | `POST /operators/login` | ✅ | | | |
 | `POST /operators/owner` | ✅ | | | |
+| `GET /health` (status only: `200` or `503`) | ✅ | | | |
 | `POST /operators` | | | ✅ Admin creates only Operator | |
 | `GET /operators/{id}` | | | ✅ | |
 | `POST /operators/{targetId}/promote`, `/demote` | | | | ✅ |
@@ -326,7 +327,7 @@ Outside Management, role and state come from the token alone. **A deactivated or
 | `MYSQL_ROOT_PASSWORD` | MySQL container only | `.env`; never passed to the API |
 | `Access:ConnectionString` | Yes, without password | `docker-compose.yml` or `appsettings.Development.json` |
 | `Billing:ConnectionString` | Yes, without password | Same |
-| `Management:ConnectionString` | Falls back to the Access connection string | Same |
+| `Management:ConnectionString` | Yes, without password | Same |
 | `Jwt:Issuer`, `Jwt:Audience`, `Jwt:ExpireMinutes` | Yes | `appsettings.json`; also set in `docker-compose.yml` |
 
 ---
@@ -372,13 +373,13 @@ snyk test --file=Neoparking.sln
 ### Security Practices
 
 - **Dependency Pinning** — Explicit package versions to prevent supply chain attacks
-- **Regular Updates** — Monthly security updates for critical packages
-- **Vulnerability Remediation** — Immediate patching of high/critical CVEs
+- **Regular Updates** — Dependabot opens monthly update PRs to `develop` for NuGet packages and GitHub Actions
+- **Vulnerability Remediation** — CI fails on high or critical advisories in production dependencies; in test projects, it only warns
 - **No Secrets in Code** — Secrets come only from the environment or the gitignored `.env`
 - **Password Storage** — Operator passwords are hashed with BCrypt; plaintext is never persisted (`PasswordHash` value object)
 - **Client Documents** — CPF and CNPJ are encrypted at rest and masked in responses; see [Client documents](#client-documents)
 - **Logs and Traces** — Record the route pattern, never the real path; plates and documents stay out of logs, traces and error messages
-- **Token-Based Auth** — Every endpoint except login and Owner bootstrap requires a valid JWT, validated against issuer, audience, signature, and expiry
+- **Token-Based Auth** — Every endpoint except login, Owner bootstrap and `/health` requires a valid JWT, validated against issuer, audience, signature, and expiry
 
 ---
 

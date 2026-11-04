@@ -23,4 +23,20 @@ public class ManagementModuleTests
 
         services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(IHostedService));
     }
+
+    [Fact]
+    public void AddManagementModule_WithoutItsConnectionString_ShouldFailInsteadOfUsingAccess()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Access:ConnectionString"] = "Server=localhost;Database=neoparking_access;Uid=none;",
+                ["MYSQL_PASSWORD"] = "unit-test-only",
+            })
+            .Build();
+
+        var act = () => new ServiceCollection().AddManagementModule(configuration);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*Management:ConnectionString*");
+    }
 }

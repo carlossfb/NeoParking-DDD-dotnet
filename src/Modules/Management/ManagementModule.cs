@@ -14,7 +14,6 @@ public static class ManagementModule
         IConfiguration configuration)
     {
         var connectionString = configuration["Management:ConnectionString"]
-            ?? configuration["Access:ConnectionString"]  // fallback: mesmo servidor do Access
             ?? throw new InvalidOperationException("Management:ConnectionString not found");
 
         connectionString = MySqlConnectionStrings.WithPassword(connectionString, configuration);
@@ -22,6 +21,7 @@ public static class ManagementModule
         services.AddDbContext<ManagementDbContext>(options =>
             options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)).WithoutDatabaseErrorValuesInLogs());
 
+        services.AddSingleton<IDatabaseProbe>(new MySqlDatabaseProbe(connectionString));
         services.AddScoped<IOperatorRepository, MySqlOperatorRepository>();
         services.AddScoped<IUnitOfWork, ManagementUnitOfWork>();
         services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();

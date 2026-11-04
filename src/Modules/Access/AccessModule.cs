@@ -23,6 +23,7 @@ public static class AccessModule
 
         services.AddDbContext<AccessDbContext>(options =>
             options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)).WithoutDatabaseErrorValuesInLogs());
+        services.AddSingleton<IDatabaseProbe>(new MySqlDatabaseProbe(connectionString));
         // Falha aqui, no boot, se uma chave faltar: nenhum documento é gravado sem proteção.
         services.AddSingleton<IDocumentProtector>(
             new AesGcmDocumentProtector(DocumentProtectionKeys.FromConfiguration(configuration)));
