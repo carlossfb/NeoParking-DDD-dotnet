@@ -276,6 +276,7 @@ Management issues JWTs on successful login (`POST /operators/login`). Tokens car
 |---|---|---|---|---|
 | `POST /operators/login` | ✅ | | | |
 | `POST /operators/owner` | ✅ | | | |
+| `GET /health` (status only: `200` or `503`) | ✅ | | | |
 | `POST /operators` | | | ✅ Admin creates only Operator | |
 | `GET /operators/{id}` | | | ✅ | |
 | `POST /operators/{targetId}/promote`, `/demote` | | | | ✅ |
@@ -370,7 +371,7 @@ snyk test --file=Neoparking.sln
 - **Vulnerability Remediation** — CI fails on high or critical advisories in production dependencies; in test projects, it only warns
 - **No Secrets in Code** — Secrets come only from the environment or the gitignored `.env`
 - **Password Storage** — Operator passwords are hashed with BCrypt; plaintext is never persisted (`PasswordHash` value object)
-- **Token-Based Auth** — Every endpoint except login and Owner bootstrap requires a valid JWT, validated against issuer, audience, signature, and expiry
+- **Token-Based Auth** — Every endpoint except login, Owner bootstrap and `/health` requires a valid JWT, validated against issuer, audience, signature, and expiry
 
 ---
 
