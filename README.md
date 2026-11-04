@@ -301,15 +301,13 @@ Outside Management, role and state come from the token alone. **A deactivated or
 
 ## 10. Architecture Tests
 
-The project enforces architectural boundaries through **NetArchTest**, ensuring DDD and Hexagonal Architecture rules are respected automatically in CI/CD.
+The project enforces architectural boundaries through **NetArchTest**, run in CI on every pull request to `develop` and `main`. For each Bounded Context, the rules in `tests/NeoParking.Tests/Architecture/DomainArchitecture.cs` check that:
 
-### Layer Separation Rules
-
-- **Domain Independence** — Domain layer has no external dependencies (EF Core, etc.)
-- **Application Isolation** — Application layer does not depend on Infrastructure
-- **Dependency Direction** — Domain never depends on Application or Infrastructure
-- **No Cross-BC Project References** — Access and Management never reference each other directly; only `Shared.Kernel`
-- **Repository Contracts** — All concrete repositories implement their respective interface (`IClientRepository`, `IOperatorRepository`)
+- **Domain Independence** — Domain only uses allowed libraries and has no dependency on Application, Infrastructure, MediatR or ASP.NET
+- **Application Isolation** — Application has no dependency on Infrastructure, ASP.NET, or persistence and crypto libraries, and uses MediatR only in event handlers
+- **No Cross-BC References** — A Bounded Context never depends on another one; only on `Shared.Kernel`
+- **Repository Ports** — Ports live in Application, and each concrete repository implements a port of its own context
+- **API Boundary** — The API does not depend on Management's Domain
 
 ### Running Architecture Tests
 
@@ -520,46 +518,56 @@ dotnet ef database update \
 
 ## 13. Tests
 
-### Test Pyramid
+### Test Layers
 
-```
-        E2E (Few)
-       /          \
-  Integration (Some)
- /                  \
-Unit Tests (Many)
-```
+Unit tests are the largest layer. E2E is next, ahead of integration, because it covers every cell of the authorization matrix.
 
-| Layer | Scope | Tool |
-|---|---|---|
-| Unit | Domain entities, VOs, Application service | xUnit + Moq + FluentAssertions |
-| Integration | Repository + Outbox with real MySQL | xUnit + Testcontainers |
-| Architecture | Layer and cross-BC dependency rules | NetArchTest |
-| E2E | HTTP endpoints against running API | REST Client (`.http` file) |
+| Layer | Scope | Where | Tool |
+|---|---|---|---|
+| Unit | Domain entities, value objects, Application services, JWT and boot configuration | `tests/NeoParking.{Access,Billing,Management}.Tests/Unit`, and the tests without a container in `tests/NeoParking.E2E.Tests` | xUnit + Moq + FluentAssertions |
+| Integration | Repositories, outbox, migrations, uniqueness, Access-to-Billing flow, on real MySQL | `tests/NeoParking.Access.Tests/Integration`, `tests/NeoParking.Integration.Tests` | xUnit + Testcontainers |
+| E2E | Authorization matrix, security rules, conflicts and the smoke flow, over HTTP on the real API with real MySQL | `tests/NeoParking.E2E.Tests` | `WebApplicationFactory` + Testcontainers |
+| Architecture | Layer and cross-BC dependency rules | `tests/NeoParking.Tests` | NetArchTest |
+| Manual | Requests to try by hand against a running API; not automated | `.http` files in `src/` | REST Client |
 
-Tests are fully decoupled from production code under `tests/`, one project per Bounded Context plus a shared `NeoParking.Tests` project for architecture rules. No test assembly is referenced by, or shipped with, the API.
+Tests are fully decoupled from production code under `tests/`. No test assembly is referenced by, or shipped with, the API.
+
+`src/NeoParking.Api/NeoParking.Api.http` sends no token, so its protected requests return `401`. The `.http` files in `src/Modules/*` log in first.
 
 ### Running Tests
+
+CI runs these steps on every pull request to `develop` and `main`:
+
+```bash
+dotnet build Neoparking.sln --configuration Release
+
+# Unit
+dotnet test Neoparking.sln --configuration Release --no-build --filter "Category!=Integration&Category!=Architecture"
+
+# Architecture
+dotnet test Neoparking.sln --configuration Release --no-build --filter "Category=Architecture"
+
+# Integration and E2E: both carry Category=Integration and need Docker
+dotnet test Neoparking.sln --configuration Release --no-build --filter "Category=Integration"
+```
+
+Locally:
 
 ```bash
 # All tests
 dotnet test
 
-# Per Bounded Context
-dotnet test tests/NeoParking.Access.Tests
-dotnet test tests/NeoParking.Management.Tests
-
-# Architecture only
-dotnet test tests/NeoParking.Tests --filter "Category=Architecture"
-
-# Skip integration tests (no Docker/Testcontainers required)
+# Everything that needs no Docker
 dotnet test --filter "Category!=Integration"
+
+# One project
+dotnet test tests/NeoParking.Billing.Tests
 
 # With detailed output
 dotnet test --logger "console;verbosity=detailed"
 ```
 
-> Integration tests use Testcontainers and require a running Docker daemon reachable from wherever `dotnet test` executes (e.g. inside WSL if Docker only runs there).
+> Integration and E2E tests use Testcontainers and require a running Docker daemon reachable from wherever `dotnet test` executes (e.g. inside WSL if Docker only runs there).
 
 ---
 
