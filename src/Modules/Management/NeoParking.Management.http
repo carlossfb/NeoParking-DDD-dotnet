@@ -1,6 +1,5 @@
 @baseUrl = http://localhost:8080
 @authToken = {{login.response.body.token}}
-@ownerId = {{createOwner.response.body.id}}
 @operatorId = {{createOperator.response.body.id}}
 
 # ── Bootstrap ─────────────────────────────────────────────────
@@ -32,9 +31,9 @@ Content-Type: application/json
 
 # ── Operators (requer token do Owner/Admin) ─────────────────────
 
-### Criar um novo Operator
+### Criar um novo Operator (o solicitante vem do token)
 # @name createOperator
-POST {{baseUrl}}/operators/{{ownerId}}
+POST {{baseUrl}}/operators
 Authorization: Bearer {{authToken}}
 Content-Type: application/json
 
@@ -54,7 +53,7 @@ Authorization: Bearer {{authToken}}
 ###
 
 ### Promover Operator para Admin
-POST {{baseUrl}}/operators/{{ownerId}}/promote/{{operatorId}}
+POST {{baseUrl}}/operators/{{operatorId}}/promote
 Authorization: Bearer {{authToken}}
 
 ###
@@ -66,13 +65,13 @@ Authorization: Bearer {{authToken}}
 ###
 
 ### Rebaixar Admin para Operator novamente
-POST {{baseUrl}}/operators/{{ownerId}}/demote/{{operatorId}}
+POST {{baseUrl}}/operators/{{operatorId}}/demote
 Authorization: Bearer {{authToken}}
 
 ###
 
 ### Desativar operator
-POST {{baseUrl}}/operators/{{ownerId}}/deactivate/{{operatorId}}
+POST {{baseUrl}}/operators/{{operatorId}}/deactivate
 Authorization: Bearer {{authToken}}
 
 ###
@@ -84,14 +83,14 @@ Authorization: Bearer {{authToken}}
 ###
 
 ### Reativar operator
-POST {{baseUrl}}/operators/{{ownerId}}/activate/{{operatorId}}
+POST {{baseUrl}}/operators/{{operatorId}}/activate
 Authorization: Bearer {{authToken}}
 
 ###
 
 # ── Validações ────────────────────────────────────────────────
 
-### Login com senha errada (deve retornar erro)
+### Login com senha errada (deve retornar 401)
 POST {{baseUrl}}/operators/login
 Content-Type: application/json
 
@@ -103,7 +102,7 @@ Content-Type: application/json
 ###
 
 ### Criar operator sem token (deve retornar 401)
-POST {{baseUrl}}/operators/{{ownerId}}
+POST {{baseUrl}}/operators
 Content-Type: application/json
 
 {

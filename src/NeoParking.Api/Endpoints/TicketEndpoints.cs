@@ -2,6 +2,7 @@ namespace NeoParking.Api.Endpoints;
 
 using NeoParking.Access.Application;
 using NeoParking.Access.Domain;
+using NeoParking.Api.Extensions;
 
 public static class TicketEndpoints
 {
@@ -16,7 +17,7 @@ public static class TicketEndpoints
             return Results.Created($"/access/tickets/{result.Id}", result);
         })
         .WithName("RegisterTicketEntry")
-        .RequireAuthorization();
+        .RequireAuthorization(AuthorizationPolicies.AnyOperator);
 
         tickets.MapPost("/{id:guid}/exit", async (
             Guid id, RegisterExitRequest request, ITicketService service) =>
@@ -25,7 +26,7 @@ public static class TicketEndpoints
             return Results.Ok(result);
         })
         .WithName("RegisterTicketExit")
-        .RequireAuthorization();
+        .RequireAuthorization(AuthorizationPolicies.AnyOperator);
 
         tickets.MapGet("/{id:guid}", async (Guid id, ITicketService service) =>
         {
@@ -33,7 +34,7 @@ public static class TicketEndpoints
             return Results.Ok(result);
         })
         .WithName("GetTicket")
-        .RequireAuthorization();
+        .RequireAuthorization(AuthorizationPolicies.AnyOperator);
 
         // Listagem geral (abertos e fechados), filtrável por status/placa/período de entrada.
         tickets.MapGet("/", async (
@@ -45,6 +46,6 @@ public static class TicketEndpoints
             return Results.Ok(result);
         })
         .WithName("ListTickets")
-        .RequireAuthorization();
+        .RequireAuthorization(AuthorizationPolicies.AnyOperator);
     }
 }

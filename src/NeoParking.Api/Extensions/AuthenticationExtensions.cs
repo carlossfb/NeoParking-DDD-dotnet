@@ -10,8 +10,8 @@ public static class AuthenticationExtensions
     /// <summary>
     /// Registra o gerador de tokens JWT e configura a autenticação Bearer usada
     /// por todos os endpoints protegidos da API (validação de issuer, audience,
-    /// tempo de vida e assinatura). A autorização por role continua sendo feita
-    /// dentro de cada Application Service (ex: OperatorService), não aqui.
+    /// tempo de vida e assinatura) e as policies da matriz de autorização.
+    /// Em Management, o OperatorService ainda confere papel e estado no banco.
     /// </summary>
     public static IServiceCollection AddNeoParkingAuthentication(
         this IServiceCollection services,
@@ -37,7 +37,7 @@ public static class AuthenticationExtensions
                 };
             });
 
-        services.AddAuthorization();
+        services.AddAuthorization(AuthorizationPolicies.Configure);
 
         return services;
     }
