@@ -48,6 +48,9 @@ public sealed class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Jwt:Secret", _jwtSecret);
     }
 
+    /// <summary>Para o MySQL com a API no ar, para testar a queda do banco.</summary>
+    public Task StopDatabaseAsync() => _mysql.StopAsync();
+
     public new async Task DisposeAsync()
     {
         await base.DisposeAsync();

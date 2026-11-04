@@ -61,6 +61,10 @@ builder.Services.AddMediatR(cfg =>
 builder.Services.AddNeoParkingModules(builder.Configuration);
 builder.Services.AddNeoParkingAuthentication(builder.Configuration, builder.Environment);
 
+// Limite curto: um banco fora do ar não pode prender a resposta pelo timeout de conexão.
+builder.Services.AddHealthChecks()
+    .AddCheck<DatabaseHealthCheck>("database", timeout: TimeSpan.FromSeconds(5));
+
 var app = builder.Build();
 
 app.UseMiddleware<RequestLoggingMiddleware>();
@@ -75,6 +79,11 @@ if (app.Environment.IsDevelopment())
 // Authentication/Authorization devem vir antes dos endpoints
 app.UseAuthentication();
 app.UseAuthorization();
+
+// A resposta padrão traz só o status: Healthy (200) ou Unhealthy (503).
+app.MapHealthChecks("/health")
+    .AllowAnonymous()
+    .WithMetadata(new HttpMethodMetadata(["GET", "HEAD"]));
 
 app.MapClientEndpoints();
 app.MapTicketEndpoints();
