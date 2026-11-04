@@ -1,6 +1,7 @@
 namespace NeoParking.Access.Infrastructure;
 
 using Microsoft.EntityFrameworkCore;
+using NeoParking.Access.Application;
 using NeoParking.Access.Domain;
 using NeoParking.Shared.Kernel.Primitives;
 

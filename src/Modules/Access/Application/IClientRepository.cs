@@ -1,4 +1,6 @@
-namespace NeoParking.Access.Domain;
+namespace NeoParking.Access.Application;
+
+using NeoParking.Access.Domain;
 
 public interface IClientRepository
 {

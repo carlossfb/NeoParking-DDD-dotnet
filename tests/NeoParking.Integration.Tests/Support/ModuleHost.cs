@@ -28,7 +28,6 @@ public sealed class ModuleHost : IAsyncDisposable
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Access:DatabaseProvider"] = "MySQL",
                 ["Access:ConnectionString"] = databases.AccessConnection,
                 ["Management:ConnectionString"] = databases.ManagementConnection,
                 ["Billing:ConnectionString"] = databases.BillingConnection,

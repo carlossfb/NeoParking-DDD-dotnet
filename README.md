@@ -153,7 +153,7 @@ NeoParking-DDD-dotnet/
 │   │   │   ├── NeoParking.Access.csproj      # Single project per BC
 │   │   │   ├── Domain/                       # Client, Vehicle, VOs (Cpf, Plate, PhoneNumber)
 │   │   │   ├── Application/                  # ClientService, DTOs, interfaces
-│   │   │   ├── Infraestructure/               # EF Core (MySQL) + MongoDB, outbox processor
+│   │   │   ├── Infrastructure/                # EF Core (MySQL), outbox processor
 │   │   │   └── Migrations/
 │   │   │
 │   │   └── Management/                       # Management Bounded Context — the gatekeeper
@@ -287,7 +287,7 @@ The project enforces architectural boundaries through **NetArchTest**, ensuring 
 
 ### Layer Separation Rules
 
-- **Domain Independence** — Domain layer has no external dependencies (EF Core, MongoDB, etc.)
+- **Domain Independence** — Domain layer has no external dependencies (EF Core, etc.)
 - **Application Isolation** — Application layer does not depend on Infrastructure
 - **Dependency Direction** — Domain never depends on Application or Infrastructure
 - **No Cross-BC Project References** — Access and Management never reference each other directly; only `Shared.Kernel`
@@ -338,7 +338,7 @@ snyk test --file=Neoparking.sln
 ### Prerequisites
 
 - .NET 8 SDK
-- Docker (for MySQL, MongoDB, and running the full stack via `docker-compose`)
+- Docker (for MySQL and running the full stack via `docker-compose`)
 - `dotnet-ef` tool v8: `dotnet tool install --global dotnet-ef --version 8.0.11`
 
 ### Running locally with Docker Compose (recommended)
@@ -379,7 +379,6 @@ In Development, the API and `dotnet ef` read secrets from `.env`, without overri
 ```json
 {
   "Access": {
-    "DatabaseProvider": "MySQL",
     "ConnectionString": "Server=localhost;Database=neoparking_access;Uid=neoparking_app;AllowPublicKeyRetrieval=true;SslMode=none;"
   },
   "Management": {
@@ -387,16 +386,6 @@ In Development, the API and `dotnet ef` read secrets from `.env`, without overri
   },
   "Billing": {
     "ConnectionString": "Server=localhost;Database=neoparking_billing;Uid=neoparking_app;AllowPublicKeyRetrieval=true;SslMode=none;"
-  }
-}
-```
-
-For MongoDB (Access only):
-```json
-{
-  "Access": {
-    "DatabaseProvider": "MongoDB",
-    "ConnectionString": "mongodb://localhost:27017/neoparking_access"
   }
 }
 ```
@@ -445,7 +434,7 @@ Requests that lose a uniqueness race, or that break one of these rules, return `
 
 A message that fails is retried with exponential backoff (10 s up to 15 min). After 10 failed attempts it stops being retried, with `DeadLetteredAt` and `LastError` set. An event that cannot be processed yet retries indefinitely instead: a `TicketClosed` received before the Owner defines the first pricing policy waits for that policy, so the charge is not lost.
 
-Find dead-lettered messages in `outbox_messages`, `management_outbox_messages` and `billing_outbox_messages`:
+Find dead-lettered messages in `outbox_messages` and `billing_outbox_messages`:
 
 ```sql
 SELECT Id, Type, AttemptCount, LastError, DeadLetteredAt FROM neoparking_access.outbox_messages

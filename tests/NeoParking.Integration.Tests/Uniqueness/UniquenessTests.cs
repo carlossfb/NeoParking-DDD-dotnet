@@ -252,7 +252,7 @@ public sealed class UniquenessTests
         });
 
     private static Task AddOpenTicketAsync(ModuleHost host) =>
-        host.UseAsync<NeoParking.Access.Domain.ITicketRepository, AccessUnitOfWork>(async (repository, unitOfWork) =>
+        host.UseAsync<NeoParking.Access.Application.ITicketRepository, AccessUnitOfWork>(async (repository, unitOfWork) =>
         {
             await repository.AddAsync(AccessTicket.RegisterEntry(Plate.Create("ABC1D23"), null));
             await unitOfWork.SaveChangesAsync();

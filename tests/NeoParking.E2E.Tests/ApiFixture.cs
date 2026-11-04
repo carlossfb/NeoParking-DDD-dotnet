@@ -41,7 +41,6 @@ public sealed class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseEnvironment("Testing");
 
         // UseSetting chega ao Program antes de builder.Build(), que é quando os módulos leem a configuração.
-        builder.UseSetting("Access:DatabaseProvider", "MySQL");
         builder.UseSetting("Access:ConnectionString", ConnectionString("neoparking_access"));
         builder.UseSetting("Management:ConnectionString", ConnectionString("neoparking_management"));
         builder.UseSetting("Billing:ConnectionString", ConnectionString("neoparking_billing"));

@@ -20,11 +20,11 @@ public sealed class OperatorService
     // ── autenticação ──────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Valida credenciais e retorna o operador. E-mail inexistente, senha errada e conta
+    /// Valida credenciais e retorna os dados públicos do operador. E-mail inexistente, senha errada e conta
     /// inativa produzem a mesma exceção, para não revelar o estado da conta.
     /// Gerar o token JWT é responsabilidade da camada de API (infraestrutura de transporte).
     /// </summary>
-    public async Task<OperatorUser> LoginAsync(LoginRequest request)
+    public async Task<OperatorResponseDTO> LoginAsync(LoginRequest request)
     {
         var user = await _repo.GetByEmailAsync(request.Email)
             ?? throw new InvalidCredentialsException();
@@ -32,7 +32,7 @@ public sealed class OperatorService
         if (!_hasher.Verify(request.Password, user.PasswordHash.Value) || !user.IsActive)
             throw new InvalidCredentialsException();
 
-        return user;
+        return ToResponse(user);
     }
 
     // ── criar owner ──────────────────────────────────────────────────────────

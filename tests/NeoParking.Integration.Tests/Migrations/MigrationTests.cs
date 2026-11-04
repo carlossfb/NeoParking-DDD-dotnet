@@ -120,7 +120,6 @@ public sealed class MigrationTests
 
     [Theory]
     [InlineData("access")]
-    [InlineData("management")]
     [InlineData("billing")]
     public async Task PendingOutboxMessages_FromThePreviousVersion_ShouldRemainEligible(string module)
     {
@@ -136,12 +135,6 @@ public sealed class MigrationTests
                 await host.UseAsync<AccessDbContext>(c => c.Database.MigrateAsync());
                 await PendingShouldContainAsync<AccessDbContext>(host, id);
                 break;
-            case "management":
-                await host.UseAsync<ManagementDbContext>(c => c.GetService<IMigrator>().MigrateAsync("Initial"));
-                await _mysql.ExecuteAsync(OutboxInsert($"{databases.Management}.management_outbox_messages", id));
-                await host.UseAsync<ManagementDbContext>(c => c.Database.MigrateAsync());
-                await PendingShouldContainAsync<ManagementDbContext>(host, id);
-                break;
             default:
                 await host.UseAsync<BillingDbContext>(c => c.GetService<IMigrator>().MigrateAsync("Initial"));
                 await _mysql.ExecuteAsync(OutboxInsert($"{databases.Billing}.billing_outbox_messages", id));
@@ -149,6 +142,51 @@ public sealed class MigrationTests
                 await PendingShouldContainAsync<BillingDbContext>(host, id);
                 break;
         }
+    }
+
+    [Fact]
+    public async Task ManagementOutbox_WithRows_ShouldFailClearly_AndKeepTheData()
+    {
+        var databases = await _mysql.CreateDatabasesAsync();
+        await using var host = ModuleHost.Create(databases);
+        var table = $"{databases.Management}.management_outbox_messages";
+        await host.UseAsync<ManagementDbContext>(c => c.GetService<IMigrator>().MigrateAsync("AddUniqueConstraints"));
+        await _mysql.ExecuteAsync(OutboxInsert(table, Guid.NewGuid()));
+
+        var act = () => host.UseAsync<ManagementDbContext>(c => c.Database.MigrateAsync());
+
+        (await act.Should().ThrowAsync<MySqlException>()).Which.Message.Should().Contain("management_outbox_messages");
+        (await CountAsync(table)).Should().Be(1);
+
+        // Depois de esvaziar a tabela à mão, a mesma migration conclui.
+        await _mysql.ExecuteAsync($"DELETE FROM {table};");
+        await host.UseAsync<ManagementDbContext>(c => c.Database.MigrateAsync());
+        (await ReadFirstColumnAsync(TableQuery(databases.Management))).Should().NotContain("management_outbox_messages");
+    }
+
+    [Fact]
+    public async Task ManagementFromScratch_ShouldHaveNoOutboxTable_AndMatchTheModel()
+    {
+        var databases = await _mysql.CreateDatabasesAsync();
+        await using var host = await ModuleHost.CreateMigratedAsync(databases);
+
+        (await ReadFirstColumnAsync(TableQuery(databases.Management))).Should().NotContain("management_outbox_messages");
+        await host.UseAsync<ManagementDbContext>(c =>
+        {
+            c.Database.HasPendingModelChanges().Should().BeFalse();
+            return Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public async Task RemovingTheManagementOutbox_ShouldBeReversible()
+    {
+        var databases = await _mysql.CreateDatabasesAsync();
+        await using var host = await ModuleHost.CreateMigratedAsync(databases);
+
+        await host.UseAsync<ManagementDbContext>(c => c.GetService<IMigrator>().MigrateAsync("AddUniqueConstraints"));
+
+        (await CountAsync($"{databases.Management}.management_outbox_messages")).Should().Be(0);
     }
 
     [Fact]
@@ -232,6 +270,9 @@ public sealed class MigrationTests
 
     private static string OutboxInsert(string table, Guid id) =>
         $"INSERT INTO {table} (Id, Type, Payload, CreatedAt) VALUES ('{id}', 'Some.Type', '{{}}', {Now});";
+
+    private static string TableQuery(string database) =>
+        $"SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = '{database}'";
 
     private async Task<long> CountAsync(string table)
     {

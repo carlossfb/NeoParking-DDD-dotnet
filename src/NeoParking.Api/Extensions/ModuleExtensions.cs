@@ -26,11 +26,9 @@ public static class ModuleExtensions
     /// Aplica as migrations de cada Bounded Context no boot da aplicação.
     /// Só é chamado fora do design-time do EF (ver EF_DESIGN_TIME em Program.cs).
     /// </summary>
-    public static void InitializeNeoParkingDatabases(
-        this IServiceProvider services,
-        IConfiguration configuration)
+    public static void InitializeNeoParkingDatabases(this IServiceProvider services)
     {
-        AccessModule.InitializeDatabase(services, configuration);
+        AccessModule.InitializeDatabase(services);
         ManagementModule.InitializeDatabase(services);
         BillingModule.InitializeDatabase(services);
     }

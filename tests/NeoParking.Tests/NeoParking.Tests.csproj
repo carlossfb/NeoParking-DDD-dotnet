@@ -26,6 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\NeoParking.Api\NeoParking.Api.csproj" />
     <ProjectReference Include="..\..\src\Modules\Access\NeoParking.Access.csproj" />
     <ProjectReference Include="..\..\src\Modules\Management\NeoParking.Management.csproj" />
     <ProjectReference Include="..\..\src\Modules\Billing\NeoParking.Billing.csproj" />

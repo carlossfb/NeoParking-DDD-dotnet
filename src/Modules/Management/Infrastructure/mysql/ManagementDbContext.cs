@@ -4,12 +4,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using NeoParking.Management.Domain;
 using NeoParking.Management.Domain.Vo;
-using NeoParking.Shared.Kernel.Outbox;
 
 public sealed class ManagementDbContext : DbContext
 {
-    public DbSet<OperatorUser>  Operators      { get; set; }
-    public DbSet<OutboxMessage> OutboxMessages { get; set; }
+    public DbSet<OperatorUser> Operators { get; set; }
 
     public ManagementDbContext(DbContextOptions<ManagementDbContext> options) : base(options) { }
 
@@ -53,27 +51,6 @@ public sealed class ManagementDbContext : DbContext
 
             builder.Property(u => u.IsActive).IsRequired();
             builder.Property(u => u.CreatedAt).IsRequired();
-        });
-
-        modelBuilder.Entity<OutboxMessage>(builder =>
-        {
-            builder.ToTable("management_outbox_messages");
-            builder.HasKey(o => o.Id);
-
-            builder.Property(o => o.Type)
-                .HasMaxLength(500)
-                .IsRequired();
-
-            builder.Property(o => o.Payload)
-                .HasColumnType("longtext")
-                .IsRequired();
-
-            builder.Property(o => o.CreatedAt).IsRequired();
-            builder.Property(o => o.PublishedAt).IsRequired(false);
-            builder.Property(o => o.LastError).HasMaxLength(OutboxMessage.LastErrorMaxLength);
-
-            builder.HasIndex(o => o.PublishedAt)
-                .HasDatabaseName("ix_management_outbox_published_at");
         });
     }
 }

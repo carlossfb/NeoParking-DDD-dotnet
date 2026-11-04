@@ -41,7 +41,6 @@ services:
       - Jwt__Issuer=neoparking
       - Jwt__Audience=neoparking
       - Jwt__ExpireMinutes=60
-      - Access__DatabaseProvider=MySQL
       - Access__ConnectionString=Server=mysql;Database=neoparking_access;Uid=neoparking_app;AllowPublicKeyRetrieval=true;SslMode=none;
       - Management__ConnectionString=Server=mysql;Database=neoparking_management;Uid=neoparking_app;AllowPublicKeyRetrieval=true;SslMode=none;
       - Billing__ConnectionString=Server=mysql;Database=neoparking_billing;Uid=neoparking_app;AllowPublicKeyRetrieval=true;SslMode=none;

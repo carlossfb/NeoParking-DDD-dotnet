@@ -63,48 +63,6 @@ namespace NeoParking.Management.Migrations
 
                     b.ToTable("management_operators", (string)null);
                 });
-
-            modelBuilder.Entity("NeoParking.Shared.Kernel.Outbox.OutboxMessage", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<int>("AttemptCount")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime?>("DeadLetteredAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("LastError")
-                        .HasMaxLength(2000)
-                        .HasColumnType("varchar(2000)");
-
-                    b.Property<DateTime?>("NextAttemptAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Payload")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<DateTime?>("PublishedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PublishedAt")
-                        .HasDatabaseName("ix_management_outbox_published_at");
-
-                    b.ToTable("management_outbox_messages", (string)null);
-                });
 #pragma warning restore 612, 618
         }
     }

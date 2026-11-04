@@ -3,7 +3,6 @@ namespace NeoParking.Api.Endpoints;
 using System.Security.Claims;
 using NeoParking.Api.Extensions;
 using NeoParking.Management.Application;
-using NeoParking.Management.Infrastructure;
 
 public static class ManagementEndpoints
 {
