@@ -25,7 +25,13 @@ public sealed record Money
 
     public static Money operator +(Money left, Money right) => new(left.Value + right.Value);
 
-    public static Money operator *(Money money, int factor) => new(money.Value * factor);
+    public static Money operator *(Money money, int factor)
+    {
+        if (factor < 0)
+            throw new DomainException("Multiplication factor cannot be negative.");
+
+        return new Money(money.Value * factor);
+    }
 
     public static bool operator >(Money left, Money right) => left.Value > right.Value;
 
