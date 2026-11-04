@@ -8,8 +8,9 @@ public sealed class Client : Entity
     public string Name { get; private set; }
     public PhoneNumber PhoneNumber { get; private set; }
     public ClientType Type { get; private set; }
-    public string DocumentValue { get; private set; }
-    public Document Document => Document.Create(Type, DocumentValue);
+    public string DocumentEncrypted { get; private set; }
+    public string DocumentHmac { get; private set; }
+    public ProtectedDocument Document => new(Type, DocumentEncrypted, DocumentHmac);
 
     private readonly List<Vehicle> _vehicles = [];
     public IReadOnlyList<Vehicle> Vehicles => _vehicles.AsReadOnly();
@@ -19,33 +20,36 @@ public sealed class Client : Entity
     {
         Name = string.Empty;
         PhoneNumber = null!;
-        DocumentValue = string.Empty;
+        DocumentEncrypted = string.Empty;
+        DocumentHmac = string.Empty;
     }
 
 
-    private Client(string name, PhoneNumber phoneNumber, Document document) : base()
+    private Client(string name, PhoneNumber phoneNumber, ProtectedDocument document) : base()
     {
         ValidateName(name);
         Name = name;
         PhoneNumber = phoneNumber;
         Type = document.Type;
-        DocumentValue = document.Value;
+        DocumentEncrypted = document.Encrypted;
+        DocumentHmac = document.Hmac;
     }
 
-    private Client(Guid id, string name, PhoneNumber phoneNumber, Document document, IEnumerable<Vehicle> vehicles) : base(id)
+    private Client(Guid id, string name, PhoneNumber phoneNumber, ProtectedDocument document, IEnumerable<Vehicle> vehicles) : base(id)
     {
         ValidateName(name);
         Name = name;
         PhoneNumber = phoneNumber;
         Type = document.Type;
-        DocumentValue = document.Value;
+        DocumentEncrypted = document.Encrypted;
+        DocumentHmac = document.Hmac;
         _vehicles = vehicles.ToList();
     }
 
-    public static Client Create(string name, PhoneNumber phoneNumber, Document document) =>
+    public static Client Create(string name, PhoneNumber phoneNumber, ProtectedDocument document) =>
         new(name, phoneNumber, document);
 
-    public static Client Reconstitute(Guid id, string name, PhoneNumber phoneNumber, Document document, IEnumerable<Vehicle> vehicles) =>
+    public static Client Reconstitute(Guid id, string name, PhoneNumber phoneNumber, ProtectedDocument document, IEnumerable<Vehicle> vehicles) =>
         new(id, name, phoneNumber, document, vehicles);
 
     public Vehicle RegisterVehicle(Plate plate)
@@ -61,7 +65,7 @@ public sealed class Client : Entity
         return vehicle;
     }
 
-    public void Update(string? name, string? phoneNumber, Document? document)
+    public void Update(string? name, string? phoneNumber, ProtectedDocument? document)
     {
         if (name is not null)
         {
@@ -72,7 +76,8 @@ public sealed class Client : Entity
         if (document is not null)
         {
             Type = document.Type;
-            DocumentValue = document.Value;
+            DocumentEncrypted = document.Encrypted;
+            DocumentHmac = document.Hmac;
         }
     }
     public void RemoveVehicle(Guid vehicleId)

@@ -34,7 +34,7 @@ public sealed class MigrationTests
         await using var host = await ModuleHost.CreateMigratedAsync(databases);
 
         (await UniqueIndexesAsync(databases.Access)).Should().Contain(
-            ["ux_vehicles_plate", "ux_clients_document", "ux_tickets_open_plate"]);
+            ["ux_vehicles_plate", "ux_clients_document_hmac", "ux_tickets_open_plate"]);
         (await UniqueIndexesAsync(databases.Management)).Should().Contain("ux_management_operators_owner");
         (await UniqueIndexesAsync(databases.Billing)).Should().Contain("ux_billing_pricing_policies_active");
     }
@@ -52,7 +52,7 @@ public sealed class MigrationTests
         await _mysql.ExecuteAsync(seed);
         var rowsBefore = await CountAsync($"{databases.Access}.{table}");
 
-        var act = () => host.UseAsync<AccessDbContext>(c => c.Database.MigrateAsync());
+        var act = () => host.UseAsync<AccessDatabaseMigrator>(m => m.MigrateAsync());
 
         (await act.Should().ThrowAsync<MySqlException>()).Which.Message.Should()
             .Contain(expectedMessage).And.Contain("scripts/mysql/detect-duplicates.sql");
@@ -62,7 +62,7 @@ public sealed class MigrationTests
 
         // Depois da correção manual, a mesma migration conclui.
         await _mysql.ExecuteAsync(fix);
-        await host.UseAsync<AccessDbContext>(c => c.Database.MigrateAsync());
+        await host.UseAsync<AccessDatabaseMigrator>(m => m.MigrateAsync());
         (await UniqueIndexesAsync(databases.Access)).Should().Contain("ux_tickets_open_plate");
     }
 
@@ -112,7 +112,7 @@ public sealed class MigrationTests
             + OwnerInsert(databases.Management, "a")
             + PolicyInsert(databases.Billing));
 
-        await host.UseAsync<AccessDbContext>(c => c.Database.MigrateAsync());
+        await host.UseAsync<AccessDatabaseMigrator>(m => m.MigrateAsync());
         await host.UseAsync<ManagementDbContext>(c => c.Database.MigrateAsync());
         await host.UseAsync<BillingDbContext>(c => c.Database.MigrateAsync());
 

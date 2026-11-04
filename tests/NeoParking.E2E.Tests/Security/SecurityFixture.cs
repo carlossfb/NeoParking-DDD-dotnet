@@ -156,6 +156,19 @@ public sealed class SecurityFixture : IAsyncLifetime
         return await context.Tickets.AsNoTracking().SingleAsync(t => t.Id == id);
     }
 
+    /// <summary>A linha crua do cliente, com todas as colunas, como quem consulta o banco a veria.</summary>
+    public async Task<string> ReadClientRowAsync(Guid clientId)
+    {
+        using var scope = _api.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AccessDbContext>();
+        await context.Database.OpenConnectionAsync();
+        await using var command = context.Database.GetDbConnection().CreateCommand();
+        command.CommandText = $"SELECT * FROM clients WHERE Id = '{clientId}'";
+        await using var reader = await command.ExecuteReaderAsync();
+        await reader.ReadAsync();
+        return string.Join('|', Enumerable.Range(0, reader.FieldCount).Select(i => reader.GetValue(i)));
+    }
+
     /// <summary>Lê a auditoria direto do banco: não há rota que a exponha.</summary>
     public async Task<List<ClientDocumentAccess>> ReadDocumentAccessesAsync(Guid clientId)
     {

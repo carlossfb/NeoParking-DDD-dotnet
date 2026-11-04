@@ -26,7 +26,8 @@ public class ClientServiceTests
             _mockRepository.Object,
             _mockOutbox.Object,
             _mockUnitOfWork.Object,
-            _mockCorrelation.Object);
+            _mockCorrelation.Object,
+            TestDocuments.Protector);
     }
 
     [Fact]

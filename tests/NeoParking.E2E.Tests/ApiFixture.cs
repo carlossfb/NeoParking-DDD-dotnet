@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using NeoParking.Access.Infrastructure;
+using System.Security.Cryptography;
 using Testcontainers.MySql;
 
 /// <summary>
@@ -50,6 +52,8 @@ public sealed class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Billing:ConnectionString", ConnectionString("neoparking_billing"));
         builder.UseSetting("MYSQL_PASSWORD", DbPassword);
         builder.UseSetting("Jwt:Secret", _jwtSecret);
+        builder.UseSetting(DocumentProtectionKeys.EncryptionKeyName, RandomNumberGenerator.GetHexString(64));
+        builder.UseSetting(DocumentProtectionKeys.HmacKeyName, RandomNumberGenerator.GetHexString(64));
         builder.ConfigureLogging(logging => logging.Services.AddSingleton<ILoggerProvider>(Logs));
     }
 

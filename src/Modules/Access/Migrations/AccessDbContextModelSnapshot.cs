@@ -28,11 +28,17 @@ namespace NeoParking.Access.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("DocumentValue")
+                    b.Property<string>("DocumentEncrypted")
                         .IsRequired()
-                        .HasMaxLength(14)
-                        .HasColumnType("varchar(14)")
-                        .HasColumnName("document");
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)")
+                        .HasColumnName("document_encrypted");
+
+                    b.Property<string>("DocumentHmac")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("document_hmac");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -53,9 +59,9 @@ namespace NeoParking.Access.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DocumentValue")
+                    b.HasIndex("DocumentHmac")
                         .IsUnique()
-                        .HasDatabaseName("ux_clients_document");
+                        .HasDatabaseName("ux_clients_document_hmac");
 
                     b.ToTable("clients", (string)null);
                 });

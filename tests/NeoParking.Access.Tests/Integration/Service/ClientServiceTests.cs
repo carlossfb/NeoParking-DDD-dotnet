@@ -33,7 +33,8 @@ public class ClientServiceIntegrationTests : IClassFixture<MySqlFixture>, IDispo
             new MySqlClientRepository(_context),
             new AccessOutboxRepository(_context),
             new AccessUnitOfWork(_context),    // implementação real — sem violar arquitetura nos testes de integração
-            mockCorrelation.Object);
+            mockCorrelation.Object,
+            TestDocuments.Protector);
     }
 
     [Fact]

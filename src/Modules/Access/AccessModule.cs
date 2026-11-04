@@ -23,6 +23,10 @@ public static class AccessModule
 
         services.AddDbContext<AccessDbContext>(options =>
             options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)).WithoutDatabaseErrorValuesInLogs());
+        // Falha aqui, no boot, se uma chave faltar: nenhum documento é gravado sem proteção.
+        services.AddSingleton<IDocumentProtector>(
+            new AesGcmDocumentProtector(DocumentProtectionKeys.FromConfiguration(configuration)));
+        services.AddScoped<AccessDatabaseMigrator>();
         services.AddScoped<IClientRepository, MySqlClientRepository>();
         services.AddScoped<ITicketRepository, MySqlTicketRepository>();
 
@@ -48,6 +52,6 @@ public static class AccessModule
     public static void InitializeDatabase(IServiceProvider serviceProvider)
     {
         using var scope = serviceProvider.CreateScope();
-        scope.ServiceProvider.GetRequiredService<AccessDbContext>().Database.Migrate();
+        scope.ServiceProvider.GetRequiredService<AccessDatabaseMigrator>().MigrateAsync().GetAwaiter().GetResult();
     }
 }

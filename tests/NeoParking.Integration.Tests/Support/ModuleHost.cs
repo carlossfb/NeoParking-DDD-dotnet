@@ -1,5 +1,6 @@
 namespace NeoParking.Integration.Tests.Support;
 
+using System.Security.Cryptography;
 using NeoParking.Shared.Kernel.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -23,7 +24,11 @@ public sealed class ModuleHost : IAsyncDisposable
 
     public ProbeRecorder Probes => _services.GetRequiredService<ProbeRecorder>();
 
-    public static ModuleHost Create(TestDatabases databases)
+    /// <summary>Chaves da execução, geradas agora: nenhuma fica versionada.</summary>
+    public static readonly string EncryptionKey = RandomNumberGenerator.GetHexString(64);
+    public static readonly string HmacKey = RandomNumberGenerator.GetHexString(64);
+
+    public static ModuleHost Create(TestDatabases databases, string? encryptionKey = null)
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -32,6 +37,8 @@ public sealed class ModuleHost : IAsyncDisposable
                 ["Management:ConnectionString"] = databases.ManagementConnection,
                 ["Billing:ConnectionString"] = databases.BillingConnection,
                 [MySqlConnectionStrings.PasswordKey] = MySqlFixture.RootPassword,
+                [DocumentProtectionKeys.EncryptionKeyName] = encryptionKey ?? EncryptionKey,
+                [DocumentProtectionKeys.HmacKeyName] = HmacKey,
             })
             .Build();
 

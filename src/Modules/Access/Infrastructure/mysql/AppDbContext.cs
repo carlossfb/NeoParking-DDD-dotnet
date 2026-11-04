@@ -29,9 +29,14 @@ public sealed class AccessDbContext : DbContext
                 .HasMaxLength(20)
                 .IsRequired();
 
-            builder.Property(c => c.DocumentValue)
-                .HasColumnName("document")
-                .HasMaxLength(14)
+            builder.Property(c => c.DocumentEncrypted)
+                .HasColumnName("document_encrypted")
+                .HasMaxLength(128)
+                .IsRequired();
+
+            builder.Property(c => c.DocumentHmac)
+                .HasColumnName("document_hmac")
+                .HasMaxLength(64)
                 .IsRequired();
 
             builder.Ignore(c => c.Document);
@@ -48,9 +53,9 @@ public sealed class AccessDbContext : DbContext
                     c => c.Value.GetHashCode(),
                     c => PhoneNumber.CreateBR(c.Value)));
 
-            builder.HasIndex(c => c.DocumentValue)
+            builder.HasIndex(c => c.DocumentHmac)
                 .IsUnique()
-                .HasDatabaseName("ux_clients_document");
+                .HasDatabaseName("ux_clients_document_hmac");
 
             builder.HasMany(c => c.Vehicles)
                 .WithOne()
