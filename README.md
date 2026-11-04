@@ -45,14 +45,14 @@ The main revenue of NeoParking comes from two sources: walk-in customers in the 
 
 **Payment Models Volatility**: Subscription, monthly, and daily payment models are subject to frequent changes due to market conditions and business strategy adjustments. However, the **hourly payment model remains the core stable revenue stream** and serves as the foundation for all pricing calculations.
 
-**Pricing Strategy**: The hourly model acts as the base unit, with other models being derivatives or packages of hourly rates with discounts or special conditions.
+**Pricing Strategy**: The hourly model is the base unit for walk-in customers. Subscribers pay a fixed price through their subscription, with no discount on hourly rates.
 
 ### Technical Assumptions
 
 **Scalability**: System designed for medium-scale operations (1000+ daily transactions)
 **Availability**: 99.5% uptime requirement with graceful degradation
 **Data Consistency**: Eventual consistency acceptable between contexts
-**Integration**: REST APIs for external systems, domain events for internal communication
+**Integration**: REST APIs for external systems, integration events for communication between contexts
 
 ---
 
@@ -223,7 +223,29 @@ services.AddBillingModule(configuration);
 
 ## 7. Context Map
 
-![ContextMap](https://www.plantuml.com/plantuml/png/RLBDIWCn4BxdAOPwi8MjegKN3r9RL-n1MhJrv2KamngQJPPCgXRnWNmENynPTxTDGTX3-7w-6RxP2KKPuhQqWZR6LJB84WAgA5rX4Ju5mDG7ZM7chGzmCXwFQqYgJH7yrkaMplESuSS62Gu3N5oAhoHIXk3V_-9QnsWqOe4uXMbjGisuY_WHIHoczswKGgAEUd7zcJNeOWRF-6gKnGnMHcqm3deW2HfrwbyejQsaKxiaOkvN6Hm8Ne-NB9g4FPo6J8srh4WYbd9NyXgKmHqYDTPMbHhdcaKcxiuVf9C5rfOaP4qOE669eJH4nhisg7DnD_it_7p3kg8OaAki2uNejIUnvuV3QsZBkeB5_TCHq-ts3vKKqP0yj5Dhh90l0_pX6riyyRERWabNdU5eYLjVIkCWhvq4_UPEC-i9TGOOrTb0237X0Vph_G80)
+Solid lines exist in the code. Dashed lines and nodes are planned and do not exist yet.
+
+```mermaid
+flowchart LR
+    Access["Access (core)"]
+    Billing["Billing (generic)"]
+    Management["Management (generic)<br/>issues the JWT validated by the API"]
+    Occupancy["Occupancy (future)"]:::future
+    Subscription["Subscription (future)"]:::future
+
+    Access -->|"TicketOpened, TicketClosed"| Billing
+    Access -.->|"TicketOpened, TicketClosed"| Occupancy
+    Occupancy -.->|"capacity and quota limits"| Access
+    Subscription -.->|"Subscription events"| Access
+    Subscription -.->|"Subscription events"| Billing
+
+    classDef future stroke-dasharray: 5 5
+```
+
+- **Access → Billing:** Billing conforms to the event contracts Access publishes.
+- **Management:** provides identity to every module through the JWT, not through module calls or events, so it has no arrows.
+- **No consumer yet:** `ClientRegistered` (Access) and `PricingPolicyChanged` (Billing) are published, but nothing reacts to them.
+- **Payments (future):** planned inside Billing, not as a separate context.
 
 ---
 
