@@ -393,8 +393,6 @@ docker compose up -d --build
 
 This starts MySQL with one schema per Bounded Context (`neoparking_access`, `neoparking_management`, `neoparking_billing`, created via `scripts/mysql/init.sql`) and the API on port **8080**, applying EF Core migrations on boot.
 
-> **Windows checkout:** with `core.autocrlf=true`, `entrypoint.sh` gets CRLF line endings and the API container restarts with `exec /entrypoint.sh: no such file or directory`. Until this is fixed in the repository, convert the file before building, from Git Bash or WSL: `sed -i 's/\r$//' entrypoint.sh`.
-
 `docker-compose.yml` has no secret values: it copies `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD` and `Jwt__Secret` from `.env` or the shell. If one is missing, startup fails: MySQL logs the missing `MYSQL_ROOT_PASSWORD` or `MYSQL_PASSWORD`, and the API reports the missing `Jwt__Secret`. If MySQL initialized a new volume without `MYSQL_PASSWORD`, the application user was not created: fix `.env` and run `docker compose down -v` if the volume has no data to keep. Port 3306 is not published; add `-f docker-compose.yml -f docker-compose.expose-db.yml` to reach MySQL from the host.
 
 The API connects as `neoparking_app`, which only has access to the project schemas. MySQL creates this user only on an empty volume. On an existing volume, run this once as root, or recreate the volume if its data can be discarded:
