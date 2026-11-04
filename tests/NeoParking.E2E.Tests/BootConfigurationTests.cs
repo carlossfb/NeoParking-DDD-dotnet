@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 /// </summary>
 public class BootConfigurationTests
 {
-    private const string UnreachableDb = "Server=127.0.0.1;Port=1;Database=none;Uid=none;Pwd=none;";
+    private const string UnreachableDb = "Server=127.0.0.1;Port=1;Database=none;Uid=none;";
 
     [Theory]
     [InlineData("CHANGE_ME_IN_PRODUCTION_MIN_32_CHARS_LONG_VALUE")]
@@ -27,6 +27,7 @@ public class BootConfigurationTests
             builder.UseSetting("Access:ConnectionString", UnreachableDb);
             builder.UseSetting("Management:ConnectionString", UnreachableDb);
             builder.UseSetting("Billing:ConnectionString", UnreachableDb);
+            builder.UseSetting("MYSQL_PASSWORD", "boot-test-only");
             if (secret is not null)
                 builder.UseSetting("Jwt:Secret", secret);
         });
@@ -38,4 +39,24 @@ public class BootConfigurationTests
         if (!string.IsNullOrEmpty(secret))
             details.Should().NotContain(secret);
     }
+
+    [Fact]
+    public void Boot_WithoutDatabasePassword_ShouldFailNamingTheVariable()
+    {
+        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Production");
+            builder.UseSetting("Access:DatabaseProvider", "MySQL");
+            builder.UseSetting("Access:ConnectionString", UnreachableDb);
+            builder.UseSetting("Management:ConnectionString", UnreachableDb);
+            builder.UseSetting("Billing:ConnectionString", UnreachableDb);
+            builder.UseSetting("MYSQL_PASSWORD", "");
+            builder.UseSetting("Jwt:Secret", "0123456789abcdef0123456789abcdef");
+        });
+
+        var act = () => factory.CreateClient();
+
+        act.Should().Throw<Exception>().Which.ToString().Should().Contain("MYSQL_PASSWORD");
+    }
+
 }

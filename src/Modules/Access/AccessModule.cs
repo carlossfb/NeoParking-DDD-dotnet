@@ -1,5 +1,6 @@
 namespace NeoParking.Access.Infrastructure;
 
+using NeoParking.Shared.Kernel.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,8 +26,9 @@ public static class AccessModule
         switch (provider)
         {
             case DatabaseProvider.MySQL:
+                var mySqlConnectionString = MySqlConnectionStrings.WithPassword(connectionString, configuration);
                 services.AddDbContext<AccessDbContext>(options =>
-                    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+                    options.UseMySql(mySqlConnectionString, ServerVersion.AutoDetect(mySqlConnectionString)));
                 services.AddScoped<IClientRepository, MySqlClientRepository>();
                 services.AddScoped<ITicketRepository, MySqlTicketRepository>();
 

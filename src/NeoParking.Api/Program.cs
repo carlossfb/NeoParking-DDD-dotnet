@@ -4,8 +4,16 @@ using Microsoft.OpenApi.Models;
 using NeoParking.Api.Endpoints;
 using NeoParking.Api.Extensions;
 using NeoParking.Api.Middleware;
+using NeoParking.Shared.Kernel.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// O compose entrega o .env aos containers; no dotnet run local, quem lê é este passo.
+if (builder.Environment.IsDevelopment())
+{
+    LocalEnvFile.Load();
+    builder.Configuration.AddEnvironmentVariables();
+}
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>

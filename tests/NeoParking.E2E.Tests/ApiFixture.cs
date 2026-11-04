@@ -45,6 +45,7 @@ public sealed class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Access:ConnectionString", ConnectionString("neoparking_access"));
         builder.UseSetting("Management:ConnectionString", ConnectionString("neoparking_management"));
         builder.UseSetting("Billing:ConnectionString", ConnectionString("neoparking_billing"));
+        builder.UseSetting("MYSQL_PASSWORD", DbPassword);
         builder.UseSetting("Jwt:Secret", _jwtSecret);
     }
 
@@ -56,7 +57,7 @@ public sealed class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
 
     private string ConnectionString(string database) =>
         $"Server={_mysql.Hostname};Port={_mysql.GetMappedPublicPort(MySqlBuilder.MySqlPort)};" +
-        $"Database={database};Uid={AppUser};Pwd={DbPassword};AllowPublicKeyRetrieval=true;SslMode=none;";
+        $"Database={database};Uid={AppUser};AllowPublicKeyRetrieval=true;SslMode=none;";
 
     private static string FindMySqlScript(string name)
     {

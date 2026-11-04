@@ -344,16 +344,17 @@ snyk test --file=Neoparking.sln
 ### Running locally with Docker Compose (recommended)
 
 ```bash
-cp .env.example .env   # then replace every CHANGE_ME value
+cp .env.example .env          # the only place with secrets; gitignored
+openssl rand -hex 32          # run once per CHANGE_ME and paste each value in .env
 docker compose up -d --build
 ```
 
-Compose refuses to start if a required variable is missing, and the API refuses to boot outside Development if `JWT_SECRET` is a placeholder or shorter than 32 bytes. Port 3306 is not published; add `-f docker-compose.yml -f docker-compose.expose-db.yml` to reach MySQL from the host.
+`docker-compose.yml` has no secret values: it copies `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD` and `Jwt__Secret` from `.env` or the shell. If one is missing, startup fails: MySQL logs the missing `MYSQL_ROOT_PASSWORD` or `MYSQL_PASSWORD`, and the API reports the missing `Jwt__Secret`. If MySQL initialized a new volume without `MYSQL_PASSWORD`, the application user was not created: fix `.env` and run `docker compose down -v` if the volume has no data to keep. Outside Development, the API also rejects a `Jwt__Secret` that is a placeholder or shorter than 32 bytes. Port 3306 is not published; add `-f docker-compose.yml -f docker-compose.expose-db.yml` to reach MySQL from the host.
 
 The API connects as `neoparking_app`, which only has access to the project schemas. MySQL creates this user only on an empty volume. On an existing volume, run this once as root, or recreate the volume if its data can be discarded:
 
 ```sql
-CREATE USER 'neoparking_app'@'%' IDENTIFIED BY '<MYSQL_APP_PASSWORD>';
+CREATE USER 'neoparking_app'@'%' IDENTIFIED BY '<MYSQL_PASSWORD>';
 GRANT ALL PRIVILEGES ON neoparking_access.*     TO 'neoparking_app'@'%';
 GRANT ALL PRIVILEGES ON neoparking_management.* TO 'neoparking_app'@'%';
 GRANT ALL PRIVILEGES ON neoparking_billing.*    TO 'neoparking_app'@'%';
@@ -365,33 +366,27 @@ This starts MySQL with separate schemas for each Bounded Context (`neoparking_ac
 
 **1. Start the database**
 
+Create `.env` as above, then publish MySQL to the host:
+
 ```bash
-docker run -d \
-  --name neoparking-mysql \
-  -e MYSQL_ROOT_PASSWORD=<password> \
-  -e MYSQL_DATABASE=neoparking_access \
-  -p 3306:3306 \
-  mysql:8
+docker compose -f docker-compose.yml -f docker-compose.expose-db.yml up -d mysql
 ```
 
 **2. Configure**
 
-Create `src/NeoParking.Api/appsettings.Development.json` (gitignored):
+In Development, the API and `dotnet ef` read secrets from `.env`, without overriding variables already set. Create `src/NeoParking.Api/appsettings.Development.json` (gitignored) without passwords or secrets:
 
 ```json
 {
   "Access": {
     "DatabaseProvider": "MySQL",
-    "ConnectionString": "Server=localhost;Database=neoparking_access;Uid=root;Pwd=<password>;AllowPublicKeyRetrieval=true;SslMode=none;"
+    "ConnectionString": "Server=localhost;Database=neoparking_access;Uid=neoparking_app;AllowPublicKeyRetrieval=true;SslMode=none;"
   },
   "Management": {
-    "ConnectionString": "Server=localhost;Database=neoparking_management;Uid=root;Pwd=<password>;AllowPublicKeyRetrieval=true;SslMode=none;"
+    "ConnectionString": "Server=localhost;Database=neoparking_management;Uid=neoparking_app;AllowPublicKeyRetrieval=true;SslMode=none;"
   },
-  "Jwt": {
-    "Secret": "<at least 32 random bytes>",
-    "Issuer": "neoparking",
-    "Audience": "neoparking",
-    "ExpireMinutes": "60"
+  "Billing": {
+    "ConnectionString": "Server=localhost;Database=neoparking_billing;Uid=neoparking_app;AllowPublicKeyRetrieval=true;SslMode=none;"
   }
 }
 ```
