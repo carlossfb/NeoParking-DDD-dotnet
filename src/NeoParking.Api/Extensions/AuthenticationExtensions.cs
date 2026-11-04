@@ -15,12 +15,13 @@ public static class AuthenticationExtensions
     /// </summary>
     public static IServiceCollection AddNeoParkingAuthentication(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
-        var jwtSecret = configuration["Jwt:Secret"]
-            ?? throw new InvalidOperationException("Jwt:Secret not configured.");
+        var jwtSecret = configuration["Jwt:Secret"];
+        JwtSecretValidator.Validate(jwtSecret, environment.IsDevelopment());
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
@@ -33,7 +34,7 @@ public static class AuthenticationExtensions
                     ValidAudience            = configuration["Jwt:Audience"] ?? "neoparking",
                     ValidateLifetime         = true,
                     ValidateIssuerSigningKey = true,
-                    IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
+                    IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret!))
                 };
             });
 
