@@ -8,6 +8,7 @@ public interface ITicketRepository
     Task AddAsync(Ticket ticket);
     Task UpdateAsync(Ticket ticket);
     Task<Ticket?> GetByIdAsync(Guid ticketId);
+    Task<Ticket?> GetByCodeAsync(TicketCode code);
 
     /// <summary>Ticket ainda aberto para a placa informada, se existir (evita duas entradas simultâneas).</summary>
     Task<Ticket?> GetOpenByPlateAsync(string plate);

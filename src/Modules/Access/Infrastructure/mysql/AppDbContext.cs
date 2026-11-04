@@ -98,14 +98,43 @@ public sealed class AccessDbContext : DbContext
                     c => c.Value.GetHashCode(),
                     c => Plate.Create(c.Value)));
 
+            builder.Property(t => t.Code)
+                .HasColumnName("code")
+                .HasMaxLength(TicketCode.Length)
+                .IsRequired()
+                .HasConversion(
+                    code => code.Value,
+                    value => TicketCode.Create(value))
+                .Metadata.SetValueComparer(new ValueComparer<TicketCode>(
+                    (a, b) => a!.Value == b!.Value,
+                    c => c.Value.GetHashCode(),
+                    c => TicketCode.Create(c.Value)));
+
+            builder.HasIndex(t => t.Code)
+                .IsUnique()
+                .HasDatabaseName("ux_tickets_code");
+
             builder.Property(t => t.ClientId).HasColumnName("client_id");
             builder.Property(t => t.EntryAt).HasColumnName("entry_at").IsRequired();
             builder.Property(t => t.ExitAt).HasColumnName("exit_at");
 
+            builder.Property(t => t.ExitMethod)
+                .HasColumnName("exit_method")
+                .HasConversion<string>()
+                .HasMaxLength(20);
+
+            builder.Property(t => t.ExitReason)
+                .HasColumnName("exit_reason")
+                .HasMaxLength(Ticket.ExitReasonMaxLength);
+
+            builder.Property(t => t.ExitOperatorId).HasColumnName("exit_operator_id");
+
+            // A saída só grava se o ticket continuar aberto: duas saídas simultâneas não publicam dois eventos.
             builder.Property(t => t.Status)
                 .HasConversion<string>()
                 .HasMaxLength(20)
-                .IsRequired();
+                .IsRequired()
+                .IsConcurrencyToken();
 
             builder.HasIndex(t => t.Plate)
                 .HasDatabaseName("ix_tickets_plate");

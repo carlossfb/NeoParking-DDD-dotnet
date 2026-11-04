@@ -64,6 +64,12 @@ namespace NeoParking.Access.Migrations
                         .HasColumnType("char(36)")
                         .HasColumnName("client_id");
 
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("code");
+
                     b.Property<DateTime>("EntryAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("entry_at");
@@ -72,6 +78,20 @@ namespace NeoParking.Access.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("exit_at");
 
+                    b.Property<string>("ExitMethod")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("exit_method");
+
+                    b.Property<Guid?>("ExitOperatorId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("exit_operator_id");
+
+                    b.Property<string>("ExitReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("exit_reason");
+
                     b.Property<string>("Plate")
                         .IsRequired()
                         .HasMaxLength(7)
@@ -79,11 +99,16 @@ namespace NeoParking.Access.Migrations
                         .HasColumnName("plate");
 
                     b.Property<string>("Status")
+                        .IsConcurrencyToken()
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("ux_tickets_code");
 
                     b.HasIndex("Plate")
                         .HasDatabaseName("ix_tickets_plate");
