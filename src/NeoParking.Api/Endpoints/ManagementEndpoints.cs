@@ -1,5 +1,7 @@
 namespace NeoParking.Api.Endpoints;
 
+using System.Security.Claims;
+using NeoParking.Api.Extensions;
 using NeoParking.Management.Application;
 using NeoParking.Management.Infrastructure;
 
@@ -29,63 +31,66 @@ public static class ManagementEndpoints
         })
         .WithName("CreateOwner");
 
+        // O solicitante vem sempre do token. As policies filtram pelo papel do token;
+        // o OperatorService confere papel e estado no banco (decisão D3).
+
         // ── criar operator / admin ────────────────────────────────────────────
-        group.MapPost("/{requesterId:guid}", async (
-            Guid requesterId,
+        group.MapPost("/", async (
             CreateOperatorRequest request,
+            ClaimsPrincipal user,
             OperatorService service) =>
         {
-            var result = await service.CreateOperatorAsync(requesterId, request);
+            var result = await service.CreateOperatorAsync(user.GetOperatorId(), request);
             return Results.Created($"/operators/{result.Id}", result);
         })
         .WithName("CreateOperator")
-        .RequireAuthorization();
+        .RequireAuthorization(AuthorizationPolicies.OwnerOrAdmin);
 
         // ── consulta ─────────────────────────────────────────────────────────
-        group.MapGet("/{id:guid}", async (Guid id, OperatorService service) =>
+        group.MapGet("/{id:guid}", async (Guid id, ClaimsPrincipal user, OperatorService service) =>
         {
-            var result = await service.GetByIdAsync(id);
+            var result = await service.GetByIdAsync(user.GetOperatorId(), id);
             return Results.Ok(result);
         })
         .WithName("GetOperator")
-        .RequireAuthorization();
+        .RequireAuthorization(AuthorizationPolicies.OwnerOrAdmin);
 
         // ── promoção / rebaixamento ───────────────────────────────────────────
-        group.MapPost("/{requesterId:guid}/promote/{targetId:guid}", async (
-            Guid requesterId, Guid targetId, OperatorService service) =>
+        group.MapPost("/{targetId:guid}/promote", async (
+            Guid targetId, ClaimsPrincipal user, OperatorService service) =>
         {
-            await service.PromoteToAdminAsync(requesterId, targetId);
+            await service.PromoteToAdminAsync(user.GetOperatorId(), targetId);
             return Results.NoContent();
         })
         .WithName("PromoteToAdmin")
-        .RequireAuthorization();
+        .RequireAuthorization(AuthorizationPolicies.Owner);
 
-        group.MapPost("/{requesterId:guid}/demote/{targetId:guid}", async (
-            Guid requesterId, Guid targetId, OperatorService service) =>
+        group.MapPost("/{targetId:guid}/demote", async (
+            Guid targetId, ClaimsPrincipal user, OperatorService service) =>
         {
-            await service.DemoteToOperatorAsync(requesterId, targetId);
+            await service.DemoteToOperatorAsync(user.GetOperatorId(), targetId);
             return Results.NoContent();
         })
         .WithName("DemoteToOperator")
-        .RequireAuthorization();
+        .RequireAuthorization(AuthorizationPolicies.Owner);
 
         // ── ativação / desativação ────────────────────────────────────────────
-        group.MapPost("/{requesterId:guid}/deactivate/{targetId:guid}", async (
-            Guid requesterId, Guid targetId, OperatorService service) =>
+        group.MapPost("/{targetId:guid}/deactivate", async (
+            Guid targetId, ClaimsPrincipal user, OperatorService service) =>
         {
-            await service.DeactivateAsync(requesterId, targetId);
+            await service.DeactivateAsync(user.GetOperatorId(), targetId);
             return Results.NoContent();
         })
         .WithName("DeactivateOperator")
-        .RequireAuthorization();
+        .RequireAuthorization(AuthorizationPolicies.OwnerOrAdmin);
 
-        group.MapPost("/{requesterId:guid}/activate/{targetId:guid}", async (
-            Guid requesterId, Guid targetId, OperatorService service) =>
+        group.MapPost("/{targetId:guid}/activate", async (
+            Guid targetId, ClaimsPrincipal user, OperatorService service) =>
         {
-            await service.ActivateAsync(requesterId, targetId);
+            await service.ActivateAsync(user.GetOperatorId(), targetId);
             return Results.NoContent();
         })
         .WithName("ActivateOperator")
-        .RequireAuthorization();
+        .RequireAuthorization(AuthorizationPolicies.OwnerOrAdmin);
     }
 }

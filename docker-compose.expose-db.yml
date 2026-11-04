@@ -1,0 +1,6 @@
+# Opcional: publica o MySQL só em 127.0.0.1, para ferramentas locais como dotnet ef.
+# docker compose -f docker-compose.yml -f docker-compose.expose-db.yml up -d
+services:
+  mysql:
+    ports:
+      - "127.0.0.1:${MYSQL_EXPOSED_PORT:-3306}:3306"

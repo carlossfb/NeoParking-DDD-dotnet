@@ -1,5 +1,6 @@
 namespace NeoParking.Management.Infrastructure;
 
+using NeoParking.Shared.Kernel.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,6 +17,8 @@ public static class ManagementModule
         var connectionString = configuration["Management:ConnectionString"]
             ?? configuration["Access:ConnectionString"]  // fallback: mesmo servidor do Access
             ?? throw new InvalidOperationException("Management:ConnectionString not found");
+
+        connectionString = MySqlConnectionStrings.WithPassword(connectionString, configuration);
 
         services.AddDbContext<ManagementDbContext>(options =>
             options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));

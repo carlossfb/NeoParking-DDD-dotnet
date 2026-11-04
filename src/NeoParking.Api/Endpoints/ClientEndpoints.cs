@@ -1,6 +1,7 @@
 namespace NeoParking.Api.Endpoints;
 
 using NeoParking.Access.Application;
+using NeoParking.Api.Extensions;
 
 public static class ClientEndpoints
 {
@@ -14,7 +15,7 @@ public static class ClientEndpoints
             return Results.Created($"/clients/{result.Id}", result);
         })
         .WithName("CreateClient")
-        .RequireAuthorization();
+        .RequireAuthorization(AuthorizationPolicies.AnyOperator);
 
         group.MapGet("/{id:guid}", async (Guid id, IClientService service) =>
         {
@@ -22,7 +23,7 @@ public static class ClientEndpoints
             return result is not null ? Results.Ok(result) : Results.NotFound();
         })
         .WithName("GetClient")
-        .RequireAuthorization();
+        .RequireAuthorization(AuthorizationPolicies.AnyOperator);
 
         group.MapGet("/", async (IClientService service) =>
         {
@@ -30,7 +31,7 @@ public static class ClientEndpoints
             return Results.Ok(result);
         })
         .WithName("GetAllClients")
-        .RequireAuthorization();
+        .RequireAuthorization(AuthorizationPolicies.AnyOperator);
 
         group.MapPatch("/{id:guid}", async (Guid id, ClientUpdateDTO request, IClientService service) =>
         {
@@ -38,7 +39,7 @@ public static class ClientEndpoints
             return Results.Ok(result);
         })
         .WithName("UpdateClient")
-        .RequireAuthorization();
+        .RequireAuthorization(AuthorizationPolicies.AnyOperator);
 
         group.MapDelete("/{id:guid}", async (Guid id, IClientService service) =>
         {
@@ -46,7 +47,7 @@ public static class ClientEndpoints
             return Results.NoContent();
         })
         .WithName("DeleteClient")
-        .RequireAuthorization();
+        .RequireAuthorization(AuthorizationPolicies.OwnerOrAdmin);
 
         group.MapPost("/{id:guid}/vehicles", async (Guid id, VehicleRequestDTO request, IClientService service) =>
         {
@@ -54,7 +55,7 @@ public static class ClientEndpoints
             return Results.Created($"/clients/{id}/vehicles/{result.Id}", result);
         })
         .WithName("RegisterVehicle")
-        .RequireAuthorization();
+        .RequireAuthorization(AuthorizationPolicies.AnyOperator);
 
         group.MapDelete("/{id:guid}/vehicles/{vehicleId:guid}", async (Guid id, Guid vehicleId, IClientService service) =>
         {
@@ -62,6 +63,6 @@ public static class ClientEndpoints
             return Results.NoContent();
         })
         .WithName("RemoveVehicle")
-        .RequireAuthorization();
+        .RequireAuthorization(AuthorizationPolicies.AnyOperator);
     }
 }

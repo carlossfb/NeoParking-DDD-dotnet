@@ -2,6 +2,7 @@ namespace NeoParking.Management.Infrastructure;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using NeoParking.Shared.Kernel.Configuration;
 
 /// <summary>
 /// Usado pelo EF Core tooling (dotnet ef migrations add) fora do host.
@@ -11,8 +12,7 @@ public sealed class ManagementDbContextFactory : IDesignTimeDbContextFactory<Man
 {
     public ManagementDbContext CreateDbContext(string[] args)
     {
-        var connectionString = Environment.GetEnvironmentVariable("MANAGEMENT_CONNECTION_STRING")
-            ?? "Server=localhost;Database=neoparking_management;Uid=root;Pwd=password;";
+        var connectionString = MySqlConnectionStrings.ForDesignTime("MANAGEMENT_CONNECTION_STRING", "neoparking_management");
 
         var options = new DbContextOptionsBuilder<ManagementDbContext>()
             .UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))

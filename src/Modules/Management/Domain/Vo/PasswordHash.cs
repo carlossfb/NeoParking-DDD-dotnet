@@ -24,7 +24,8 @@ public sealed class PasswordHash
         return new PasswordHash(hash);
     }
 
-    public override string ToString() => Value;
+    // O hash nunca aparece em logs nem em interpolações; quem precisa dele usa Value.
+    public override string ToString() => "***";
 
     public override bool Equals(object? obj)
         => obj is PasswordHash other && Value == other.Value;

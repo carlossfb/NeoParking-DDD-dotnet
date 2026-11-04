@@ -4,17 +4,19 @@ services:
     image: mysql:8.4
     container_name: neoparking_mysql
     restart: unless-stopped
+    # Chaves sem valor: o compose copia cada segredo do shell ou do .env local (ver .env.example).
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-password}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-neoparking}
-    ports:
-      - "${MYSQL_EXPOSED_PORT:-3306}:3306"
+      - MYSQL_ROOT_PASSWORD
+      - MYSQL_USER=neoparking_app
+      - MYSQL_PASSWORD
+    # A porta 3306 não é publicada. Para acessá-la do host, use docker-compose.expose-db.yml.
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./scripts/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./scripts/mysql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./scripts/mysql/app-grants.sql:/docker-entrypoint-initdb.d/02-app-grants.sql:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost",
-             "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-password}"]
+      # Por TCP: o servidor temporário da inicialização só escuta no socket local.
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -29,36 +31,20 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    # A API aplica MYSQL_PASSWORD às connection strings no boot e falha se ele faltar.
     environment:
-      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
-      MYSQL_HOST: mysql
-      MYSQL_PORT: 3306
-      Access__DatabaseProvider: MySQL
-      Access__ConnectionString: >-
-        Server=mysql;
-        Database=neoparking_access;
-        Uid=root;
-        Pwd=${MYSQL_ROOT_PASSWORD:-password};
-        AllowPublicKeyRetrieval=true;
-        SslMode=none;
-      Management__ConnectionString: >-
-        Server=mysql;
-        Database=neoparking_management;
-        Uid=root;
-        Pwd=${MYSQL_ROOT_PASSWORD:-password};
-        AllowPublicKeyRetrieval=true;
-        SslMode=none;
-      Jwt__Secret: ${JWT_SECRET:-CHANGE_ME_IN_PRODUCTION_MIN_32_CHARS!!}
-      Jwt__Issuer: neoparking
-      Jwt__Audience: neoparking
-      Jwt__ExpireMinutes: "60"
-      Billing__ConnectionString: >-
-        Server=mysql;
-        Database=neoparking_billing;
-        Uid=root;
-        Pwd=${MYSQL_ROOT_PASSWORD:-password};
-        AllowPublicKeyRetrieval=true;
-        SslMode=none;
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_PASSWORD
+      - Jwt__Secret
+      - Jwt__Issuer=neoparking
+      - Jwt__Audience=neoparking
+      - Jwt__ExpireMinutes=60
+      - Access__DatabaseProvider=MySQL
+      - Access__ConnectionString=Server=mysql;Database=neoparking_access;Uid=neoparking_app;AllowPublicKeyRetrieval=true;SslMode=none;
+      - Management__ConnectionString=Server=mysql;Database=neoparking_management;Uid=neoparking_app;AllowPublicKeyRetrieval=true;SslMode=none;
+      - Billing__ConnectionString=Server=mysql;Database=neoparking_billing;Uid=neoparking_app;AllowPublicKeyRetrieval=true;SslMode=none;
     ports:
       - "${API_PORT:-8080}:8080"
 

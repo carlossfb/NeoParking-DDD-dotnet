@@ -28,6 +28,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeoParking.Billing", "src\M
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeoParking.Billing.Tests", "tests\NeoParking.Billing.Tests\NeoParking.Billing.Tests.csproj", "{3B03720B-12D9-4B2D-A794-7826CE7B4B39}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeoParking.E2E.Tests", "tests\NeoParking.E2E.Tests\NeoParking.E2E.Tests.csproj", "{2E5767D1-7376-413F-A731-0AF7A18CE29A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -70,6 +72,10 @@ Global
 		{3B03720B-12D9-4B2D-A794-7826CE7B4B39}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3B03720B-12D9-4B2D-A794-7826CE7B4B39}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3B03720B-12D9-4B2D-A794-7826CE7B4B39}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E5767D1-7376-413F-A731-0AF7A18CE29A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E5767D1-7376-413F-A731-0AF7A18CE29A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E5767D1-7376-413F-A731-0AF7A18CE29A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E5767D1-7376-413F-A731-0AF7A18CE29A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -86,5 +92,6 @@ Global
 		{F09BF953-427E-4F85-848F-949FB8812984} = {A1B2C3D4-E5F6-7890-ABCD-EF0987654321}
 		{CBB6721F-2972-46C0-BD98-680F2F4B6B79} = {79DCAFD1-ABF9-4943-8A6F-8468B0FCA510}
 		{3B03720B-12D9-4B2D-A794-7826CE7B4B39} = {A1B2C3D4-E5F6-7890-ABCD-EF0987654321}
+		{2E5767D1-7376-413F-A731-0AF7A18CE29A} = {A1B2C3D4-E5F6-7890-ABCD-EF0987654321}
 	EndGlobalSection
 EndGlobal

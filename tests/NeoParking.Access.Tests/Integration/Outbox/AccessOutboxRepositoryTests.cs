@@ -6,6 +6,7 @@ using NeoParking.Access.Infrastructure;
 using NeoParking.Shared.Kernel.Events;
 using NeoParking.Shared.Kernel.Outbox;
 
+[Trait("Category", "Integration")]
 public class AccessOutboxRepositoryTests : IDisposable
 {
     private record TestEvent(string Name, Guid CorrelationId) : IDomainEvent;

@@ -39,6 +39,7 @@ public class MySqlFixture : IAsyncLifetime
     }
 }
 
+[Trait("Category", "Integration")]
 public class ClientRepositoryTests : IClassFixture<MySqlFixture>
 {
     private readonly MySqlFixture _fixture;

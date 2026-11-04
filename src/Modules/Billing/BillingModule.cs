@@ -1,5 +1,6 @@
 namespace NeoParking.Billing.Infrastructure;
 
+using NeoParking.Shared.Kernel.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,6 +17,8 @@ public static class BillingModule
         var connectionString = configuration["Billing:ConnectionString"]
             ?? configuration["Access:ConnectionString"]  // fallback: mesmo servidor do Access
             ?? throw new InvalidOperationException("Billing:ConnectionString not found");
+
+        connectionString = MySqlConnectionStrings.WithPassword(connectionString, configuration);
 
         services.AddDbContext<BillingDbContext>(options =>
             options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));

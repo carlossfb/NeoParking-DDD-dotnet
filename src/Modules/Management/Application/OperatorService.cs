@@ -20,19 +20,17 @@ public sealed class OperatorService
     // ── autenticação ──────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Valida credenciais e retorna o operador. Lança DomainException se inválido ou inativo.
+    /// Valida credenciais e retorna o operador. E-mail inexistente, senha errada e conta
+    /// inativa produzem a mesma exceção, para não revelar o estado da conta.
     /// Gerar o token JWT é responsabilidade da camada de API (infraestrutura de transporte).
     /// </summary>
     public async Task<OperatorUser> LoginAsync(LoginRequest request)
     {
         var user = await _repo.GetByEmailAsync(request.Email)
-            ?? throw new DomainException("Invalid credentials.");
+            ?? throw new InvalidCredentialsException();
 
-        if (!user.IsActive)
-            throw new DomainException("Account is inactive.");
-
-        if (!_hasher.Verify(request.Password, user.PasswordHash.Value))
-            throw new DomainException("Invalid credentials.");
+        if (!_hasher.Verify(request.Password, user.PasswordHash.Value) || !user.IsActive)
+            throw new InvalidCredentialsException();
 
         return user;
     }
@@ -66,15 +64,15 @@ public sealed class OperatorService
     /// </summary>
     public async Task<OperatorResponseDTO> CreateOperatorAsync(Guid requesterId, CreateOperatorRequest request)
     {
-        var requester = await GetExistingAsync(requesterId);
+        var requester = await GetActiveRequesterAsync(requesterId);
 
         if (requester.Role == OperatorRole.Operator)
-            throw new DomainException("Insufficient permissions to create operators.");
+            throw new ForbiddenException("Insufficient permissions to create operators.");
 
         var targetRole = ParseRole(request.Role);
 
-        if (targetRole == OperatorRole.Admin && requester.Role != OperatorRole.Owner)
-            throw new DomainException("Only the Owner can create Admin users.");
+        if (targetRole != OperatorRole.Operator && requester.Role != OperatorRole.Owner)
+            throw new ForbiddenException("Only the Owner can create Admin users.");
 
         if (targetRole == OperatorRole.Owner)
             throw new DomainException("Cannot create additional Owner accounts.");
@@ -93,10 +91,10 @@ public sealed class OperatorService
 
     public async Task PromoteToAdminAsync(Guid requesterId, Guid targetId)
     {
-        var requester = await GetExistingAsync(requesterId);
+        var requester = await GetActiveRequesterAsync(requesterId);
 
         if (requester.Role != OperatorRole.Owner)
-            throw new DomainException("Only the Owner can promote operators to Admin.");
+            throw new ForbiddenException("Only the Owner can promote operators to Admin.");
 
         var target = await GetExistingAsync(targetId);
         target.PromoteToAdmin();
@@ -106,10 +104,10 @@ public sealed class OperatorService
 
     public async Task DemoteToOperatorAsync(Guid requesterId, Guid targetId)
     {
-        var requester = await GetExistingAsync(requesterId);
+        var requester = await GetActiveRequesterAsync(requesterId);
 
         if (requester.Role != OperatorRole.Owner)
-            throw new DomainException("Only the Owner can demote Admin users.");
+            throw new ForbiddenException("Only the Owner can demote Admin users.");
 
         var target = await GetExistingAsync(targetId);
         target.DemoteToOperator();
@@ -121,15 +119,16 @@ public sealed class OperatorService
 
     public async Task DeactivateAsync(Guid requesterId, Guid targetId)
     {
-        var requester = await GetExistingAsync(requesterId);
-        var target    = await GetExistingAsync(targetId);
+        var requester = await GetActiveRequesterAsync(requesterId);
 
         if (requester.Role == OperatorRole.Operator)
-            throw new DomainException("Insufficient permissions to deactivate operators.");
+            throw new ForbiddenException("Insufficient permissions to deactivate operators.");
+
+        var target = await GetExistingAsync(targetId);
 
         // Admin não pode desativar outro Admin ou Owner
         if (requester.Role == OperatorRole.Admin && target.Role >= OperatorRole.Admin)
-            throw new DomainException("Cannot deactivate a user with the same or higher role.");
+            throw new ForbiddenException("Cannot deactivate a user with the same or higher role.");
 
         target.Deactivate();
         await _repo.UpdateAsync(target);
@@ -138,12 +137,17 @@ public sealed class OperatorService
 
     public async Task ActivateAsync(Guid requesterId, Guid targetId)
     {
-        var requester = await GetExistingAsync(requesterId);
+        var requester = await GetActiveRequesterAsync(requesterId);
 
         if (requester.Role == OperatorRole.Operator)
-            throw new DomainException("Insufficient permissions to activate operators.");
+            throw new ForbiddenException("Insufficient permissions to activate operators.");
 
         var target = await GetExistingAsync(targetId);
+
+        // Admin não pode ativar outro Admin ou Owner
+        if (requester.Role == OperatorRole.Admin && target.Role >= OperatorRole.Admin)
+            throw new ForbiddenException("Cannot activate a user with the same or higher role.");
+
         target.Activate();
         await _repo.UpdateAsync(target);
         await _unitOfWork.SaveChangesAsync();
@@ -151,8 +155,13 @@ public sealed class OperatorService
 
     // ── consulta ─────────────────────────────────────────────────────────────
 
-    public async Task<OperatorResponseDTO> GetByIdAsync(Guid id)
+    public async Task<OperatorResponseDTO> GetByIdAsync(Guid requesterId, Guid id)
     {
+        var requester = await GetActiveRequesterAsync(requesterId);
+
+        if (requester.Role == OperatorRole.Operator)
+            throw new ForbiddenException("Insufficient permissions to read operators.");
+
         var user = await _repo.GetByIdAsync(id)
             ?? throw new NotFoundException(nameof(OperatorUser), id);
 
@@ -160,6 +169,20 @@ public sealed class OperatorService
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Papel e estado do solicitante vêm do banco, não do token: um token ainda válido
+    /// não basta depois de uma desativação ou de um rebaixamento (decisão D3).
+    /// </summary>
+    private async Task<OperatorUser> GetActiveRequesterAsync(Guid id)
+    {
+        var requester = await _repo.GetByIdAsync(id);
+
+        if (requester is null || !requester.IsActive)
+            throw new ForbiddenException("The requester is not allowed to perform this action.");
+
+        return requester;
+    }
 
     private async Task<OperatorUser> GetExistingAsync(Guid id)
         => await _repo.GetByIdAsync(id)

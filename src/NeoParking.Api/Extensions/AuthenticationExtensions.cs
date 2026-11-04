@@ -10,17 +10,18 @@ public static class AuthenticationExtensions
     /// <summary>
     /// Registra o gerador de tokens JWT e configura a autenticação Bearer usada
     /// por todos os endpoints protegidos da API (validação de issuer, audience,
-    /// tempo de vida e assinatura). A autorização por role continua sendo feita
-    /// dentro de cada Application Service (ex: OperatorService), não aqui.
+    /// tempo de vida e assinatura) e as policies da matriz de autorização.
+    /// Em Management, o OperatorService ainda confere papel e estado no banco.
     /// </summary>
     public static IServiceCollection AddNeoParkingAuthentication(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
-        var jwtSecret = configuration["Jwt:Secret"]
-            ?? throw new InvalidOperationException("Jwt:Secret not configured.");
+        var jwtSecret = configuration["Jwt:Secret"];
+        JwtSecretValidator.Validate(jwtSecret, environment.IsDevelopment());
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
@@ -33,11 +34,11 @@ public static class AuthenticationExtensions
                     ValidAudience            = configuration["Jwt:Audience"] ?? "neoparking",
                     ValidateLifetime         = true,
                     ValidateIssuerSigningKey = true,
-                    IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
+                    IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret!))
                 };
             });
 
-        services.AddAuthorization();
+        services.AddAuthorization(AuthorizationPolicies.Configure);
 
         return services;
     }

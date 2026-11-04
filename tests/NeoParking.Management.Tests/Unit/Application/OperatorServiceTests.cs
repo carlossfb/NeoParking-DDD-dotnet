@@ -84,7 +84,7 @@ public class OperatorServiceTests
     }
 
     [Fact]
-    public async Task CreateOperatorAsync_AdminCreatingAdmin_ShouldThrowDomainException()
+    public async Task CreateOperatorAsync_AdminCreatingAdmin_ShouldThrowForbiddenException()
     {
         var adminId = Guid.NewGuid();
         _repo.Setup(r => r.GetByIdAsync(adminId)).ReturnsAsync(MakeUser(OperatorRole.Admin, adminId));
@@ -93,11 +93,11 @@ public class OperatorServiceTests
         var act = async () => await _service.CreateOperatorAsync(adminId,
             new CreateOperatorRequest("Op", "op@neo.com", "pass", "Admin"));
 
-        await act.Should().ThrowAsync<DomainException>().WithMessage("*Only the Owner*");
+        await act.Should().ThrowAsync<ForbiddenException>().WithMessage("*Only the Owner*");
     }
 
     [Fact]
-    public async Task CreateOperatorAsync_ByRegularOperator_ShouldThrowDomainException()
+    public async Task CreateOperatorAsync_ByRegularOperator_ShouldThrowForbiddenException()
     {
         var opId = Guid.NewGuid();
         _repo.Setup(r => r.GetByIdAsync(opId)).ReturnsAsync(MakeUser(OperatorRole.Operator, opId));
@@ -105,7 +105,7 @@ public class OperatorServiceTests
         var act = async () => await _service.CreateOperatorAsync(opId,
             new CreateOperatorRequest("Op", "op@neo.com", "pass", "Operator"));
 
-        await act.Should().ThrowAsync<DomainException>().WithMessage("*Insufficient permissions*");
+        await act.Should().ThrowAsync<ForbiddenException>().WithMessage("*Insufficient permissions*");
     }
 
     // ── promoção ─────────────────────────────────────────────────────────────
@@ -125,7 +125,7 @@ public class OperatorServiceTests
     }
 
     [Fact]
-    public async Task PromoteToAdminAsync_ByAdmin_ShouldThrowDomainException()
+    public async Task PromoteToAdminAsync_ByAdmin_ShouldThrowForbiddenException()
     {
         var adminId = Guid.NewGuid();
         var targetId = Guid.NewGuid();
@@ -134,7 +134,7 @@ public class OperatorServiceTests
 
         var act = async () => await _service.PromoteToAdminAsync(adminId, targetId);
 
-        await act.Should().ThrowAsync<DomainException>().WithMessage("*Only the Owner*");
+        await act.Should().ThrowAsync<ForbiddenException>().WithMessage("*Only the Owner*");
     }
 
     // ── desativação ──────────────────────────────────────────────────────────
@@ -154,7 +154,7 @@ public class OperatorServiceTests
     }
 
     [Fact]
-    public async Task DeactivateAsync_OperatorDeactivatingAdmin_ShouldThrowDomainException()
+    public async Task DeactivateAsync_OperatorDeactivatingAdmin_ShouldThrowForbiddenException()
     {
         var opId = Guid.NewGuid();
         var adminId = Guid.NewGuid();
@@ -163,11 +163,11 @@ public class OperatorServiceTests
 
         var act = async () => await _service.DeactivateAsync(opId, adminId);
 
-        await act.Should().ThrowAsync<DomainException>().WithMessage("*Insufficient permissions*");
+        await act.Should().ThrowAsync<ForbiddenException>().WithMessage("*Insufficient permissions*");
     }
 
     [Fact]
-    public async Task DeactivateAsync_AdminDeactivatingAdmin_ShouldThrowDomainException()
+    public async Task DeactivateAsync_AdminDeactivatingAdmin_ShouldThrowForbiddenException()
     {
         var adminId = Guid.NewGuid();
         var targetAdminId = Guid.NewGuid();
@@ -176,7 +176,7 @@ public class OperatorServiceTests
 
         var act = async () => await _service.DeactivateAsync(adminId, targetAdminId);
 
-        await act.Should().ThrowAsync<DomainException>().WithMessage("*same or higher role*");
+        await act.Should().ThrowAsync<ForbiddenException>().WithMessage("*same or higher role*");
     }
 
     // ── not found ────────────────────────────────────────────────────────────
@@ -184,10 +184,108 @@ public class OperatorServiceTests
     [Fact]
     public async Task GetByIdAsync_WithNonExistingId_ShouldThrowNotFoundException()
     {
+        var adminId = Guid.NewGuid();
         _repo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync((OperatorUser?)null);
+        _repo.Setup(r => r.GetByIdAsync(adminId)).ReturnsAsync(MakeUser(OperatorRole.Admin, adminId));
 
-        var act = async () => await _service.GetByIdAsync(Guid.NewGuid());
+        var act = async () => await _service.GetByIdAsync(adminId, Guid.NewGuid());
 
         await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    // ── solicitante (TD-104) ─────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Actions_ByInactiveRequester_ShouldThrowForbiddenException()
+    {
+        var requesterId = Guid.NewGuid();
+        var targetId = Guid.NewGuid();
+        var inactive = OperatorUser.Reconstitute(requesterId, "User", "user@neo.com",
+            PasswordHash.FromHash("hash"), OperatorRole.Owner, false, DateTime.UtcNow);
+        _repo.Setup(r => r.GetByIdAsync(requesterId)).ReturnsAsync(inactive);
+        _repo.Setup(r => r.GetByIdAsync(targetId)).ReturnsAsync(MakeUser(OperatorRole.Operator, targetId));
+
+        var actions = new Func<Task>[]
+        {
+            () => _service.CreateOperatorAsync(requesterId, new CreateOperatorRequest("Op", "op@neo.com", "pass", "Operator")),
+            () => _service.GetByIdAsync(requesterId, targetId),
+            () => _service.PromoteToAdminAsync(requesterId, targetId),
+            () => _service.DemoteToOperatorAsync(requesterId, targetId),
+            () => _service.DeactivateAsync(requesterId, targetId),
+            () => _service.ActivateAsync(requesterId, targetId),
+        };
+
+        foreach (var action in actions)
+            await action.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    [Fact]
+    public async Task Actions_ByUnknownRequester_ShouldThrowForbiddenException()
+    {
+        _repo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync((OperatorUser?)null);
+
+        var act = () => _service.GetByIdAsync(Guid.NewGuid(), Guid.NewGuid());
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    // ── ativação (TD-107) ────────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData(OperatorRole.Admin)]
+    [InlineData(OperatorRole.Owner)]
+    public async Task ActivateAsync_AdminActivatingSameOrHigherRole_ShouldThrowForbiddenException(OperatorRole targetRole)
+    {
+        var adminId = Guid.NewGuid();
+        var targetId = Guid.NewGuid();
+        _repo.Setup(r => r.GetByIdAsync(adminId)).ReturnsAsync(MakeUser(OperatorRole.Admin, adminId));
+        _repo.Setup(r => r.GetByIdAsync(targetId)).ReturnsAsync(MakeUser(targetRole, targetId));
+
+        var act = () => _service.ActivateAsync(adminId, targetId);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    [Fact]
+    public async Task ActivateAsync_AdminActivatingOperator_ShouldSucceed()
+    {
+        var adminId = Guid.NewGuid();
+        var targetId = Guid.NewGuid();
+        var target = OperatorUser.Reconstitute(targetId, "User", "user@neo.com",
+            PasswordHash.FromHash("hash"), OperatorRole.Operator, false, DateTime.UtcNow);
+        _repo.Setup(r => r.GetByIdAsync(adminId)).ReturnsAsync(MakeUser(OperatorRole.Admin, adminId));
+        _repo.Setup(r => r.GetByIdAsync(targetId)).ReturnsAsync(target);
+
+        await _service.ActivateAsync(adminId, targetId);
+
+        _repo.Verify(r => r.UpdateAsync(It.Is<OperatorUser>(u => u.IsActive)), Times.Once);
+    }
+
+    // ── login (TD-105 e TD-106) ──────────────────────────────────────────────
+
+    [Fact]
+    public async Task LoginAsync_UnknownEmail_WrongPassword_AndInactive_ShouldThrowTheSameException()
+    {
+        var active = MakeUser(OperatorRole.Operator, Guid.NewGuid());
+        var inactive = OperatorUser.Reconstitute(Guid.NewGuid(), "User", "inactive@neo.com",
+            PasswordHash.FromHash("hash"), OperatorRole.Operator, false, DateTime.UtcNow);
+        _repo.Setup(r => r.GetByEmailAsync("unknown@neo.com")).ReturnsAsync((OperatorUser?)null);
+        _repo.Setup(r => r.GetByEmailAsync("active@neo.com")).ReturnsAsync(active);
+        _repo.Setup(r => r.GetByEmailAsync("inactive@neo.com")).ReturnsAsync(inactive);
+        _hasher.Setup(h => h.Verify("right", "hash")).Returns(true);
+
+        var cases = new[]
+        {
+            new LoginRequest("unknown@neo.com", "right"),
+            new LoginRequest("active@neo.com", "wrong"),
+            new LoginRequest("inactive@neo.com", "right"),
+        };
+
+        foreach (var request in cases)
+        {
+            var act = () => _service.LoginAsync(request);
+            (await act.Should().ThrowAsync<InvalidCredentialsException>()).Which.Message
+                .Should().Be("Invalid credentials.");
+        }
     }
 }

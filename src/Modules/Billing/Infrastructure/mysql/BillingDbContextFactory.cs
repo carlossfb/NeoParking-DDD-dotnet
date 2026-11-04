@@ -2,6 +2,7 @@ namespace NeoParking.Billing.Infrastructure;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using NeoParking.Shared.Kernel.Configuration;
 
 /// <summary>
 /// Usado pelo EF Core tooling (dotnet ef migrations add) fora do host.
@@ -11,8 +12,7 @@ public sealed class BillingDbContextFactory : IDesignTimeDbContextFactory<Billin
 {
     public BillingDbContext CreateDbContext(string[] args)
     {
-        var connectionString = Environment.GetEnvironmentVariable("BILLING_CONNECTION_STRING")
-            ?? "Server=localhost;Database=neoparking_billing;Uid=root;Pwd=password;";
+        var connectionString = MySqlConnectionStrings.ForDesignTime("BILLING_CONNECTION_STRING", "neoparking_billing");
 
         var options = new DbContextOptionsBuilder<BillingDbContext>()
             .UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))
