@@ -57,4 +57,20 @@ public class BootConfigurationTests
         act.Should().Throw<Exception>().Which.ToString().Should().Contain("MYSQL_PASSWORD");
     }
 
+    [Fact]
+    public void Boot_WithoutBillingConnectionString_ShouldFailNamingTheKey()
+    {
+        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Production");
+            builder.UseSetting("Access:ConnectionString", UnreachableDb);
+            builder.UseSetting("Management:ConnectionString", UnreachableDb);
+            builder.UseSetting("MYSQL_PASSWORD", "boot-test-only");
+            builder.UseSetting("Jwt:Secret", "0123456789abcdef0123456789abcdef");
+        });
+
+        var act = () => factory.CreateClient();
+
+        act.Should().Throw<Exception>().Which.ToString().Should().Contain("Billing:ConnectionString");
+    }
 }

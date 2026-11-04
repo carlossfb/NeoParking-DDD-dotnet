@@ -15,7 +15,6 @@ public static class BillingModule
         IConfiguration configuration)
     {
         var connectionString = configuration["Billing:ConnectionString"]
-            ?? configuration["Access:ConnectionString"]  // fallback: mesmo servidor do Access
             ?? throw new InvalidOperationException("Billing:ConnectionString not found");
 
         connectionString = MySqlConnectionStrings.WithPassword(connectionString, configuration);
