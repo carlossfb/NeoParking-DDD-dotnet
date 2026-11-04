@@ -55,9 +55,11 @@ public sealed class MySqlFixture : IAsyncLifetime
         await command.ExecuteNonQueryAsync();
     }
 
+    // Sem pool: cada teste usa schemas próprios, e conexões ociosas de todos eles somadas
+    // esgotam o max_connections do container ("Too many connections").
     private string ConnectionString(string database) =>
         $"Server={_mysql.Hostname};Port={_mysql.GetMappedPublicPort(MySqlBuilder.MySqlPort)};" +
-        $"Database={database};Uid=root;Pwd={RootPassword};AllowPublicKeyRetrieval=true;SslMode=none;";
+        $"Database={database};Uid=root;Pwd={RootPassword};AllowPublicKeyRetrieval=true;SslMode=none;Pooling=false;";
 }
 
 public sealed record TestDatabases(

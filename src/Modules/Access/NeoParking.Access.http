@@ -218,6 +218,79 @@ Authorization: Bearer {{authToken}}
 
 ###
 
+### Registrar entrada: a resposta traz o código para imprimir ou mostrar
+# @name registerEntryWithCode
+POST {{baseUrl}}/access/tickets
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "plate": "DEF5G67"
+}
+
+###
+
+### Consultar o ticket pelo código
+GET {{baseUrl}}/access/tickets/by-code/{{registerEntryWithCode.response.body.code}}
+Authorization: Bearer {{authToken}}
+
+###
+
+### Registrar saída pelo código
+POST {{baseUrl}}/access/tickets/by-code/{{registerEntryWithCode.response.body.code}}/exit
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{}
+
+###
+
+### Repetir a saída pelo código (deve retornar 422: já encerrado)
+POST {{baseUrl}}/access/tickets/by-code/{{registerEntryWithCode.response.body.code}}/exit
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{}
+
+###
+
+### Consultar código inexistente (deve retornar 404)
+GET {{baseUrl}}/access/tickets/by-code/0123456789ABCDEF0123
+Authorization: Bearer {{authToken}}
+
+###
+
+### Registrar entrada para a saída por placa
+POST {{baseUrl}}/access/tickets
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "plate": "GHI8J90"
+}
+
+###
+
+### Saída por placa sem motivo (deve retornar 422)
+POST {{baseUrl}}/access/tickets/by-plate/GHI8J90/exit
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{}
+
+###
+
+### Saída por placa, para ticket perdido: o autor vem do token
+POST {{baseUrl}}/access/tickets/by-plate/GHI8J90/exit
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "reason": "Ticket perdido pelo motorista"
+}
+
+###
+
 ### Registrar entrada + saída retroativa com horário explícito (simula uma permanência de 2h30)
 # @name registerEntryRetro
 POST {{baseUrl}}/access/tickets

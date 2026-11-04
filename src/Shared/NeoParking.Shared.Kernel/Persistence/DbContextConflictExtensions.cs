@@ -9,6 +9,7 @@ public static class DbContextConflictExtensions
     /// <summary>
     /// Salva e traduz violação de índice único (erro MySQL 1062) para <see cref="ConflictException"/>.
     /// O índice é a garantia de unicidade; a mensagem genérica não expõe valores nem nomes do banco.
+    /// Uma escrita perdida para outra operação, detectada por token de concorrência, é traduzida da mesma forma.
     /// </summary>
     public static async Task SaveChangesOrConflictAsync(
         this DbContext context,
@@ -21,6 +22,10 @@ public static class DbContextConflictExtensions
         catch (DbUpdateException ex) when (ex.InnerException is MySqlException { ErrorCode: MySqlErrorCode.DuplicateKeyEntry })
         {
             throw new ConflictException("The operation conflicts with existing data.", ex);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            throw new ConflictException("The data was changed by another operation.", ex);
         }
     }
 }

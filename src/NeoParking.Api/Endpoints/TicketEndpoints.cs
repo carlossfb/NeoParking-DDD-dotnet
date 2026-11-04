@@ -1,5 +1,6 @@
 namespace NeoParking.Api.Endpoints;
 
+using System.Security.Claims;
 using NeoParking.Access.Application;
 using NeoParking.Access.Domain;
 using NeoParking.Api.Extensions;
@@ -26,6 +27,33 @@ public static class TicketEndpoints
             return Results.Ok(result);
         })
         .WithName("RegisterTicketExit")
+        .RequireAuthorization(AuthorizationPolicies.AnyOperator);
+
+        tickets.MapGet("/by-code/{code}", async (string code, ITicketService service) =>
+        {
+            var result = await service.GetByCodeAsync(code);
+            return Results.Ok(result);
+        })
+        .WithName("GetTicketByCode")
+        .RequireAuthorization(AuthorizationPolicies.AnyOperator);
+
+        tickets.MapPost("/by-code/{code}/exit", async (
+            string code, RegisterExitRequest request, ITicketService service) =>
+        {
+            var result = await service.RegisterExitByCodeAsync(code, request);
+            return Results.Ok(result);
+        })
+        .WithName("RegisterTicketExitByCode")
+        .RequireAuthorization(AuthorizationPolicies.AnyOperator);
+
+        // Para ticket perdido: o motivo vem do corpo, e o autor, do token.
+        tickets.MapPost("/by-plate/{plate}/exit", async (
+            string plate, RegisterExitByPlateRequest request, ClaimsPrincipal user, ITicketService service) =>
+        {
+            var result = await service.RegisterExitByPlateAsync(plate, request, user.GetOperatorId());
+            return Results.Ok(result);
+        })
+        .WithName("RegisterTicketExitByPlate")
         .RequireAuthorization(AuthorizationPolicies.AnyOperator);
 
         tickets.MapGet("/{id:guid}", async (Guid id, ITicketService service) =>

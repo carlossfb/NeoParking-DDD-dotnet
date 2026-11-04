@@ -66,4 +66,91 @@ public class TicketTests
         var act = () => ticket.RegisterExit(EntryAt.AddMinutes(-1));
         act.Should().Throw<DomainException>();
     }
+
+    [Fact]
+    public void RegisterEntry_ShouldAssignACode()
+    {
+        var first = Ticket.RegisterEntry(Plate.Create("ABC1234"), entryAt: EntryAt);
+        var second = Ticket.RegisterEntry(Plate.Create("ABC1234"), entryAt: EntryAt);
+
+        first.Code.Should().NotBeNull();
+        first.Code.Should().NotBe(second.Code);
+    }
+
+    [Theory]
+    [InlineData(ExitMethod.TicketId)]
+    [InlineData(ExitMethod.Code)]
+    public void RegisterExit_ShouldRecordTheMethod(ExitMethod method)
+    {
+        var ticket = Ticket.RegisterEntry(Plate.Create("ABC1234"), entryAt: EntryAt);
+
+        ticket.RegisterExit(EntryAt.AddHours(1), method);
+
+        ticket.ExitMethod.Should().Be(method);
+        ticket.ExitReason.Should().BeNull();
+        ticket.ExitOperatorId.Should().BeNull();
+    }
+
+    [Fact]
+    public void RegisterLostTicketExit_ShouldRecordMethodReasonAndAuthor()
+    {
+        var operatorId = Guid.NewGuid();
+        var ticket = Ticket.RegisterEntry(Plate.Create("ABC1234"), entryAt: EntryAt);
+
+        ticket.RegisterLostTicketExit(operatorId, "  Ticket perdido  ", EntryAt.AddHours(1));
+
+        ticket.Status.Should().Be(TicketStatus.Closed);
+        ticket.EntryAt.Should().Be(EntryAt);
+        ticket.ExitMethod.Should().Be(ExitMethod.Plate);
+        ticket.ExitReason.Should().Be("Ticket perdido");
+        ticket.ExitOperatorId.Should().Be(operatorId);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void RegisterLostTicketExit_WithoutReason_ShouldBeRejectedAndKeepTheTicketOpen(string? reason)
+    {
+        var ticket = Ticket.RegisterEntry(Plate.Create("ABC1234"), entryAt: EntryAt);
+
+        var act = () => ticket.RegisterLostTicketExit(Guid.NewGuid(), reason!, EntryAt.AddHours(1));
+
+        act.Should().Throw<DomainException>();
+        ticket.Status.Should().Be(TicketStatus.Open);
+    }
+
+    [Fact]
+    public void RegisterLostTicketExit_WithTooLongReason_ShouldBeRejected()
+    {
+        var ticket = Ticket.RegisterEntry(Plate.Create("ABC1234"), entryAt: EntryAt);
+
+        var act = () => ticket.RegisterLostTicketExit(
+            Guid.NewGuid(), new string('x', Ticket.ExitReasonMaxLength + 1), EntryAt.AddHours(1));
+
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void RegisterLostTicketExit_WithoutAuthor_ShouldBeRejected()
+    {
+        var ticket = Ticket.RegisterEntry(Plate.Create("ABC1234"), entryAt: EntryAt);
+
+        var act = () => ticket.RegisterLostTicketExit(Guid.Empty, "Ticket perdido", EntryAt.AddHours(1));
+
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void RegisterLostTicketExit_OnAClosedTicket_ShouldKeepTheOriginalExit()
+    {
+        var ticket = Ticket.RegisterEntry(Plate.Create("ABC1234"), entryAt: EntryAt);
+        ticket.RegisterExit(EntryAt.AddHours(1), ExitMethod.Code);
+
+        var act = () => ticket.RegisterLostTicketExit(Guid.NewGuid(), "Ticket perdido", EntryAt.AddHours(2));
+
+        act.Should().Throw<DomainException>();
+        ticket.ExitMethod.Should().Be(ExitMethod.Code);
+        ticket.ExitReason.Should().BeNull();
+    }
 }

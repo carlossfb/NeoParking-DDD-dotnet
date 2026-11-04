@@ -25,6 +25,9 @@ public sealed class MySqlTicketRepository : ITicketRepository
     public Task<Ticket?> GetByIdAsync(Guid ticketId)
         => _context.Tickets.FirstOrDefaultAsync(t => t.Id == ticketId);
 
+    public Task<Ticket?> GetByCodeAsync(TicketCode code)
+        => _context.Tickets.FirstOrDefaultAsync(t => t.Code == code);
+
     public Task<Ticket?> GetOpenByPlateAsync(string plate)
     {
         var normalized = Plate.Create(plate);

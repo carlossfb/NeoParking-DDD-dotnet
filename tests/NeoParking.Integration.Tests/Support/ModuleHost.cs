@@ -97,6 +97,18 @@ public sealed class ModuleHost : IAsyncDisposable
             scope.ServiceProvider.GetRequiredService<TSecond>());
     }
 
+    public async Task UseAsync<TFirst, TSecond, TThird>(Func<TFirst, TSecond, TThird, Task> action)
+        where TFirst : notnull
+        where TSecond : notnull
+        where TThird : notnull
+    {
+        await using var scope = _services.CreateAsyncScope();
+        await action(
+            scope.ServiceProvider.GetRequiredService<TFirst>(),
+            scope.ServiceProvider.GetRequiredService<TSecond>(),
+            scope.ServiceProvider.GetRequiredService<TThird>());
+    }
+
     public Task<OutboxMessage> ReloadFromAccessOutboxAsync(Guid id) =>
         UseAsync<AccessDbContext, OutboxMessage>(c =>
             c.OutboxMessages.AsNoTracking().SingleAsync(m => m.Id == id));
