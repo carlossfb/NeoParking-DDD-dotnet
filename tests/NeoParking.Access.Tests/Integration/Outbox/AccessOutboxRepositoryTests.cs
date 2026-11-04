@@ -3,21 +3,24 @@ namespace NeoParking.Access.Tests.Integration.Outbox;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using NeoParking.Access.Infrastructure;
+using NeoParking.Access.Tests.Integration.Repository;
 using NeoParking.Shared.Kernel.Events;
 using NeoParking.Shared.Kernel.Outbox;
 
 [Trait("Category", "Integration")]
-public class AccessOutboxRepositoryTests : IDisposable
+public class AccessOutboxRepositoryTests : IClassFixture<MySqlFixture>, IDisposable
 {
     private record TestEvent(string Name, Guid CorrelationId) : IDomainEvent;
 
     private readonly AccessDbContext _context;
     private readonly AccessOutboxRepository _repository;
 
-    public AccessOutboxRepositoryTests()
+    public AccessOutboxRepositoryTests(MySqlFixture fixture)
     {
+        fixture.Context.Database.ExecuteSqlRaw("DELETE FROM outbox_messages");
+
         var options = new DbContextOptionsBuilder<AccessDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .UseMySql(fixture.ConnectionString, ServerVersion.AutoDetect(fixture.ConnectionString))
             .Options;
 
         _context = new AccessDbContext(options);

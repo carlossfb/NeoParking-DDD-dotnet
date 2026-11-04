@@ -10,6 +10,7 @@ using Testcontainers.MySql;
 public class MySqlFixture : IAsyncLifetime
 {
     private readonly MySqlContainer _mysql = new MySqlBuilder()
+        .WithImage("mysql:8.4")
         .WithDatabase("neoparking_test")
         .WithUsername("root")
         .WithPassword("password")

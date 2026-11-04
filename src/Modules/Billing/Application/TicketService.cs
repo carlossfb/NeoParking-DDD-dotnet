@@ -49,7 +49,9 @@ public sealed class TicketService
     /// <summary>
     /// Reage ao <see cref="TicketClosedIntegrationEvent"/> publicado pelo Access, calculando
     /// e congelando a Fee com a PricingPolicy vigente no momento da saída. Idempotente: se o
-    /// ticket já está fechado (reentrega do outbox), não recalcula.
+    /// ticket já está fechado (reentrega do outbox), não recalcula. Sem política definida, o
+    /// evento fica aguardando no outbox, sem dead-letter: a cobrança sai quando o Owner definir
+    /// a primeira política, que vale retroativamente (ver PricingPolicyService).
     /// </summary>
     public async Task HandleTicketClosedAsync(TicketClosedIntegrationEvent @event)
     {
@@ -60,7 +62,7 @@ public sealed class TicketService
             return;
 
         var pricingPolicy = await _pricingPolicies.GetEffectiveAtAsync(@event.ExitAt)
-            ?? throw new DomainException("No pricing policy is defined. The Owner must define one before charging fees.");
+            ?? throw new RetryLaterException("No pricing policy is defined. The Owner must define one before charging fees.");
 
         ticket.Close(@event.ExitAt, pricingPolicy);
 

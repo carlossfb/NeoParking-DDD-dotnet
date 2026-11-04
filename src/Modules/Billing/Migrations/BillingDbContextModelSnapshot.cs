@@ -22,6 +22,48 @@ namespace NeoParking.Billing.Migrations
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
+            modelBuilder.Entity("NeoParking.Billing.Domain.PricingPolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("EffectiveFrom")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("EffectiveTo")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("GracePeriodMinutes")
+                        .HasColumnType("int")
+                        .HasColumnName("grace_period_minutes");
+
+                    b.Property<decimal>("HourlyRate")
+                        .HasColumnType("decimal(10,2)")
+                        .HasColumnName("hourly_rate");
+
+                    b.Property<decimal>("MinimumFee")
+                        .HasColumnType("decimal(10,2)")
+                        .HasColumnName("minimum_fee");
+
+                    b.Property<int>("MinimumFeeCoverageMinutes")
+                        .HasColumnType("int")
+                        .HasColumnName("minimum_fee_coverage_minutes");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EffectiveTo")
+                        .HasDatabaseName("ix_billing_pricing_policies_effective_to");
+
+                    b.HasIndex("EffectiveFrom", "EffectiveTo")
+                        .HasDatabaseName("ix_billing_pricing_policies_effective_range");
+
+                    b.ToTable("billing_pricing_policies", (string)null);
+                });
+
             modelBuilder.Entity("NeoParking.Billing.Domain.Ticket", b =>
                 {
                     b.Property<Guid>("Id")
@@ -79,55 +121,26 @@ namespace NeoParking.Billing.Migrations
                     b.ToTable("billing_tickets", (string)null);
                 });
 
-            modelBuilder.Entity("NeoParking.Billing.Domain.PricingPolicy", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("EffectiveFrom")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime?>("EffectiveTo")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<int>("GracePeriodMinutes")
-                        .HasColumnType("int")
-                        .HasColumnName("grace_period_minutes");
-
-                    b.Property<decimal>("HourlyRate")
-                        .HasColumnType("decimal(10,2)")
-                        .HasColumnName("hourly_rate");
-
-                    b.Property<decimal>("MinimumFee")
-                        .HasColumnType("decimal(10,2)")
-                        .HasColumnName("minimum_fee");
-
-                    b.Property<int>("MinimumFeeCoverageMinutes")
-                        .HasColumnType("int")
-                        .HasColumnName("minimum_fee_coverage_minutes");
-
-                    b.Property<Guid>("OwnerId")
-                        .HasColumnType("char(36)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EffectiveTo")
-                        .HasDatabaseName("ix_billing_pricing_policies_effective_to");
-
-                    b.HasIndex("EffectiveFrom", "EffectiveTo")
-                        .HasDatabaseName("ix_billing_pricing_policies_effective_range");
-
-                    b.ToTable("billing_pricing_policies", (string)null);
-                });
-
             modelBuilder.Entity("NeoParking.Shared.Kernel.Outbox.OutboxMessage", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("DeadLetteredAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
+
+                    b.Property<DateTime?>("NextAttemptAt")
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("Payload")

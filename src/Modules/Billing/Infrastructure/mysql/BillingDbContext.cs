@@ -61,6 +61,9 @@ public sealed class BillingDbContext : DbContext
 
             builder.HasIndex(p => new { p.EffectiveFrom, p.EffectiveTo })
                 .HasDatabaseName("ix_billing_pricing_policies_effective_range");
+
+            // Uma política ativa: índice funcional ux_billing_pricing_policies_active, criado na
+            // migration AddUniqueConstraints. O EF não representa esse tipo de índice no modelo.
         });
 
         modelBuilder.Entity<Ticket>(builder =>
@@ -131,6 +134,7 @@ public sealed class BillingDbContext : DbContext
             builder.Property(o => o.Payload).HasColumnType("longtext").IsRequired();
             builder.Property(o => o.CreatedAt).IsRequired();
             builder.Property(o => o.PublishedAt).IsRequired(false);
+            builder.Property(o => o.LastError).HasMaxLength(OutboxMessage.LastErrorMaxLength);
 
             builder.HasIndex(o => o.PublishedAt)
                 .HasDatabaseName("ix_billing_outbox_published_at");

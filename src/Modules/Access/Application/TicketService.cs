@@ -37,7 +37,7 @@ public sealed class TicketService : ITicketService
 
         var existingOpen = await _tickets.GetOpenByPlateAsync(plate.Value);
         if (existingOpen is not null)
-            throw new DomainException($"Vehicle '{plate.Value}' already has an open ticket.");
+            throw new ConflictException($"Vehicle '{plate.Value}' already has an open ticket.");
 
         var ticket = Ticket.RegisterEntry(plate, request.ClientId);
 

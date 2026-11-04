@@ -47,6 +47,10 @@ namespace NeoParking.Access.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Cpf")
+                        .IsUnique()
+                        .HasDatabaseName("ux_clients_cpf");
+
                     b.ToTable("clients", (string)null);
                 });
 
@@ -109,6 +113,10 @@ namespace NeoParking.Access.Migrations
 
                     b.HasIndex("ClientId");
 
+                    b.HasIndex("Plate")
+                        .IsUnique()
+                        .HasDatabaseName("ux_vehicles_plate");
+
                     b.ToTable("vehicles", (string)null);
                 });
 
@@ -118,7 +126,20 @@ namespace NeoParking.Access.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("DeadLetteredAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
+
+                    b.Property<DateTime?>("NextAttemptAt")
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("Payload")

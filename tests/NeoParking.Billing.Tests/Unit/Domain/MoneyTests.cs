@@ -45,4 +45,12 @@ public class MoneyTests
     {
         Money.Create(10m).Should().Be(Money.Create(10m));
     }
+
+    [Fact]
+    public void Multiplication_ByNegativeFactor_ShouldThrowDomainException()
+    {
+        var act = () => Money.Create(10m) * -1;
+
+        act.Should().Throw<DomainException>().WithMessage("*negative*");
+    }
 }

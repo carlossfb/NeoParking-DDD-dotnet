@@ -5,19 +5,23 @@ using Microsoft.EntityFrameworkCore;
 using Moq;
 using NeoParking.Access.Application;
 using NeoParking.Access.Infrastructure;
+using NeoParking.Access.Tests.Integration.Repository;
 using NeoParking.Shared.Kernel.Exceptions;
 using NeoParking.Shared.Kernel.Observability;
 
 [Trait("Category", "Integration")]
-public class ClientServiceIntegrationTests : IDisposable
+public class ClientServiceIntegrationTests : IClassFixture<MySqlFixture>, IDisposable
 {
     private readonly AccessDbContext _context;
     private readonly ClientService _service;
 
-    public ClientServiceIntegrationTests()
+    public ClientServiceIntegrationTests(MySqlFixture fixture)
     {
+        fixture.Context.Database.ExecuteSqlRaw("DELETE FROM outbox_messages");
+        fixture.Context.Database.ExecuteSqlRaw("DELETE FROM clients");
+
         var options = new DbContextOptionsBuilder<AccessDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .UseMySql(fixture.ConnectionString, ServerVersion.AutoDetect(fixture.ConnectionString))
             .Options;
 
         _context = new AccessDbContext(options);
@@ -66,6 +70,32 @@ public class ClientServiceIntegrationTests : IDisposable
 
         clients.Should().Be(1);
         outboxMessages.Should().Be(1);
+    }
+
+    [Theory]
+    [InlineData("outbox_messages")]
+    [InlineData("clients")]
+    public async Task CreateClientAsync_WhenAnyInsertFails_ShouldPersistNothing(string failingTable)
+    {
+        // Falha real, dentro do banco, em uma das escritas da transação.
+        await _context.Database.ExecuteSqlRawAsync(
+            $"CREATE TRIGGER force_failure BEFORE INSERT ON {failingTable} FOR EACH ROW "
+            + "SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'forced failure'");
+
+        try
+        {
+            var act = () => _service.CreateClientAsync(
+                new ClientRequestDTO("João Silva", "+5511999999999", "11144477735", null));
+
+            await act.Should().ThrowAsync<DbUpdateException>();
+        }
+        finally
+        {
+            await _context.Database.ExecuteSqlRawAsync("DROP TRIGGER force_failure");
+        }
+
+        (await _context.Clients.AsNoTracking().CountAsync()).Should().Be(0);
+        (await _context.OutboxMessages.AsNoTracking().CountAsync()).Should().Be(0);
     }
 
     [Fact]

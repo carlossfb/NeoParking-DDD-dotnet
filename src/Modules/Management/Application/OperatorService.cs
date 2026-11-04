@@ -43,7 +43,7 @@ public sealed class OperatorService
     public async Task<OperatorResponseDTO> CreateOwnerAsync(CreateOwnerRequest request)
     {
         if (await _repo.ExistsOwnerAsync())
-            throw new DomainException("Owner already exists. Only one Owner is allowed.");
+            throw new ConflictException("Owner already exists. Only one Owner is allowed.");
 
         await EnsureEmailAvailableAsync(request.Email);
 
@@ -191,7 +191,7 @@ public sealed class OperatorService
     private async Task EnsureEmailAvailableAsync(string email)
     {
         if (await _repo.GetByEmailAsync(email) is not null)
-            throw new DomainException($"E-mail '{email}' is already in use.");
+            throw new ConflictException($"E-mail '{email}' is already in use.");
     }
 
     private static OperatorRole ParseRole(string role)

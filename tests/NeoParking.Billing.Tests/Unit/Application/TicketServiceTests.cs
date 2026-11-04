@@ -109,7 +109,7 @@ public class TicketServiceTests
     }
 
     [Fact]
-    public async Task HandleTicketClosedAsync_WithNoPricingPolicyDefined_ShouldThrowDomainException()
+    public async Task HandleTicketClosedAsync_WithNoPricingPolicyDefined_ShouldAskTheOutboxToRetryLater()
     {
         var ticketId = Guid.NewGuid();
         var ticket = Ticket.OpenFromAccess(ticketId, "ABC1234", DateTime.UtcNow.AddHours(-1));
@@ -119,7 +119,7 @@ public class TicketServiceTests
         var act = async () => await _service.HandleTicketClosedAsync(new TicketClosedIntegrationEvent(
             ticketId, "ABC1234", DateTime.UtcNow, Guid.NewGuid()));
 
-        await act.Should().ThrowAsync<DomainException>().WithMessage("*Owner must define*");
+        await act.Should().ThrowAsync<RetryLaterException>().WithMessage("*Owner must define*");
     }
 
     [Fact]
