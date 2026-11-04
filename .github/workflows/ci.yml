@@ -32,3 +32,10 @@ jobs:
       - name: Integration tests
         if: ${{ !cancelled() && steps.build.outcome != 'failure' }}
         run: dotnet test Neoparking.sln --configuration Release --no-build --filter "Category=Integration"
+
+      # Roda por último para não esconder o resultado dos testes.
+      - name: Vulnerable packages
+        if: ${{ !cancelled() && steps.build.outcome != 'failure' }}
+        run: |
+          dotnet list Neoparking.sln package --vulnerable --include-transitive --format json > vulnerable-packages.json
+          bash scripts/ci/check-vulnerable-packages.sh vulnerable-packages.json

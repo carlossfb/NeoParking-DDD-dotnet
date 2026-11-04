@@ -366,8 +366,8 @@ snyk test --file=Neoparking.sln
 ### Security Practices
 
 - **Dependency Pinning** — Explicit package versions to prevent supply chain attacks
-- **Regular Updates** — Monthly security updates for critical packages
-- **Vulnerability Remediation** — Immediate patching of high/critical CVEs
+- **Regular Updates** — Dependabot opens monthly update PRs to `develop` for NuGet packages and GitHub Actions
+- **Vulnerability Remediation** — CI fails on high or critical advisories in production dependencies; in test projects, it only warns
 - **No Secrets in Code** — Secrets come only from the environment or the gitignored `.env`
 - **Password Storage** — Operator passwords are hashed with BCrypt; plaintext is never persisted (`PasswordHash` value object)
 - **Token-Based Auth** — Every endpoint except login and Owner bootstrap requires a valid JWT, validated against issuer, audience, signature, and expiry
