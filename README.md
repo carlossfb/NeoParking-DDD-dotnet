@@ -320,7 +320,7 @@ Outside Management, role and state come from the token alone. **A deactivated or
 | `MYSQL_ROOT_PASSWORD` | MySQL container only | `.env`; never passed to the API |
 | `Access:ConnectionString` | Yes, without password | `docker-compose.yml` or `appsettings.Development.json` |
 | `Billing:ConnectionString` | Yes, without password | Same |
-| `Management:ConnectionString` | Falls back to the Access connection string | Same |
+| `Management:ConnectionString` | Yes, without password | Same |
 | `Jwt:Issuer`, `Jwt:Audience`, `Jwt:ExpireMinutes` | Yes | `appsettings.json`; also set in `docker-compose.yml` |
 
 ---

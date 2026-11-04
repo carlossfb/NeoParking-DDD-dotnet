@@ -13,7 +13,6 @@ public static class ManagementModule
         IConfiguration configuration)
     {
         var connectionString = configuration["Management:ConnectionString"]
-            ?? configuration["Access:ConnectionString"]  // fallback: mesmo servidor do Access
             ?? throw new InvalidOperationException("Management:ConnectionString not found");
 
         connectionString = MySqlConnectionStrings.WithPassword(connectionString, configuration);
