@@ -8,6 +8,7 @@ using NeoParking.Access.Infrastructure;
 using NeoParking.Shared.Kernel.Exceptions;
 using NeoParking.Shared.Kernel.Observability;
 
+[Trait("Category", "Integration")]
 public class ClientServiceIntegrationTests : IDisposable
 {
     private readonly AccessDbContext _context;

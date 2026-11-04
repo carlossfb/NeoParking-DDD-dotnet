@@ -296,7 +296,7 @@ The project enforces architectural boundaries through **NetArchTest**, ensuring 
 ### Running Architecture Tests
 
 ```bash
-dotnet test tests/NeoParking.Tests --filter "FullyQualifiedName~Architecture"
+dotnet test tests/NeoParking.Tests --filter "Category=Architecture"
 ```
 
 ---
@@ -498,10 +498,10 @@ dotnet test tests/NeoParking.Access.Tests
 dotnet test tests/NeoParking.Management.Tests
 
 # Architecture only
-dotnet test tests/NeoParking.Tests --filter "FullyQualifiedName~Architecture"
+dotnet test tests/NeoParking.Tests --filter "Category=Architecture"
 
 # Skip integration tests (no Docker/Testcontainers required)
-dotnet test --filter "FullyQualifiedName!~Integration"
+dotnet test --filter "Category!=Integration"
 
 # With detailed output
 dotnet test --logger "console;verbosity=detailed"
@@ -633,8 +633,8 @@ Before opening a PR or merging into `develop`, make sure:
 
 ```bash
 dotnet build
-dotnet test --filter "FullyQualifiedName!~Integration"
-dotnet test tests/NeoParking.Tests --filter "FullyQualifiedName~Architecture"
+dotnet test --filter "Category!=Integration"
+dotnet test tests/NeoParking.Tests --filter "Category=Architecture"
 ```
 
 ---

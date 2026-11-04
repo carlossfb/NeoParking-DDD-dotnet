@@ -80,3 +80,6 @@ if (!isDesignTime)
 }
 
 app.Run();
+
+// Expõe o entry point para WebApplicationFactory nos testes E2E.
+public partial class Program { }
