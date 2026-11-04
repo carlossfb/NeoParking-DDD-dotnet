@@ -15,7 +15,7 @@ public sealed class MySqlCollection : ICollectionFixture<MySqlFixture>
 /// </summary>
 public sealed class MySqlFixture : IAsyncLifetime
 {
-    private const string RootPassword = "integration-test-only";
+    public const string RootPassword = "integration-test-only";
 
     private readonly MySqlContainer _mysql = new MySqlBuilder()
         .WithImage("mysql:8.4")

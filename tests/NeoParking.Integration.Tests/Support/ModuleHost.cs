@@ -1,5 +1,6 @@
 namespace NeoParking.Integration.Tests.Support;
 
+using NeoParking.Shared.Kernel.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,6 +32,7 @@ public sealed class ModuleHost : IAsyncDisposable
                 ["Access:ConnectionString"] = databases.AccessConnection,
                 ["Management:ConnectionString"] = databases.ManagementConnection,
                 ["Billing:ConnectionString"] = databases.BillingConnection,
+                [MySqlConnectionStrings.PasswordKey] = MySqlFixture.RootPassword,
             })
             .Build();
 
