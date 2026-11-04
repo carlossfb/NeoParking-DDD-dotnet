@@ -158,7 +158,8 @@ public class AuthorizationMatrixTests
     {
         name = "Cliente E2E",
         phoneNumber = "+5511999999999",
-        cpf = SecurityFixture.UniqueCpf()
+        type = "Individual",
+        document = SecurityFixture.UniqueCpf()
     };
 
     private static async Task<Guid> SeedClientAsync(SecurityFixture f)

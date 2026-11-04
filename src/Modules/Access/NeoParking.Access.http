@@ -32,7 +32,8 @@ Content-Type: application/json
 {
   "name": "João Silva",
   "phoneNumber": "+5511999999999",
-  "cpf": "11144477735"
+  "type": "Individual",
+  "document": "11144477735"
 }
 
 ###
@@ -45,7 +46,8 @@ Content-Type: application/json
 {
   "name": "Maria Oliveira",
   "phoneNumber": "+5521987654321",
-  "cpf": "98765432100",
+  "type": "Individual",
+  "document": "98765432100",
   "vehicles": [
     { "plate": "ABC1234" },
     { "plate": "XYZ9876" }
@@ -370,7 +372,8 @@ Content-Type: application/json
 {
   "name": "Teste Inválido",
   "phoneNumber": "+5511999999999",
-  "cpf": "00000000000"
+  "type": "Individual",
+  "document": "00000000000"
 }
 
 ###
@@ -383,7 +386,8 @@ Content-Type: application/json
 {
   "name": "Teste Inválido",
   "phoneNumber": "123",
-  "cpf": "11144477735"
+  "type": "Individual",
+  "document": "11144477735"
 }
 
 ###

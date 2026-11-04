@@ -5,7 +5,8 @@
 SELECT 'vehicles.plate' AS rule_name, plate AS value_found, COUNT(*) AS occurrences
   FROM neoparking_access.vehicles GROUP BY plate HAVING COUNT(*) > 1;
 
--- CPF em mais de um cliente
+-- CPF em mais de um cliente. Esta consulta só vale antes de AddUniqueConstraints: depois disso o índice
+-- garante a unicidade, e a coluna cpf deixa de existir. O resultado traz o CPF em texto puro: não o salve.
 SELECT 'clients.cpf' AS rule_name, cpf AS value_found, COUNT(*) AS occurrences
   FROM neoparking_access.clients GROUP BY cpf HAVING COUNT(*) > 1;
 

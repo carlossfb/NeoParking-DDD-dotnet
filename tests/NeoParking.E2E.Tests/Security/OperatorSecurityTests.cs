@@ -128,7 +128,7 @@ public class OperatorSecurityTests
         var invalidRole = await _f.SendAsync(HttpMethod.Post, "/operators", _f.Owner.Token, NewOperator("Janitor"));
         var secondOwner = await _f.SendAsync(HttpMethod.Post, "/operators", _f.Owner.Token, NewOperator("Owner"));
         var invalidCpf = await _f.SendAsync(HttpMethod.Post, "/clients", _f.Operator.Token,
-            new { name = "Cliente", phoneNumber = "+5511999999999", cpf = "00000000000" });
+            new { name = "Cliente", phoneNumber = "+5511999999999", type = "Individual", document = "00000000000" });
 
         invalidRole.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
         secondOwner.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);

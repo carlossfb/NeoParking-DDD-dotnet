@@ -22,17 +22,18 @@ public sealed class AccessDbContext : DbContext
             builder.HasKey(c => c.Id);
             builder.Property(c => c.Name).HasMaxLength(200).IsRequired();
 
-            builder.Property(c => c.Cpf)
-                .HasColumnName("cpf")
-                .HasMaxLength(11)
-                .IsRequired()
-                .HasConversion(
-                    cpf => cpf.Document,
-                    value => Cpf.Create(value))
-                .Metadata.SetValueComparer(new ValueComparer<Cpf>(
-                    (a, b) => a!.Document == b!.Document,
-                    c => c.Document.GetHashCode(),
-                    c => Cpf.Create(c.Document)));
+            builder.Property(c => c.Type)
+                .HasColumnName("type")
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .IsRequired();
+
+            builder.Property(c => c.DocumentValue)
+                .HasColumnName("document")
+                .HasMaxLength(14)
+                .IsRequired();
+
+            builder.Ignore(c => c.Document);
 
             builder.Property(c => c.PhoneNumber)
                 .HasColumnName("phone_number")
@@ -46,9 +47,9 @@ public sealed class AccessDbContext : DbContext
                     c => c.Value.GetHashCode(),
                     c => PhoneNumber.CreateBR(c.Value)));
 
-            builder.HasIndex(c => c.Cpf)
+            builder.HasIndex(c => c.DocumentValue)
                 .IsUnique()
-                .HasDatabaseName("ux_clients_cpf");
+                .HasDatabaseName("ux_clients_document");
 
             builder.HasMany(c => c.Vehicles)
                 .WithOne()

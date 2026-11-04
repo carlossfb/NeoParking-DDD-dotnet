@@ -114,6 +114,25 @@ public sealed class SecurityFixture : IAsyncLifetime
         return string.Concat(digits);
     }
 
+    /// <summary>CNPJ alfanumérico válido: valor do caractere = ASCII − 48, pesos oficiais da Receita Federal.</summary>
+    public static string UniqueCnpj()
+    {
+        const string alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        var body = new string(Enumerable.Range(0, 12).Select(_ => alphabet[Random.Shared.Next(alphabet.Length)]).ToArray());
+        int[] firstWeights = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+        int[] secondWeights = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+
+        var first = CnpjDigit(body, firstWeights);
+        var second = CnpjDigit(body + first, secondWeights);
+        return $"{body}{first}{second}";
+    }
+
+    private static int CnpjDigit(string value, int[] weights)
+    {
+        var rest = weights.Select((weight, i) => (value[i] - 48) * weight).Sum() % 11;
+        return rest < 2 ? 0 : 11 - rest;
+    }
+
     private static int CheckDigit(IReadOnlyList<int> digits)
     {
         var weight = digits.Count + 1;

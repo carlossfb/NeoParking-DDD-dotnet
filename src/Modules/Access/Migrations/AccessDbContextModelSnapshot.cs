@@ -28,11 +28,11 @@ namespace NeoParking.Access.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("Cpf")
+                    b.Property<string>("DocumentValue")
                         .IsRequired()
-                        .HasMaxLength(11)
-                        .HasColumnType("varchar(11)")
-                        .HasColumnName("cpf");
+                        .HasMaxLength(14)
+                        .HasColumnType("varchar(14)")
+                        .HasColumnName("document");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -45,11 +45,17 @@ namespace NeoParking.Access.Migrations
                         .HasColumnType("varchar(20)")
                         .HasColumnName("phone_number");
 
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("type");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("Cpf")
+                    b.HasIndex("DocumentValue")
                         .IsUnique()
-                        .HasDatabaseName("ux_clients_cpf");
+                        .HasDatabaseName("ux_clients_document");
 
                     b.ToTable("clients", (string)null);
                 });

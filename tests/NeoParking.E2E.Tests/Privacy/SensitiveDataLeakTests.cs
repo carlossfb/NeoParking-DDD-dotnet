@@ -59,7 +59,7 @@ public sealed class SensitiveDataLeakTests
     public async Task DocumentInUse_ShouldNotLeakItFromTheDuplicateKeyError()
     {
         var cpf = SecurityFixture.UniqueCpf();
-        var body = new { name = "Cliente", phoneNumber = "+5511999999999", cpf };
+        var body = new { name = "Cliente", phoneNumber = "+5511999999999", type = "Individual", document = cpf };
         await _f.SendAsync(HttpMethod.Post, "/clients", _f.Operator.Token, body);
 
         var response = await _f.SendAsync(HttpMethod.Post, "/clients", _f.Operator.Token, body);
@@ -96,7 +96,7 @@ public sealed class SensitiveDataLeakTests
     private async Task<Guid> CreateClientAsync()
     {
         var response = await _f.SendAsync(HttpMethod.Post, "/clients", _f.Operator.Token,
-            new { name = "Cliente", phoneNumber = "+5511999999999", cpf = SecurityFixture.UniqueCpf() });
+            new { name = "Cliente", phoneNumber = "+5511999999999", type = "Individual", document = SecurityFixture.UniqueCpf() });
         return (await _f.ReadAsync<SecurityFixture.IdResponse>(response)).Id;
     }
 }

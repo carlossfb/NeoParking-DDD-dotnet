@@ -149,7 +149,7 @@ public sealed class UniquenessTests
         var other = await CreateClientAsync(host, OtherCpf);
 
         var act = () => host.UseAsync<IClientService>(s =>
-            s.UpdateClientAsync(other, new ClientUpdateDTO(null, null, ValidCpf)));
+            s.UpdateClientAsync(other, new ClientUpdateDTO(null, null, null, ValidCpf)));
 
         await act.Should().ThrowAsync<ConflictException>();
     }
@@ -240,7 +240,7 @@ public sealed class UniquenessTests
     private static async Task<Guid> CreateClientAsync(ModuleHost host, string cpf)
     {
         var created = await host.UseAsync<IClientService, ClientResponseDTO>(s =>
-            s.CreateClientAsync(new ClientRequestDTO("Cliente", PhoneNumberValue, cpf, null)));
+            s.CreateClientAsync(new ClientRequestDTO("Cliente", PhoneNumberValue, "Individual", cpf, null)));
         return created.Id;
     }
 

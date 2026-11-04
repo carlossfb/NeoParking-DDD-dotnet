@@ -19,6 +19,7 @@ public sealed class MigrationTests
 {
     private const string BeforeUnique = "AddOutboxRetry";
     private const string BeforeTicketCode = "AddUniqueConstraints";
+    private const string BeforeClientType = "AddTicketCode";
 
     private const string Now = "'2026-01-01 00:00:00'";
 
@@ -33,7 +34,7 @@ public sealed class MigrationTests
         await using var host = await ModuleHost.CreateMigratedAsync(databases);
 
         (await UniqueIndexesAsync(databases.Access)).Should().Contain(
-            ["ux_vehicles_plate", "ux_clients_cpf", "ux_tickets_open_plate"]);
+            ["ux_vehicles_plate", "ux_clients_document", "ux_tickets_open_plate"]);
         (await UniqueIndexesAsync(databases.Management)).Should().Contain("ux_management_operators_owner");
         (await UniqueIndexesAsync(databases.Billing)).Should().Contain("ux_billing_pricing_policies_active");
     }
@@ -270,6 +271,36 @@ public sealed class MigrationTests
             "SELECT COLUMN_NAME FROM information_schema.COLUMNS "
             + $"WHERE TABLE_SCHEMA = '{databases.Access}' AND TABLE_NAME = 'tickets'"))
             .Should().NotContain(["code", "exit_method", "exit_reason", "exit_operator_id"]);
+    }
+
+    [Fact]
+    public async Task ExistingClients_ShouldBecomeIndividuals_WithTheRestrictedUser()
+    {
+        var databases = await _mysql.CreateDatabasesAsync();
+        var restricted = await RestrictedUserAsync(databases);
+        await using var host = ModuleHost.Create(restricted);
+        await MigrateAccessToAsync(host, BeforeClientType);
+        await _mysql.ExecuteAsync(ClientInsert(databases.Access, "11144477735", out var id));
+
+        await MigrateAccessToAsync(host, "AddClientType");
+
+        (await ReadFirstColumnAsync($"SELECT type FROM {databases.Access}.clients WHERE Id = '{id}'"))
+            .Should().ContainSingle().Which.Should().Be("Individual");
+        (await ReadFirstColumnAsync($"SELECT document FROM {databases.Access}.clients WHERE Id = '{id}'"))
+            .Should().ContainSingle().Which.Should().Be("11144477735");
+        (await UniqueIndexesAsync(databases.Access)).Should().Contain("ux_clients_document").And.NotContain("ux_clients_cpf");
+    }
+
+    [Fact]
+    public async Task RemovingTheClientType_ShouldRestoreTheCpfColumn()
+    {
+        var databases = await _mysql.CreateDatabasesAsync();
+        await using var host = ModuleHost.Create(databases);
+        await MigrateAccessToAsync(host, "AddClientType");
+
+        await MigrateAccessToAsync(host, BeforeClientType);
+
+        (await UniqueIndexesAsync(databases.Access)).Should().Contain("ux_clients_cpf").And.NotContain("ux_clients_document");
     }
 
     /// <summary>Usuário com acesso só aos schemas do teste, como o neoparking_app do compose.</summary>

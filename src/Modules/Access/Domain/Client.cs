@@ -7,7 +7,9 @@ public sealed class Client : Entity
 {
     public string Name { get; private set; }
     public PhoneNumber PhoneNumber { get; private set; }
-    public Cpf Cpf { get; private set; }
+    public ClientType Type { get; private set; }
+    public string DocumentValue { get; private set; }
+    public Document Document => Document.Create(Type, DocumentValue);
 
     private readonly List<Vehicle> _vehicles = [];
     public IReadOnlyList<Vehicle> Vehicles => _vehicles.AsReadOnly();
@@ -17,32 +19,34 @@ public sealed class Client : Entity
     {
         Name = string.Empty;
         PhoneNumber = null!;
-        Cpf = null!;
+        DocumentValue = string.Empty;
     }
 
 
-    private Client(string name, PhoneNumber phoneNumber, Cpf cpf) : base()
+    private Client(string name, PhoneNumber phoneNumber, Document document) : base()
     {
         ValidateName(name);
         Name = name;
         PhoneNumber = phoneNumber;
-        Cpf = cpf;
+        Type = document.Type;
+        DocumentValue = document.Value;
     }
 
-    private Client(Guid id, string name, PhoneNumber phoneNumber, Cpf cpf, IEnumerable<Vehicle> vehicles) : base(id)
+    private Client(Guid id, string name, PhoneNumber phoneNumber, Document document, IEnumerable<Vehicle> vehicles) : base(id)
     {
         ValidateName(name);
         Name = name;
         PhoneNumber = phoneNumber;
-        Cpf = cpf;
+        Type = document.Type;
+        DocumentValue = document.Value;
         _vehicles = vehicles.ToList();
     }
 
-    public static Client Create(string name, PhoneNumber phoneNumber, Cpf cpf) =>
-        new(name, phoneNumber, cpf);
+    public static Client Create(string name, PhoneNumber phoneNumber, Document document) =>
+        new(name, phoneNumber, document);
 
-    public static Client Reconstitute(Guid id, string name, PhoneNumber phoneNumber, Cpf cpf, IEnumerable<Vehicle> vehicles) =>
-        new(id, name, phoneNumber, cpf, vehicles);
+    public static Client Reconstitute(Guid id, string name, PhoneNumber phoneNumber, Document document, IEnumerable<Vehicle> vehicles) =>
+        new(id, name, phoneNumber, document, vehicles);
 
     public Vehicle RegisterVehicle(Plate plate)
     {
@@ -57,7 +61,7 @@ public sealed class Client : Entity
         return vehicle;
     }
 
-    public void Update(string? name, string? phoneNumber, string? cpf)
+    public void Update(string? name, string? phoneNumber, Document? document)
     {
         if (name is not null)
         {
@@ -65,7 +69,11 @@ public sealed class Client : Entity
             Name = name;
         }
         if (phoneNumber is not null) PhoneNumber = PhoneNumber.Create(phoneNumber);
-        if (cpf is not null) Cpf = Cpf.Create(cpf);
+        if (document is not null)
+        {
+            Type = document.Type;
+            DocumentValue = document.Value;
+        }
     }
     public void RemoveVehicle(Guid vehicleId)
     {

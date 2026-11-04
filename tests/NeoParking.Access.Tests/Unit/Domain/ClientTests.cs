@@ -10,7 +10,7 @@ public class ClientTests
     [Fact]
     public void Create_WithValidData_ShouldCreateClient()
     {
-        var client = Client.Create("João Silva", PhoneNumber.Create("+5511999999999"), Cpf.Create("11144477735"));
+        var client = Client.Create("João Silva", PhoneNumber.Create("+5511999999999"), TestDocuments.Cpf("11144477735"));
 
         client.Should().NotBeNull();
         client.Name.Should().Be("João Silva");
@@ -20,7 +20,7 @@ public class ClientTests
     [Fact]
     public void RegisterVehicle_WithValidPlate_ShouldAddVehicle()
     {
-        var client = Client.Create("João", PhoneNumber.Create("+5511999999999"), Cpf.Create("11144477735"));
+        var client = Client.Create("João", PhoneNumber.Create("+5511999999999"), TestDocuments.Cpf("11144477735"));
 
         var vehicle = client.RegisterVehicle(Plate.Create("ABC1234")); // sem clientId
 
@@ -34,7 +34,7 @@ public class ClientTests
     [InlineData(null)]
     public void Create_WithInvalidName_ShouldThrowDomainException(string invalidName)
     {
-        var act = () => Client.Create(invalidName, PhoneNumber.Create("+5511999999999"), Cpf.Create("11144477735"));
+        var act = () => Client.Create(invalidName, PhoneNumber.Create("+5511999999999"), TestDocuments.Cpf("11144477735"));
         act.Should().Throw<DomainException>();
     }
 }
