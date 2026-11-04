@@ -19,7 +19,7 @@ public class DomainArchitectureTests
     private const string PhoneNumberLibrary = "PhoneNumbers";
 
     private static readonly string[] PersistenceAndCryptoLibraries =
-        ["Microsoft.EntityFrameworkCore", "Pomelo", "MySqlConnector", "MongoDB", "BCrypt"];
+        ["Microsoft.EntityFrameworkCore", "Pomelo", "MySqlConnector", "BCrypt"];
 
     private static readonly string[] AspNetLibraries = ["Microsoft.AspNetCore"];
 

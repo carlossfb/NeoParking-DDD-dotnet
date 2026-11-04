@@ -9,8 +9,6 @@ using NeoParking.Access.Domain;
 using NeoParking.Shared.Kernel.Outbox;
 using Microsoft.Extensions.Logging;
 
-public enum DatabaseProvider { MySQL, MongoDB }
-
 public static class AccessModule
 {
     public static IServiceCollection AddAccessModule(
@@ -20,55 +18,35 @@ public static class AccessModule
         var connectionString = configuration["Access:ConnectionString"]
             ?? throw new InvalidOperationException("Access:ConnectionString not found");
 
-        var provider = Enum.Parse<DatabaseProvider>(
-            configuration["Access:DatabaseProvider"] ?? "MySQL", ignoreCase: true);
+        connectionString = MySqlConnectionStrings.WithPassword(connectionString, configuration);
 
-        switch (provider)
-        {
-            case DatabaseProvider.MySQL:
-                var mySqlConnectionString = MySqlConnectionStrings.WithPassword(connectionString, configuration);
-                services.AddDbContext<AccessDbContext>(options =>
-                    options.UseMySql(mySqlConnectionString, ServerVersion.AutoDetect(mySqlConnectionString)));
-                services.AddScoped<IClientRepository, MySqlClientRepository>();
-                services.AddScoped<ITicketRepository, MySqlTicketRepository>();
+        services.AddDbContext<AccessDbContext>(options =>
+            options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+        services.AddScoped<IClientRepository, MySqlClientRepository>();
+        services.AddScoped<ITicketRepository, MySqlTicketRepository>();
 
-                services.AddScoped<OutboxRepository<AccessDbContext>>();
-                services.AddScoped<AccessOutboxRepository>();
-                services.AddScoped<IAccessOutboxRepository>(sp => sp.GetRequiredService<AccessOutboxRepository>());
+        services.AddScoped<OutboxRepository<AccessDbContext>>();
+        services.AddScoped<AccessOutboxRepository>();
+        services.AddScoped<IAccessOutboxRepository>(sp => sp.GetRequiredService<AccessOutboxRepository>());
 
-                services.AddScoped<IUnitOfWork, AccessUnitOfWork>();
+        services.AddScoped<IUnitOfWork, AccessUnitOfWork>();
 
-                services.AddScoped<ITicketService, TicketService>();
+        services.AddScoped<ITicketService, TicketService>();
 
-                services.AddHostedService<OutboxProcessor<AccessDbContext>>(sp =>
-                    new OutboxProcessor<AccessDbContext>(
-                        sp.GetRequiredService<IServiceScopeFactory>(),
-                        sp.GetRequiredService<ILogger<OutboxProcessor<AccessDbContext>>>(),
-                        moduleName: "Access"));
-                break;
-            case DatabaseProvider.MongoDB:
-                services.AddSingleton(_ => new MongoDbContext(connectionString));
-                services.AddScoped<IClientRepository, MongoClientRepository>();
-                // Ticket depende do outbox para publicar eventos ao Billing — não suportado no provider MongoDB por ora
-                break;
-            default:
-                throw new ArgumentException($"Unsupported provider: {provider}");
-        }
+        services.AddHostedService<OutboxProcessor<AccessDbContext>>(sp =>
+            new OutboxProcessor<AccessDbContext>(
+                sp.GetRequiredService<IServiceScopeFactory>(),
+                sp.GetRequiredService<ILogger<OutboxProcessor<AccessDbContext>>>(),
+                moduleName: "Access"));
 
         services.AddScoped<IClientService, ClientService>();
 
         return services;
     }
 
-    public static void InitializeDatabase(IServiceProvider serviceProvider, IConfiguration configuration)
+    public static void InitializeDatabase(IServiceProvider serviceProvider)
     {
-        var provider = Enum.Parse<DatabaseProvider>(
-            configuration["Access:DatabaseProvider"] ?? "MySQL", ignoreCase: true);
-
-        if (provider == DatabaseProvider.MySQL)
-        {
-            using var scope = serviceProvider.CreateScope();
-            scope.ServiceProvider.GetRequiredService<AccessDbContext>().Database.Migrate();
-        }
+        using var scope = serviceProvider.CreateScope();
+        scope.ServiceProvider.GetRequiredService<AccessDbContext>().Database.Migrate();
     }
 }

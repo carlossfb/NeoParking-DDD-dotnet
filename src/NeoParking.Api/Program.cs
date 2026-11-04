@@ -84,7 +84,7 @@ app.MapBillingEndpoints(); // <- registre aqui quando os endpoints do Billing ex
 var isDesignTime = Environment.GetEnvironmentVariable("EF_DESIGN_TIME") == "1";
 if (!isDesignTime)
 {
-    app.Services.InitializeNeoParkingDatabases(builder.Configuration);
+    app.Services.InitializeNeoParkingDatabases();
 }
 
 app.Run();

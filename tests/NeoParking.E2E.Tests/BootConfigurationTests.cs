@@ -23,7 +23,6 @@ public class BootConfigurationTests
         using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Production");
-            builder.UseSetting("Access:DatabaseProvider", "MySQL");
             builder.UseSetting("Access:ConnectionString", UnreachableDb);
             builder.UseSetting("Management:ConnectionString", UnreachableDb);
             builder.UseSetting("Billing:ConnectionString", UnreachableDb);
@@ -46,7 +45,6 @@ public class BootConfigurationTests
         using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Production");
-            builder.UseSetting("Access:DatabaseProvider", "MySQL");
             builder.UseSetting("Access:ConnectionString", UnreachableDb);
             builder.UseSetting("Management:ConnectionString", UnreachableDb);
             builder.UseSetting("Billing:ConnectionString", UnreachableDb);
