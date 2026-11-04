@@ -38,14 +38,14 @@ public class PricingPolicyServiceTests
     private static DefinePricingPolicyRequest MakeRequest(
         decimal minimumFee = 10m, decimal hourlyRate = 4m,
         int coverageMinutes = 60, int graceMinutes = 0)
-        => new(OwnerId, minimumFee, hourlyRate, coverageMinutes, graceMinutes);
+        => new(minimumFee, hourlyRate, coverageMinutes, graceMinutes);
 
     [Fact]
     public async Task DefineAsync_WithNoActivePolicy_ShouldCreateNewActivePolicy()
     {
         _mockRepository.Setup(r => r.GetActiveAsync()).ReturnsAsync((PricingPolicy?)null);
 
-        var result = await _service.DefineAsync(MakeRequest());
+        var result = await _service.DefineAsync(OwnerId, MakeRequest());
 
         result.IsActive.Should().BeTrue();
         result.MinimumFee.Should().Be(10m);
@@ -62,7 +62,7 @@ public class PricingPolicyServiceTests
         _mockRepository.Setup(r => r.GetActiveAsync()).ReturnsAsync(current);
         _mockRepository.Setup(r => r.UpdateAsync(It.IsAny<PricingPolicy>())).Returns(Task.CompletedTask);
 
-        await _service.DefineAsync(MakeRequest(minimumFee: 20m, hourlyRate: 6m));
+        await _service.DefineAsync(OwnerId, MakeRequest(minimumFee: 20m, hourlyRate: 6m));
 
         current.IsActive.Should().BeFalse();
         _mockRepository.Verify(r => r.UpdateAsync(current), Times.Once);
@@ -74,7 +74,7 @@ public class PricingPolicyServiceTests
     {
         _mockRepository.Setup(r => r.GetActiveAsync()).ReturnsAsync((PricingPolicy?)null);
 
-        await _service.DefineAsync(MakeRequest());
+        await _service.DefineAsync(OwnerId, MakeRequest());
 
         _mockOutbox.Verify(o => o.AddAsync(It.IsAny<OutboxMessage>()), Times.Once);
     }
@@ -84,7 +84,7 @@ public class PricingPolicyServiceTests
     {
         _mockRepository.Setup(r => r.GetActiveAsync()).ReturnsAsync((PricingPolicy?)null);
 
-        await _service.DefineAsync(MakeRequest());
+        await _service.DefineAsync(OwnerId, MakeRequest());
 
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(default), Times.Once);
     }
@@ -95,7 +95,7 @@ public class PricingPolicyServiceTests
         _mockRepository.Setup(r => r.GetActiveAsync()).ReturnsAsync((PricingPolicy?)null);
         _mockRepository.Setup(r => r.GetHistoryAsync()).ReturnsAsync(new List<PricingPolicy>());
 
-        var result = await _service.DefineAsync(MakeRequest());
+        var result = await _service.DefineAsync(OwnerId, MakeRequest());
 
         // Precisa cobrir qualquer ticket fechado no Access antes de existir qualquer política —
         // por isso o ano é muito anterior a "agora", não apenas alguns segundos/minutos atrás.
@@ -113,7 +113,7 @@ public class PricingPolicyServiceTests
         _mockRepository.Setup(r => r.GetActiveAsync()).ReturnsAsync((PricingPolicy?)null);
         _mockRepository.Setup(r => r.GetHistoryAsync()).ReturnsAsync(new List<PricingPolicy> { olderClosed });
 
-        var result = await _service.DefineAsync(MakeRequest());
+        var result = await _service.DefineAsync(OwnerId, MakeRequest());
 
         result.EffectiveFrom.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
     }

@@ -1,5 +1,7 @@
 namespace NeoParking.Api.Endpoints;
 
+using System.Security.Claims;
+using NeoParking.Api.Extensions;
 using NeoParking.Billing.Application;
 
 public static class BillingEndpoints
@@ -9,13 +11,14 @@ public static class BillingEndpoints
         // ── política de tarifação (Owner) ────────────────────────────────────────
         var pricing = app.MapGroup("/billing/pricing-policies").WithOpenApi();
 
-        pricing.MapPost("/", async (DefinePricingPolicyRequest request, PricingPolicyService service) =>
+        pricing.MapPost("/", async (
+            DefinePricingPolicyRequest request, ClaimsPrincipal user, PricingPolicyService service) =>
         {
-            var result = await service.DefineAsync(request);
+            var result = await service.DefineAsync(user.GetOperatorId(), request);
             return Results.Created($"/billing/pricing-policies/{result.Id}", result);
         })
         .WithName("DefinePricingPolicy")
-        .RequireAuthorization();
+        .RequireAuthorization(AuthorizationPolicies.Owner);
 
         pricing.MapGet("/active", async (PricingPolicyService service) =>
         {
@@ -23,7 +26,7 @@ public static class BillingEndpoints
             return Results.Ok(result);
         })
         .WithName("GetActivePricingPolicy")
-        .RequireAuthorization();
+        .RequireAuthorization(AuthorizationPolicies.AnyOperator);
 
         pricing.MapGet("/history", async (PricingPolicyService service) =>
         {
@@ -31,7 +34,7 @@ public static class BillingEndpoints
             return Results.Ok(result);
         })
         .WithName("GetPricingPolicyHistory")
-        .RequireAuthorization();
+        .RequireAuthorization(AuthorizationPolicies.OwnerOrAdmin);
 
         pricing.MapGet("/effective-at", async (DateTime at, PricingPolicyService service) =>
         {
@@ -39,7 +42,7 @@ public static class BillingEndpoints
             return Results.Ok(result);
         })
         .WithName("GetPricingPolicyEffectiveAt")
-        .RequireAuthorization();
+        .RequireAuthorization(AuthorizationPolicies.OwnerOrAdmin);
 
         // ── tickets (somente consulta — entrada/saída são registradas no Access) ─
         var tickets = app.MapGroup("/billing/tickets").WithOpenApi();
@@ -52,7 +55,7 @@ public static class BillingEndpoints
             return Results.Ok(result);
         })
         .WithName("GetFeeHistory")
-        .RequireAuthorization();
+        .RequireAuthorization(AuthorizationPolicies.OwnerOrAdmin);
 
         tickets.MapGet("/{id:guid}", async (Guid id, TicketService service) =>
         {
@@ -60,6 +63,6 @@ public static class BillingEndpoints
             return Results.Ok(result);
         })
         .WithName("GetBillingTicket")
-        .RequireAuthorization();
+        .RequireAuthorization(AuthorizationPolicies.AnyOperator);
     }
 }

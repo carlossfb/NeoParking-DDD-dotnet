@@ -6,9 +6,9 @@ namespace NeoParking.Billing.Application;
 /// Requisição do Owner para definir (ou redefinir) a tarifação: taxa mínima + valor por hora.
 /// MinimumFeeCoverageMinutes é quantos minutos a taxa mínima já cobre (default: 60 = 1h).
 /// GracePeriodMinutes é a cortesia inicial, totalmente gratuita (default: 0).
+/// O Owner vem do token autenticado, nunca do corpo da requisição.
 /// </summary>
 public sealed record DefinePricingPolicyRequest(
-    Guid OwnerId,
     decimal MinimumFee,
     decimal HourlyRate,
     int MinimumFeeCoverageMinutes = 60,

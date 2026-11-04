@@ -47,7 +47,7 @@ public sealed class PricingPolicyService
     /// </summary>
     private static readonly DateTime RetroactiveEffectiveFrom = new(1000, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-    public async Task<PricingPolicyResponseDTO> DefineAsync(DefinePricingPolicyRequest request)
+    public async Task<PricingPolicyResponseDTO> DefineAsync(Guid ownerId, DefinePricingPolicyRequest request)
     {
         var now = DateTime.UtcNow;
 
@@ -62,7 +62,7 @@ public sealed class PricingPolicyService
         var effectiveFrom = isFirstPolicyEver ? RetroactiveEffectiveFrom : now;
 
         var policy = PricingPolicy.Define(
-            request.OwnerId,
+            ownerId,
             Money.Create(request.MinimumFee),
             Money.Create(request.HourlyRate),
             request.MinimumFeeCoverageMinutes,
