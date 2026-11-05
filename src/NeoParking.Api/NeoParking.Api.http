@@ -164,3 +164,12 @@ DELETE {{baseUrl}}/clients/{{clientId}}
 
 ### Confirmar que foi deletado (deve retornar 404)
 GET {{baseUrl}}/clients/{{clientId}}
+
+###
+
+# ── Rotas para a view (Onda 8). Faça login em POST /operators/login e preencha o token. ──
+@token = cole-o-token-aqui
+
+### Listar operadores (Owner/Admin), no máximo 100 por página
+GET {{baseUrl}}/operators?page=1&pageSize=20
+Authorization: Bearer {{token}}

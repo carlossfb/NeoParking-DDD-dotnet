@@ -3,6 +3,7 @@ namespace NeoParking.Management.Application;
 using NeoParking.Management.Domain;
 using NeoParking.Management.Domain.Vo;
 using NeoParking.Shared.Kernel.Exceptions;
+using NeoParking.Shared.Kernel.Primitives;
 
 public sealed class OperatorService
 {
@@ -166,6 +167,22 @@ public sealed class OperatorService
             ?? throw new NotFoundException(nameof(OperatorUser), id);
 
         return ToResponse(user);
+    }
+
+    public async Task<PagedResult<OperatorResponseDTO>> ListAsync(Guid requesterId, PageRequest page)
+    {
+        var requester = await GetActiveRequesterAsync(requesterId);
+
+        if (requester.Role == OperatorRole.Operator)
+            throw new ForbiddenException("Insufficient permissions to read operators.");
+
+        var result = await _repo.ListAsync(page);
+
+        return new PagedResult<OperatorResponseDTO>(
+            result.Items.Select(ToResponse).ToList(),
+            result.Page,
+            result.PageSize,
+            result.TotalCount);
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────

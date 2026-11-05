@@ -3,6 +3,7 @@ namespace NeoParking.Api.Endpoints;
 using System.Security.Claims;
 using NeoParking.Api.Extensions;
 using NeoParking.Management.Application;
+using NeoParking.Shared.Kernel.Primitives;
 
 public static class ManagementEndpoints
 {
@@ -46,6 +47,15 @@ public static class ManagementEndpoints
         .RequireAuthorization(AuthorizationPolicies.OwnerOrAdmin);
 
         // ── consulta ─────────────────────────────────────────────────────────
+        group.MapGet("/", async (
+            ClaimsPrincipal user, OperatorService service, int page = 1, int pageSize = PageRequest.DefaultPageSize) =>
+        {
+            var result = await service.ListAsync(user.GetOperatorId(), new PageRequest(page, pageSize));
+            return Results.Ok(result);
+        })
+        .WithName("ListOperators")
+        .RequireAuthorization(AuthorizationPolicies.OwnerOrAdmin);
+
         group.MapGet("/{id:guid}", async (Guid id, ClaimsPrincipal user, OperatorService service) =>
         {
             var result = await service.GetByIdAsync(user.GetOperatorId(), id);

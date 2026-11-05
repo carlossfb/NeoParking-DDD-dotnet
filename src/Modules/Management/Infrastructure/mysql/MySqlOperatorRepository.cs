@@ -3,6 +3,7 @@ namespace NeoParking.Management.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using NeoParking.Management.Application;
 using NeoParking.Management.Domain;
+using NeoParking.Shared.Kernel.Primitives;
 
 public sealed class MySqlOperatorRepository : IOperatorRepository
 {
@@ -23,6 +24,21 @@ public sealed class MySqlOperatorRepository : IOperatorRepository
     public async Task<OperatorUser?> GetByEmailAsync(string email)
         => await _context.Operators
             .FirstOrDefaultAsync(u => u.Email == email.ToLowerInvariant());
+
+    public async Task<PagedResult<OperatorUser>> ListAsync(PageRequest page)
+    {
+        var query = _context.Operators.AsNoTracking();
+        var totalCount = await query.CountAsync();
+
+        var items = await query
+            .OrderBy(u => u.CreatedAt)
+            .ThenBy(u => u.Id)
+            .Skip(page.Skip)
+            .Take(page.PageSize)
+            .ToListAsync();
+
+        return new PagedResult<OperatorUser>(items, page.Page, page.PageSize, totalCount);
+    }
 
     public Task UpdateAsync(OperatorUser user)
     {
