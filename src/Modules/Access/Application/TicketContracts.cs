@@ -8,6 +8,8 @@ public sealed record RegisterEntryRequest(string Plate, Guid? ClientId = null);
 
 public sealed record RegisterExitRequest(DateTime? ExitAt = null);
 
+public sealed record OpenTicketByPlateRequest(string Plate);
+
 public sealed record RegisterExitByPlateRequest(string Reason, DateTime? ExitAt = null);
 
 /// <summary>

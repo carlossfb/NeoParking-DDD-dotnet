@@ -202,3 +202,14 @@ Content-Type: application/json
   "documentType": "Individual",
   "document": "11144477735"
 }
+
+###
+
+### Conferir o ticket aberto de uma placa, sem colocá-la na URL
+POST {{baseUrl}}/access/tickets/open-by-plate
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "plate": "ABC1D23"
+}

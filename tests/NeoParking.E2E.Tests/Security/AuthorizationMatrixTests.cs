@@ -81,6 +81,8 @@ public class AuthorizationMatrixTests
 
         ["POST /access/tickets"] = new(Minimum.AnyOperator, HttpStatusCode.Created, _ =>
             Task.FromResult(Post("/access/tickets", new { plate = SecurityFixture.UniquePlate() }))),
+        ["POST /access/tickets/open-by-plate"] = new(Minimum.AnyOperator, HttpStatusCode.OK, async f =>
+            Post("/access/tickets/open-by-plate", new { plate = (await SeedTicketWithCodeAsync(f)).Plate })),
         ["POST /access/tickets/{id}/exit"] = new(Minimum.AnyOperator, HttpStatusCode.OK, async f =>
             Post($"/access/tickets/{await SeedTicketAsync(f)}/exit", new { })),
         ["GET /access/tickets"] = new(Minimum.AnyOperator, HttpStatusCode.OK, _ => Task.FromResult(Get("/access/tickets"))),

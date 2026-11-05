@@ -291,7 +291,7 @@ Management issues JWTs on successful login (`POST /operators/login`). Tokens car
 | `POST /clients/{id}/vehicles`, `DELETE /clients/{id}/vehicles/{vehicleId}` | | ✅ | | |
 | `DELETE /clients/{id}` | | | ✅ | |
 | `POST /access/tickets`, `POST /access/tickets/{id}/exit` | | ✅ | | |
-| `GET /access/tickets`, `GET /access/tickets/{id}` | | ✅ | | |
+| `GET /access/tickets`, `GET /access/tickets/{id}`, `POST /access/tickets/open-by-plate` | | ✅ | | |
 | `GET /access/tickets/by-code/{code}`, `POST /access/tickets/by-code/{code}/exit` | | ✅ | | |
 | `POST /access/tickets/by-plate/{plate}/exit` (reason required) | | ✅ | | |
 | `GET /billing/pricing-policies/active` | | ✅ | | |

@@ -56,6 +56,15 @@ public static class TicketEndpoints
         .WithName("RegisterTicketExitByPlate")
         .RequireAuthorization(AuthorizationPolicies.AnyOperator);
 
+        // POST para que a placa fique no corpo, fora de URLs, logs e traces.
+        tickets.MapPost("/open-by-plate", async (OpenTicketByPlateRequest request, ITicketService service) =>
+        {
+            var result = await service.GetOpenByPlateAsync(request);
+            return Results.Ok(result);
+        })
+        .WithName("GetOpenTicketByPlate")
+        .RequireAuthorization(AuthorizationPolicies.AnyOperator);
+
         tickets.MapGet("/{id:guid}", async (Guid id, ITicketService service) =>
         {
             var result = await service.GetByIdAsync(id);

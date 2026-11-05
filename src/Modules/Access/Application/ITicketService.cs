@@ -10,5 +10,6 @@ public interface ITicketService
     Task<TicketResponseDTO> RegisterExitByPlateAsync(string plate, RegisterExitByPlateRequest request, Guid operatorId);
     Task<TicketResponseDTO> GetByIdAsync(Guid ticketId);
     Task<TicketResponseDTO> GetByCodeAsync(string code);
+    Task<TicketResponseDTO> GetOpenByPlateAsync(OpenTicketByPlateRequest request);
     Task<PagedResult<TicketResponseDTO>> ListAsync(ListTicketsRequest request);
 }

@@ -88,6 +88,14 @@ public sealed class TicketService : ITicketService
     public async Task<TicketResponseDTO> GetByCodeAsync(string code) =>
         ToResponse(await FindByCodeAsync(code));
 
+    public async Task<TicketResponseDTO> GetOpenByPlateAsync(OpenTicketByPlateRequest request)
+    {
+        var ticket = await _tickets.GetOpenByPlateAsync(Plate.Create(request.Plate).Value)
+            ?? throw new NotFoundException("No open ticket was found for this plate.");
+
+        return ToResponse(ticket);
+    }
+
     public async Task<TicketResponseDTO> GetByIdAsync(Guid ticketId)
     {
         var ticket = await _tickets.GetByIdAsync(ticketId)
