@@ -20,6 +20,16 @@ Keep the fidelity low on purpose: decide flow, content and permissions before an
 9. Label anything not implemented as "Spec, não implementado". Take its routes and rules from `docs/specs/product-evolution.md` and invent nothing.
 10. Draw no screen for a capability that depends on an open question in the spec.
 
+## React and shadcn/ui
+
+The front end will be React with shadcn/ui.
+
+- Use only patterns that exist in shadcn/ui. Confirm names in the [component docs](https://ui.shadcn.com/docs/components).
+- Note the planned components on every screen, such as `Table`, `Dialog`, `Field`, `Badge` and `Sheet`.
+- Follow `references/shadcn/` for forms, composition, styling and icons. These are reference rules only: this skill runs no shadcn CLI.
+- Draw visible keyboard focus and a logical tab order on every screen.
+- A code reader usually works as a keyboard. Read codes in a focused `Input`, submit on the reader's Enter, return focus after each result, and use no global key listener.
+
 ## Finish every wireframe with
 
 - routes that have no screen;
