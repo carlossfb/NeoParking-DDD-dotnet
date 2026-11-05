@@ -7,6 +7,7 @@ public interface IClientService
     Task<ClientResponseDTO> CreateClientAsync(ClientRequestDTO dto);
     Task<ClientResponseDTO?> GetClientByIdAsync(Guid clientId);
     Task<ClientDocumentResponseDTO> RevealDocumentAsync(Guid clientId, Guid operatorId);
+    Task<PagedResult<ClientDocumentAccessDTO>> ListDocumentAccessesAsync(Guid clientId, PageRequest page);
     Task<PagedResult<ClientResponseDTO>> ListClientsAsync(PageRequest page);
     Task<ClientResponseDTO?> SearchClientAsync(ClientSearchRequest request);
     Task<ClientResponseDTO> UpdateClientAsync(Guid clientId, ClientUpdateDTO dto);

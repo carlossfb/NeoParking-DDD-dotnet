@@ -169,7 +169,7 @@ public sealed class SecurityFixture : IAsyncLifetime
         return string.Join('|', Enumerable.Range(0, reader.FieldCount).Select(i => reader.GetValue(i)));
     }
 
-    /// <summary>Lê a auditoria direto do banco: não há rota que a exponha.</summary>
+    /// <summary>Lê a auditoria direto do banco, sem depender da rota que a expõe.</summary>
     public async Task<List<ClientDocumentAccess>> ReadDocumentAccessesAsync(Guid clientId)
     {
         using var scope = _api.Services.CreateScope();

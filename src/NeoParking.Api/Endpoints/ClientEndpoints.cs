@@ -37,6 +37,16 @@ public static class ClientEndpoints
         .WithName("GetClientDocument")
         .RequireAuthorization(AuthorizationPolicies.OwnerOrAdmin);
 
+        // Só o Owner: o Admin também lê documentos e não deve auditar a si mesmo.
+        group.MapGet("/{id:guid}/document-accesses", async (
+            Guid id, IClientService service, int page = 1, int pageSize = PageRequest.DefaultPageSize) =>
+        {
+            var result = await service.ListDocumentAccessesAsync(id, new PageRequest(page, pageSize));
+            return Results.Ok(result);
+        })
+        .WithName("ListClientDocumentAccesses")
+        .RequireAuthorization(AuthorizationPolicies.Owner);
+
         group.MapGet("/", async (IClientService service, int page = 1, int pageSize = PageRequest.DefaultPageSize) =>
         {
             var result = await service.ListClientsAsync(new PageRequest(page, pageSize));

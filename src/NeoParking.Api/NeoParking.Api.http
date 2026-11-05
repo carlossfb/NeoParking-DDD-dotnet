@@ -219,3 +219,9 @@ Content-Type: application/json
 ### Dados do próprio operador
 GET {{baseUrl}}/operators/me
 Authorization: Bearer {{token}}
+
+###
+
+### Auditoria de acesso ao documento (só Owner)
+GET {{baseUrl}}/clients/{{clientId}}/document-accesses?page=1&pageSize=20
+Authorization: Bearer {{token}}

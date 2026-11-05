@@ -289,6 +289,7 @@ Management issues JWTs on successful login (`POST /operators/login`). Tokens car
 | `POST /operators/{targetId}/activate`, `/deactivate` | | | ✅ Admin acts only on Operator | |
 | `POST /clients`, `GET /clients?page=&pageSize=` (at most 100 per page), `POST /clients/search`, `GET /clients/{id}`, `PATCH /clients/{id}` | | ✅ | | |
 | `GET /clients/{id}/document` | | | ✅ | |
+| `GET /clients/{id}/document-accesses?page=&pageSize=` | | | | ✅ |
 | `POST /clients/{id}/vehicles`, `DELETE /clients/{id}/vehicles/{vehicleId}` | | ✅ | | |
 | `DELETE /clients/{id}` | | | ✅ | |
 | `POST /access/tickets`, `POST /access/tickets/{id}/exit` | | ✅ | | |
@@ -502,7 +503,7 @@ Requests that lose a uniqueness race, or that break one of these rules, return `
 
 `POST /clients` takes `type` (`Individual` or `Company`) and `document`. `PATCH /clients/{id}` takes `document` alone to keep the type; changing `type` requires a document of the new type. Every client response returns the document masked.
 
-`GET /clients/{id}/document` returns the full value to Owner and Admin, with `Cache-Control: no-store`, and first records who read it, in `neoparking_access.client_document_accesses` (client, operator from the token, and time, never the value). There is no route to read this table, and it keeps the records after a client is deleted. `POST /clients/search` takes an exact plate or an exact document type and value in the body, compares the document by its HMAC, and returns the client or `404`. There is no search by name, because TD-710 will encrypt it.
+`GET /clients/{id}/document` returns the full value to Owner and Admin, with `Cache-Control: no-store`, and first records who read it, in `neoparking_access.client_document_accesses` (client, operator from the token, and time, never the value). The table keeps the records after a client is deleted. `GET /clients/{id}/document-accesses` lets only the Owner read it, most recent first, including for a deleted client. `POST /clients/search` takes an exact plate or an exact document type and value in the body, compares the document by its HMAC, and returns the client or `404`. There is no search by name, because TD-710 will encrypt it.
 
 In the database, `document_encrypted` holds AES-256-GCM with a random nonce, in the format `v1.<base64>`, where `v1` is the key version. `document_hmac` holds an HMAC-SHA256 with its own key, including the type, and carries the unique index.
 

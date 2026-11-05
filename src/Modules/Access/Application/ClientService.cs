@@ -71,6 +71,18 @@ public sealed class ClientService : IClientService
         return new ClientDocumentResponseDTO(document.Type.ToString(), document.Value);
     }
 
+    /// <summary>Não confere se o cliente existe: a auditoria sobrevive à exclusão dele.</summary>
+    public async Task<PagedResult<ClientDocumentAccessDTO>> ListDocumentAccessesAsync(Guid clientId, PageRequest page)
+    {
+        var result = await _repository.ListDocumentAccessesAsync(clientId, page);
+
+        return new PagedResult<ClientDocumentAccessDTO>(
+            result.Items.Select(a => new ClientDocumentAccessDTO(a.OperatorId, a.AccessedAt)).ToList(),
+            result.Page,
+            result.PageSize,
+            result.TotalCount);
+    }
+
     public async Task<PagedResult<ClientResponseDTO>> ListClientsAsync(PageRequest page)
     {
         var result = await _repository.ListAsync(page);

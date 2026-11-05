@@ -13,4 +13,5 @@ public interface IClientRepository
     Task<PagedResult<Client>> ListAsync(PageRequest page);
     Task DeleteAsync(Client client);
     Task AddDocumentAccessAsync(ClientDocumentAccess access);
+    Task<PagedResult<ClientDocumentAccess>> ListDocumentAccessesAsync(Guid clientId, PageRequest page);
 }

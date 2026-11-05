@@ -83,6 +83,21 @@ public sealed class MySqlClientRepository : IClientRepository
     public async Task AddDocumentAccessAsync(ClientDocumentAccess access) =>
         await _context.ClientDocumentAccesses.AddAsync(access);
 
+    public async Task<PagedResult<ClientDocumentAccess>> ListDocumentAccessesAsync(Guid clientId, PageRequest page)
+    {
+        var query = _context.ClientDocumentAccesses.AsNoTracking().Where(a => a.ClientId == clientId);
+        var totalCount = await query.CountAsync();
+
+        var items = await query
+            .OrderByDescending(a => a.AccessedAt)
+            .ThenBy(a => a.Id)
+            .Skip(page.Skip)
+            .Take(page.PageSize)
+            .ToListAsync();
+
+        return new PagedResult<ClientDocumentAccess>(items, page.Page, page.PageSize, totalCount);
+    }
+
     public Task DeleteAsync(Client client)
     {
         _context.Clients.Remove(client);
