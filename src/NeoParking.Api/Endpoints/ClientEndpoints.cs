@@ -3,6 +3,7 @@ namespace NeoParking.Api.Endpoints;
 using System.Security.Claims;
 using NeoParking.Access.Application;
 using NeoParking.Api.Extensions;
+using NeoParking.Shared.Kernel.Primitives;
 
 public static class ClientEndpoints
 {
@@ -36,12 +37,21 @@ public static class ClientEndpoints
         .WithName("GetClientDocument")
         .RequireAuthorization(AuthorizationPolicies.OwnerOrAdmin);
 
-        group.MapGet("/", async (IClientService service) =>
+        group.MapGet("/", async (IClientService service, int page = 1, int pageSize = PageRequest.DefaultPageSize) =>
         {
-            var result = await service.GetAllClientsAsync();
+            var result = await service.ListClientsAsync(new PageRequest(page, pageSize));
             return Results.Ok(result);
         })
         .WithName("GetAllClients")
+        .RequireAuthorization(AuthorizationPolicies.AnyOperator);
+
+        // POST para que placa e documento fiquem no corpo, fora de URLs, logs e traces.
+        group.MapPost("/search", async (ClientSearchRequest request, IClientService service) =>
+        {
+            var result = await service.SearchClientAsync(request);
+            return result is not null ? Results.Ok(result) : Results.NotFound();
+        })
+        .WithName("SearchClient")
         .RequireAuthorization(AuthorizationPolicies.AnyOperator);
 
         group.MapPatch("/{id:guid}", async (Guid id, ClientUpdateDTO request, IClientService service) =>

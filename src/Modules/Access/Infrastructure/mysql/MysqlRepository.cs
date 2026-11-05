@@ -3,6 +3,7 @@ namespace NeoParking.Access.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using NeoParking.Access.Application;
 using NeoParking.Access.Domain;
+using NeoParking.Shared.Kernel.Primitives;
 
 public sealed class MySqlClientRepository : IClientRepository
 {
@@ -22,11 +23,33 @@ public sealed class MySqlClientRepository : IClientRepository
             .Include(c => c.Vehicles)
             .FirstOrDefaultAsync(c => c.Id == clientId);
 
-    public async Task<IEnumerable<Client>> GetAllAsync() =>
+    public async Task<Client?> GetByPlateAsync(Plate plate) =>
         await _context.Clients
             .AsNoTracking()
             .Include(c => c.Vehicles)
+            .FirstOrDefaultAsync(c => c.Vehicles.Any(v => v.Plate == plate));
+
+    public async Task<Client?> GetByDocumentHmacAsync(string documentHmac) =>
+        await _context.Clients
+            .AsNoTracking()
+            .Include(c => c.Vehicles)
+            .FirstOrDefaultAsync(c => c.DocumentHmac == documentHmac);
+
+    // A ordem é por id porque nome e telefone não servem para ordenar quando estiverem cifrados (TD-710).
+    public async Task<PagedResult<Client>> ListAsync(PageRequest page)
+    {
+        var totalCount = await _context.Clients.CountAsync();
+
+        var items = await _context.Clients
+            .AsNoTracking()
+            .Include(c => c.Vehicles)
+            .OrderBy(c => c.Id)
+            .Skip(page.Skip)
+            .Take(page.PageSize)
             .ToListAsync();
+
+        return new PagedResult<Client>(items, page.Page, page.PageSize, totalCount);
+    }
 
     public async Task UpdateAsync(Client client)
     {

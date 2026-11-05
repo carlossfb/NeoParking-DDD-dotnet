@@ -5,6 +5,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using NeoParking.Access.Domain;
 using NeoParking.Access.Infrastructure;
+using NeoParking.Shared.Kernel.Primitives;
 using Testcontainers.MySql;
 
 public class MySqlFixture : IAsyncLifetime
@@ -98,15 +99,16 @@ public class ClientRepositoryTests : IClassFixture<MySqlFixture>
     }
 
     [Fact]
-    public async Task GetAllAsync_WithMultipleClients_ShouldReturnAll()
+    public async Task ListAsync_WithMultipleClients_ShouldReturnThePageAndTheTotal()
     {
         var (ctx, repo) = CreateFresh();
         await AddAndSaveAsync(ctx, repo, Client.Create("João", PhoneNumber.Create("+5511999999999"), TestDocuments.Cpf("11144477735")));
         await AddAndSaveAsync(ctx, repo, Client.Create("Maria", PhoneNumber.Create("+5521987654321"), TestDocuments.Cpf("98765432100")));
 
-        var result = await repo.GetAllAsync();
+        var result = await repo.ListAsync(new PageRequest(1, 1));
 
-        result.Should().HaveCount(2);
+        result.Items.Should().HaveCount(1);
+        result.TotalCount.Should().Be(2);
         await ctx.DisposeAsync();
     }
 

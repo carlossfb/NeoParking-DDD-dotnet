@@ -5,6 +5,7 @@ using NeoParking.Shared.Kernel.Events;
 using NeoParking.Shared.Kernel.Exceptions;
 using NeoParking.Shared.Kernel.Observability;
 using NeoParking.Shared.Kernel.Outbox;
+using NeoParking.Shared.Kernel.Primitives;
 
 public sealed class ClientService : IClientService
 {
@@ -70,10 +71,41 @@ public sealed class ClientService : IClientService
         return new ClientDocumentResponseDTO(document.Type.ToString(), document.Value);
     }
 
-    public async Task<IEnumerable<ClientResponseDTO>> GetAllClientsAsync()
+    public async Task<PagedResult<ClientResponseDTO>> ListClientsAsync(PageRequest page)
     {
-        var clients = await _repository.GetAllAsync();
-        return clients.Select(ToResponse);
+        var result = await _repository.ListAsync(page);
+
+        return new PagedResult<ClientResponseDTO>(
+            result.Items.Select(ToResponse).ToList(),
+            result.Page,
+            result.PageSize,
+            result.TotalCount);
+    }
+
+    /// <summary>
+    /// Busca exata por placa ou por documento, os dois campos que continuam pesquisáveis:
+    /// a placa fica em claro, e o documento é comparado pelo HMAC.
+    /// </summary>
+    public async Task<ClientResponseDTO?> SearchClientAsync(ClientSearchRequest request)
+    {
+        var byPlate = !string.IsNullOrWhiteSpace(request.Plate);
+        var byDocument = request.DocumentType is not null || request.Document is not null;
+
+        if (byPlate == byDocument)
+            throw new DomainException("Provide either a plate or a document.");
+
+        if (byPlate)
+        {
+            var found = await _repository.GetByPlateAsync(Plate.Create(request.Plate!));
+            return found is null ? null : ToResponse(found);
+        }
+
+        if (request.Document is null)
+            throw new DomainException("The document is required.");
+
+        var document = Document.Create(ClientTypes.Parse(request.DocumentType), request.Document);
+        var client = await _repository.GetByDocumentHmacAsync(_documentProtector.Protect(document).Hmac);
+        return client is null ? null : ToResponse(client);
     }
 
     public async Task<ClientResponseDTO> UpdateClientAsync(Guid clientId, ClientUpdateDTO dto)

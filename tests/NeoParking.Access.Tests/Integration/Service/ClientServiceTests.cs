@@ -8,6 +8,7 @@ using NeoParking.Access.Infrastructure;
 using NeoParking.Access.Tests.Integration.Repository;
 using NeoParking.Shared.Kernel.Exceptions;
 using NeoParking.Shared.Kernel.Observability;
+using NeoParking.Shared.Kernel.Primitives;
 
 [Trait("Category", "Integration")]
 public class ClientServiceIntegrationTests : IClassFixture<MySqlFixture>, IDisposable
@@ -45,7 +46,7 @@ public class ClientServiceIntegrationTests : IClassFixture<MySqlFixture>, IDispo
 
         result.Should().NotBeNull();
         result.Name.Should().Be("João Silva");
-        (await _service.GetAllClientsAsync()).Should().HaveCount(1);
+        (await _service.ListClientsAsync(new PageRequest())).TotalCount.Should().Be(1);
     }
 
     [Fact]

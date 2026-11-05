@@ -51,6 +51,19 @@ public class AuthorizationMatrixTests
 
         ["POST /clients"] = new(Minimum.AnyOperator, HttpStatusCode.Created, _ => Task.FromResult(Post("/clients", NewClient()))),
         ["GET /clients"] = new(Minimum.AnyOperator, HttpStatusCode.OK, _ => Task.FromResult(Get("/clients"))),
+        ["POST /clients/search"] = new(Minimum.AnyOperator, HttpStatusCode.OK, async f =>
+        {
+            var plate = SecurityFixture.UniquePlate();
+            await f.SendAsync(HttpMethod.Post, "/clients", f.Owner.Token, new
+            {
+                name = "Cliente E2E",
+                phoneNumber = "+5511999999999",
+                type = "Individual",
+                document = SecurityFixture.UniqueCpf(),
+                vehicles = new[] { new { plate } }
+            });
+            return Post("/clients/search", new { plate });
+        }),
         ["GET /clients/{id}"] = new(Minimum.AnyOperator, HttpStatusCode.OK, async f => Get($"/clients/{await SeedClientAsync(f)}")),
         ["GET /clients/{id}/document"] = new(Minimum.OwnerOrAdmin, HttpStatusCode.OK, async f => Get($"/clients/{await SeedClientAsync(f)}/document")),
         ["PATCH /clients/{id}"] = new(Minimum.AnyOperator, HttpStatusCode.OK, async f =>
