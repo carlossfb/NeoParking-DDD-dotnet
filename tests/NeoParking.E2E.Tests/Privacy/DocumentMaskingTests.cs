@@ -23,6 +23,18 @@ public sealed class DocumentMaskingTests
         return (created!.Id, cpf, response);
     }
 
+    // A lista é paginada e sem ordem de criação, então o cliente pode estar em qualquer página.
+    private async Task<string> ListPageWithAsync(string text)
+    {
+        for (var page = 1; ; page++)
+        {
+            var response = await _f.SendAsync(HttpMethod.Get, $"/clients?page={page}&pageSize=100", _f.Owner.Token);
+            var body = await response.Content.ReadAsStringAsync();
+            if (body.Contains(text) || body.Contains("\"items\":[]"))
+                return body;
+        }
+    }
+
     private static string MaskOf(string cpf) => $"***.{cpf[3..6]}.{cpf[6..9]}-**";
 
     [Fact]
@@ -36,8 +48,7 @@ public sealed class DocumentMaskingTests
         var byId = await _f.SendAsync(HttpMethod.Get, $"/clients/{id}", _f.Owner.Token);
         (await byId.Content.ReadAsStringAsync()).Should().Contain(mask).And.NotContain(cpf);
 
-        var all = await _f.SendAsync(HttpMethod.Get, "/clients", _f.Owner.Token);
-        (await all.Content.ReadAsStringAsync()).Should().Contain(mask).And.NotContain(cpf);
+        (await ListPageWithAsync(mask)).Should().Contain(mask).And.NotContain(cpf);
 
         var updated = await _f.SendAsync(HttpMethod.Patch, $"/clients/{id}", _f.Owner.Token, new { name = "Atualizado" });
         (await updated.Content.ReadAsStringAsync()).Should().Contain(mask).And.NotContain(cpf);

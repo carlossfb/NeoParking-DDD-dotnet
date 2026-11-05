@@ -30,7 +30,7 @@ public class ChangePasswordTests
 
         result.Should().Be(ChangePasswordResult.Changed);
         _user.PasswordHash.Value.Should().Be("new-hash");
-        _unitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Theory]
@@ -44,7 +44,7 @@ public class ChangePasswordTests
 
         result.Should().Be(expected);
         _user.PasswordHash.Value.Should().Be("old-hash");
-        _unitOfWork.Verify(u => u.SaveChangesAsync(), Times.Never);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
