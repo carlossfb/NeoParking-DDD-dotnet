@@ -26,7 +26,8 @@ public class ClientServiceTests
             _mockRepository.Object,
             _mockOutbox.Object,
             _mockUnitOfWork.Object,
-            _mockCorrelation.Object);
+            _mockCorrelation.Object,
+            TestDocuments.Protector);
     }
 
     [Fact]
@@ -35,7 +36,7 @@ public class ClientServiceTests
         _mockRepository.Setup(r => r.AddAsync(It.IsAny<Client>())).Returns(Task.CompletedTask);
 
         var result = await _service.CreateClientAsync(
-            new ClientRequestDTO("João Silva", "+5511999999999", "11144477735", null));
+            new ClientRequestDTO("João Silva", "+5511999999999", "Individual", "11144477735", null));
 
         result.Should().NotBeNull();
         result.Name.Should().Be("João Silva");
@@ -48,7 +49,7 @@ public class ClientServiceTests
         _mockRepository.Setup(r => r.AddAsync(It.IsAny<Client>())).Returns(Task.CompletedTask);
 
         await _service.CreateClientAsync(
-            new ClientRequestDTO("João Silva", "+5511999999999", "11144477735", null));
+            new ClientRequestDTO("João Silva", "+5511999999999", "Individual", "11144477735", null));
 
         _mockOutbox.Verify(o => o.AddAsync(It.IsAny<OutboxMessage>()), Times.Once);
     }
@@ -59,7 +60,7 @@ public class ClientServiceTests
         _mockRepository.Setup(r => r.AddAsync(It.IsAny<Client>())).Returns(Task.CompletedTask);
 
         await _service.CreateClientAsync(
-            new ClientRequestDTO("João Silva", "+5511999999999", "11144477735", null));
+            new ClientRequestDTO("João Silva", "+5511999999999", "Individual", "11144477735", null));
 
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(default), Times.Once);
     }
@@ -72,7 +73,7 @@ public class ClientServiceTests
         _mockRepository.Setup(r => r.AddAsync(It.IsAny<Client>())).Returns(Task.CompletedTask);
 
         await _service.CreateClientAsync(
-            new ClientRequestDTO("João Silva", "+5511999999999", "11144477735", null));
+            new ClientRequestDTO("João Silva", "+5511999999999", "Individual", "11144477735", null));
 
         _mockCorrelation.Verify(c => c.GetCorrelationId(), Times.Once);
     }
@@ -99,11 +100,11 @@ public class ClientServiceTests
     [Fact]
     public void RegisterVehicle_WithDuplicatePlate_ShouldThrowDomainException()
     {
-        var client = Client.Create("João", PhoneNumber.Create("+5511999999999"), Cpf.Create("11144477735"));
+        var client = Client.Create("João", PhoneNumber.Create("+5511999999999"), TestDocuments.Cpf("11144477735"));
         client.RegisterVehicle(Plate.Create("ABC1234"));
 
         var act = () => client.RegisterVehicle(Plate.Create("ABC1234"));
 
-        act.Should().Throw<DomainException>().WithMessage("*ABC1234*");
+        act.Should().Throw<DomainException>().Which.Message.Should().NotContain("ABC1234");
     }
 }

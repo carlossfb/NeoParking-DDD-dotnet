@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | Aprovada |
 | **Data** | 2026-11-03 |
-| **Escopo** | Só débito técnico. A evolução do produto será discutida depois. |
+| **Escopo** | Só débito técnico. A evolução do produto será discutida depois. A Onda 6 (privacidade) foi aprovada em 2026-11-04. |
 
 ## 1. Contexto e objetivos
 
@@ -28,7 +28,7 @@ A direção das dependências do NeoParking está boa: nenhum módulo referencia
 
 ## 2. Fora de escopo
 
-**Evolução do produto:** RFID, Subscriber, Occupancy, Payment, a sentinela retroativa de tarifa como regra de negócio e o tratamento de CPF/LGPD.
+**Evolução do produto:** RFID, Subscriber, Occupancy, Payment, e a sentinela retroativa de tarifa como regra de negócio. O tratamento de documento e LGPD saiu desta lista e virou a Onda 6.
 
 **Débito adiado, com gatilho para reconsiderar**
 
@@ -79,10 +79,12 @@ Três linhas foram aprovadas como sugestão, sem regra de negócio explícita, e
 - **Decisão:** aceitar até 60 minutos de validade do token após desativação ou rebaixamento nos endpoints fora de Management, e documentar em ADR. Em Management, o papel e o estado continuam vindo do banco.
 - **Descartado:** checar `IsActive` em `OnTokenValidated`, com revogação imediata e uma consulta ao banco por requisição.
 
-### D4: Unicidade de placa e CPF (antes da Onda 3)
+### D4: Unicidade de placa e documento (confirmada pelo usuário em 2026-11-04)
 
-- **Decisão:** índice único global de placa em `vehicles` e de CPF em `clients`.
-- **Premissa, a confirmar com o negócio:** não há fluxo próprio de transferência de veículo. A placa é removida do cliente antigo e registrada no novo; um fluxo dedicado fica para a discussão de produto.
+- **Decisão:** índice único global de placa em `vehicles` e de documento (CPF ou CNPJ) em `clients`. Na Onda 3 o documento era só o CPF; a Onda 6 o generaliza e move o índice para `document_hmac`.
+- **Confirmado:** cada placa tem um único cliente responsável, e não há fluxo próprio de transferência de veículo. A placa é removida do cliente antigo e registrada no novo.
+- **Responsável, não proprietário:** o registro identifica quem responde pelo veículo no estacionamento. A propriedade não é verificada.
+- **Fora do modelo por ora:** compartilhamento de veículo e frota fora do modelo de empresa. Se houver demanda real, trocar o índice único de placa por uma tabela de vínculos.
 
 ### D5: Bootstrap do Owner (antes da Onda 1)
 
@@ -366,6 +368,49 @@ Comece pelos testes E2E, que devem **falhar antes da correção**.
   - Refazer o context map com relações reais, marcando o que é futuro.
 - **Aceite:** cada contexto e seta do mapa corresponde a um módulo ou evento do código, ou está marcado como futuro.
 
+### Onda 6: Privacidade
+
+Aprovada pelo usuário em 2026-11-04. Vem antes de EVO-0, C1, C4 e C5, porque esses itens dependem do cliente, e mudar o documento depois sairia mais caro. Os itens seguem esta ordem.
+
+**TD-601: Tirar documento e placa de logs e erros**
+- **Evidência:** `Plate.cs:23`, `Client.cs:53` e `TicketService.cs:40` repetem a placa em mensagens que chegam ao log e à resposta; `DbContextConflictExtensions.cs` mantém o erro MySQL 1062, que traz o valor duplicado, como exceção interna; `RequestLoggingMiddleware.cs` registra o path, que contém a placa em `/access/tickets/by-plate/{plate}/exit`; `AddAspNetCoreInstrumentation` grava o mesmo path em `url.path`.
+- **Requisito:** documento e placa não aparecem em logs, mensagens de exceção, respostas de erro nem no texto do erro 1062. Logs e tracing registram o padrão da rota, não o valor.
+- **Aceite:** um teste E2E captura os logs reais da API e confirma que placa e documento não aparecem depois de formato inválido, conflito de índice e saída por placa; outro confirma o `url.path` do tracing.
+
+**TD-602: Cliente com tipo e documento**
+- **Evidência:** `Client.cs` só aceita `Cpf`, e `clients.cpf` tem 11 caracteres; empresas ficam de fora.
+- **Requisito:**
+  - `Type` (`Individual`, `Company`) e `Document` (CPF ou CNPJ, validado conforme o tipo). A API troca `cpf` por `type` e `document`.
+  - CNPJ alfanumérico: coluna de texto e validação pelo algoritmo oficial, com valor do caractere igual a ASCII − 48, sem assumir só dígitos.
+  - Clientes existentes migram como `Individual`. Avulso continua sem documento. Estrangeiro fica fora do escopo por agora.
+- **Aceite:** testes cobrem CPF válido e inválido, CNPJ numérico e alfanumérico válido e inválido, e casos conhecidos da especificação; a migration mantém os clientes existentes como `Individual`.
+
+**TD-603: Mascarar o documento nas respostas**
+- **Evidência:** `ClientService.ToResponse` devolve o CPF completo a qualquer operador.
+- **Requisito:** todas as respostas trazem o documento mascarado. O valor completo só sai por rota própria, para Owner e Admin, com registro persistido de autor (`sub`), cliente e data, sem o valor do documento.
+- **Aceite:** testes confirmam a máscara em criação, consulta, listagem e atualização; 403 para Operator na rota completa; um registro de auditoria por leitura, sem o valor.
+
+**TD-604: Criptografar o documento**
+- **Evidência:** o documento fica legível no banco em `clients`.
+- **Requisito:**
+  - `document_encrypted` com AES-256-GCM, nonce aleatório e versão da chave no valor.
+  - `document_hmac` com HMAC-SHA256 e chave própria, incluindo o tipo no cálculo. O índice único passa para essa coluna.
+  - CPF e CNPJ recebem a mesma proteção.
+  - As chaves vêm do ambiente, e o boot falha com mensagem clara, sem expor o valor, se uma delas faltar ou tiver tamanho errado.
+- **Aceite:** um teste confirma que o documento não fica legível em nenhuma coluna; duplicata continua em 409; boot sem chave ou com chave inválida falha.
+
+**TD-605: Migrar os documentos existentes sem perda**
+- **Evidência:** MySQL não tem AES-GCM, e a chave não pode entrar no SQL; a coluna em texto puro não pode sair antes do preenchimento.
+- **Requisito:** expandir, preencher e só então remover, de forma idempotente e retomável. A coluna em texto puro só sai depois do preenchimento concluído e verificado. Uma falha no meio não perde dados e tem mensagem clara.
+- **Aceite:** com o usuário restrito, testes cobrem o banco do zero, dados da versão anterior e falha seguida de nova tentativa.
+
+**Decisões tomadas na implementação:** registradas no ADR-007 e no README: a migração roda no boot da API, a reversão com clientes é recusada e a rotação de chave não foi implementada.
+
+**TD-606: Retenção e anonimização de inativos (pendente de definição jurídica)**
+- **Evidência:** nada define por quanto tempo guardar dados de clientes inativos.
+- **Requisito:** definir prazo e base legal com o jurídico; só então implementar a anonimização. **Não implementar antes disso.**
+- **Aceite:** a definir com a regra.
+
 ## 5. Estratégia de testes e Definition of Done
 
 | Camada | O que cobre | Ferramenta |
@@ -400,6 +445,10 @@ InMemory não é aceito como teste de integração, porque não valida SQL, rest
 | 3 | Conflitos passam a retornar 409 | Clientes da API | Tratar o novo código |
 | 4 | Remoção do provider Mongo (D1) | Quem usa `DatabaseProvider: MongoDB` | Nenhum caminho automático; hoje esse modo parece nem funcionar |
 | 4 | `Billing:ConnectionString` obrigatório | Ambientes sem a chave | Adicionar a chave; confirmar antes se Billing grava no banco de Access nesse ambiente, pois os dados precisariam ser movidos |
+| 6 | API de clientes troca `cpf` por `type` e `document` | Clientes da API e `.http` | Atualizar as chamadas; sem período de compatibilidade |
+| 6 | Respostas passam a trazer o documento mascarado | Quem lê o CPF da resposta | Usar a rota própria, para Owner e Admin |
+| 6 | Boot exige chaves de documento | Ambientes e desenvolvedores | Gerar as chaves e guardá-las fora do banco antes do deploy |
+| 6 | Coluna de documento em texto puro é removida | Dados existentes e backups | Fazer backup; a API preenche e verifica antes de remover. Backups antigos continuam com texto puro |
 
 ## 7. Riscos
 
@@ -414,3 +463,5 @@ InMemory não é aceito como teste de integração, porque não valida SQL, rest
 | O bootstrap público permite que um estranho vire Owner | Documentar em D5; adotar o segredo de bootstrap se a API ficar exposta antes da configuração inicial |
 | Renomeações e movimentações geram conflitos | Fazer a Onda 4 em commits pequenos, sem misturar com mudança de comportamento |
 | Remover o Mongo pesa na futura decisão de Occupancy | ADR registra o motivo, e o histórico do git preserva o código |
+| Perder a chave de criptografia torna os documentos irrecuperáveis | Guardar as chaves fora do banco e do backup dele, com cópia segura |
+| Texto puro permanece em backups e binlogs antigos | Documentar no README e expirá-los conforme a política de retenção |

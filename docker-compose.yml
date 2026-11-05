@@ -38,6 +38,8 @@ services:
       - MYSQL_PORT=3306
       - MYSQL_PASSWORD
       - Jwt__Secret
+      - DOCUMENT_ENCRYPTION_KEY
+      - DOCUMENT_HMAC_KEY
       - Jwt__Issuer=neoparking
       - Jwt__Audience=neoparking
       - Jwt__ExpireMinutes=60

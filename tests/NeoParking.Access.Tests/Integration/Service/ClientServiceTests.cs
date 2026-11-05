@@ -33,14 +33,15 @@ public class ClientServiceIntegrationTests : IClassFixture<MySqlFixture>, IDispo
             new MySqlClientRepository(_context),
             new AccessOutboxRepository(_context),
             new AccessUnitOfWork(_context),    // implementação real — sem violar arquitetura nos testes de integração
-            mockCorrelation.Object);
+            mockCorrelation.Object,
+            TestDocuments.Protector);
     }
 
     [Fact]
     public async Task CreateClientAsync_ShouldPersistAndReturnClient()
     {
         var result = await _service.CreateClientAsync(
-            new ClientRequestDTO("João Silva", "+5511999999999", "11144477735", null));
+            new ClientRequestDTO("João Silva", "+5511999999999", "Individual", "11144477735", null));
 
         result.Should().NotBeNull();
         result.Name.Should().Be("João Silva");
@@ -51,7 +52,7 @@ public class ClientServiceIntegrationTests : IClassFixture<MySqlFixture>, IDispo
     public async Task CreateClientAsync_ShouldPersistOutboxMessage()
     {
         await _service.CreateClientAsync(
-            new ClientRequestDTO("João Silva", "+5511999999999", "11144477735", null));
+            new ClientRequestDTO("João Silva", "+5511999999999", "Individual", "11144477735", null));
 
         var outbox = new AccessOutboxRepository(_context);
         var pending = await outbox.GetPendingAsync();
@@ -63,7 +64,7 @@ public class ClientServiceIntegrationTests : IClassFixture<MySqlFixture>, IDispo
     public async Task CreateClientAsync_ShouldPersistClientAndOutboxInSameTransaction()
     {
         await _service.CreateClientAsync(
-            new ClientRequestDTO("João Silva", "+5511999999999", "11144477735", null));
+            new ClientRequestDTO("João Silva", "+5511999999999", "Individual", "11144477735", null));
 
         var clients = await _context.Clients.CountAsync();
         var outboxMessages = await _context.OutboxMessages.CountAsync();
@@ -85,7 +86,7 @@ public class ClientServiceIntegrationTests : IClassFixture<MySqlFixture>, IDispo
         try
         {
             var act = () => _service.CreateClientAsync(
-                new ClientRequestDTO("João Silva", "+5511999999999", "11144477735", null));
+                new ClientRequestDTO("João Silva", "+5511999999999", "Individual", "11144477735", null));
 
             await act.Should().ThrowAsync<DbUpdateException>();
         }

@@ -26,6 +26,7 @@ public sealed class SecurityFixture : IAsyncLifetime
     private readonly ApiFixture _api = new();
 
     public HttpClient Client { get; private set; } = null!;
+    public LogCapture Logs => _api.Logs;
     public Actor Owner { get; private set; } = null!;
     public Actor Admin { get; private set; } = null!;
     public Actor Operator { get; private set; } = null!;
@@ -113,6 +114,25 @@ public sealed class SecurityFixture : IAsyncLifetime
         return string.Concat(digits);
     }
 
+    /// <summary>CNPJ alfanumérico válido: valor do caractere = ASCII − 48, pesos oficiais da Receita Federal.</summary>
+    public static string UniqueCnpj()
+    {
+        const string alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        var body = new string(Enumerable.Range(0, 12).Select(_ => alphabet[Random.Shared.Next(alphabet.Length)]).ToArray());
+        int[] firstWeights = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+        int[] secondWeights = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+
+        var first = CnpjDigit(body, firstWeights);
+        var second = CnpjDigit(body + first, secondWeights);
+        return $"{body}{first}{second}";
+    }
+
+    private static int CnpjDigit(string value, int[] weights)
+    {
+        var rest = weights.Select((weight, i) => (value[i] - 48) * weight).Sum() % 11;
+        return rest < 2 ? 0 : 11 - rest;
+    }
+
     private static int CheckDigit(IReadOnlyList<int> digits)
     {
         var weight = digits.Count + 1;
@@ -134,6 +154,27 @@ public sealed class SecurityFixture : IAsyncLifetime
         using var scope = _api.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AccessDbContext>();
         return await context.Tickets.AsNoTracking().SingleAsync(t => t.Id == id);
+    }
+
+    /// <summary>A linha crua do cliente, com todas as colunas, como quem consulta o banco a veria.</summary>
+    public async Task<string> ReadClientRowAsync(Guid clientId)
+    {
+        using var scope = _api.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AccessDbContext>();
+        await context.Database.OpenConnectionAsync();
+        await using var command = context.Database.GetDbConnection().CreateCommand();
+        command.CommandText = $"SELECT * FROM clients WHERE Id = '{clientId}'";
+        await using var reader = await command.ExecuteReaderAsync();
+        await reader.ReadAsync();
+        return string.Join('|', Enumerable.Range(0, reader.FieldCount).Select(i => reader.GetValue(i)));
+    }
+
+    /// <summary>Lê a auditoria direto do banco: não há rota que a exponha.</summary>
+    public async Task<List<ClientDocumentAccess>> ReadDocumentAccessesAsync(Guid clientId)
+    {
+        using var scope = _api.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AccessDbContext>();
+        return await context.ClientDocumentAccesses.AsNoTracking().Where(a => a.ClientId == clientId).ToListAsync();
     }
 
     private async Task<T> WithServiceAsync<T>(Func<OperatorService, Task<T>> action)

@@ -30,7 +30,7 @@ public sealed class ConflictTests
 
         await ShouldHaveOneWinnerAsync(HttpStatusCode.Created, () => _f.SendAsync(
             HttpMethod.Post, "/clients", _f.Owner.Token,
-            new { name = "Cliente", phoneNumber = "+5511999999999", cpf }));
+            new { name = "Cliente", phoneNumber = "+5511999999999", type = "Individual", document = cpf }));
     }
 
     [Fact]
@@ -80,7 +80,7 @@ public sealed class ConflictTests
     private async Task<Guid> CreateClientAsync()
     {
         var response = await _f.SendAsync(HttpMethod.Post, "/clients", _f.Owner.Token,
-            new { name = "Cliente", phoneNumber = "+5511999999999", cpf = SecurityFixture.UniqueCpf() });
+            new { name = "Cliente", phoneNumber = "+5511999999999", type = "Individual", document = SecurityFixture.UniqueCpf() });
         return (await _f.ReadAsync<SecurityFixture.IdResponse>(response)).Id;
     }
 

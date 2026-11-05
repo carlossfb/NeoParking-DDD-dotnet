@@ -11,6 +11,7 @@ public sealed class AccessDbContext : DbContext
     public DbSet<Vehicle> Vehicles { get; set; }
     public DbSet<Ticket> Tickets { get; set; }
     public DbSet<OutboxMessage> OutboxMessages { get; set; }
+    public DbSet<ClientDocumentAccess> ClientDocumentAccesses { get; set; }
 
     public AccessDbContext(DbContextOptions<AccessDbContext> options) : base(options) { }
 
@@ -22,17 +23,23 @@ public sealed class AccessDbContext : DbContext
             builder.HasKey(c => c.Id);
             builder.Property(c => c.Name).HasMaxLength(200).IsRequired();
 
-            builder.Property(c => c.Cpf)
-                .HasColumnName("cpf")
-                .HasMaxLength(11)
-                .IsRequired()
-                .HasConversion(
-                    cpf => cpf.Document,
-                    value => Cpf.Create(value))
-                .Metadata.SetValueComparer(new ValueComparer<Cpf>(
-                    (a, b) => a!.Document == b!.Document,
-                    c => c.Document.GetHashCode(),
-                    c => Cpf.Create(c.Document)));
+            builder.Property(c => c.Type)
+                .HasColumnName("type")
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .IsRequired();
+
+            builder.Property(c => c.DocumentEncrypted)
+                .HasColumnName("document_encrypted")
+                .HasMaxLength(128)
+                .IsRequired();
+
+            builder.Property(c => c.DocumentHmac)
+                .HasColumnName("document_hmac")
+                .HasMaxLength(64)
+                .IsRequired();
+
+            builder.Ignore(c => c.Document);
 
             builder.Property(c => c.PhoneNumber)
                 .HasColumnName("phone_number")
@@ -46,9 +53,9 @@ public sealed class AccessDbContext : DbContext
                     c => c.Value.GetHashCode(),
                     c => PhoneNumber.CreateBR(c.Value)));
 
-            builder.HasIndex(c => c.Cpf)
+            builder.HasIndex(c => c.DocumentHmac)
                 .IsUnique()
-                .HasDatabaseName("ux_clients_cpf");
+                .HasDatabaseName("ux_clients_document_hmac");
 
             builder.HasMany(c => c.Vehicles)
                 .WithOne()
@@ -144,6 +151,17 @@ public sealed class AccessDbContext : DbContext
 
             // Um ticket aberto por placa: índice funcional ux_tickets_open_plate, criado na
             // migration AddUniqueConstraints. O EF não representa esse tipo de índice no modelo.
+        });
+
+        // Sem chave estrangeira: o registro de quem leu um documento sobrevive à exclusão do cliente.
+        modelBuilder.Entity<ClientDocumentAccess>(builder =>
+        {
+            builder.ToTable("client_document_accesses");
+            builder.HasKey(a => a.Id);
+            builder.Property(a => a.ClientId).HasColumnName("client_id");
+            builder.Property(a => a.OperatorId).HasColumnName("operator_id");
+            builder.Property(a => a.AccessedAt).HasColumnName("accessed_at");
+            builder.HasIndex(a => a.ClientId).HasDatabaseName("ix_client_document_accesses_client_id");
         });
 
         modelBuilder.Entity<OutboxMessage>(builder =>

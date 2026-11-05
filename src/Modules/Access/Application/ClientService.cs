@@ -12,17 +12,20 @@ public sealed class ClientService : IClientService
     private readonly IAccessOutboxRepository _outbox;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICorrelationIdProvider _correlationIdProvider;
+    private readonly IDocumentProtector _documentProtector;
 
     public ClientService(
         IClientRepository repository,
         IAccessOutboxRepository outbox,
         IUnitOfWork unitOfWork,
-        ICorrelationIdProvider correlationIdProvider)
+        ICorrelationIdProvider correlationIdProvider,
+        IDocumentProtector documentProtector)
     {
         _repository = repository;
         _outbox = outbox;
         _unitOfWork = unitOfWork;
         _correlationIdProvider = correlationIdProvider;
+        _documentProtector = documentProtector;
     }
 
     public async Task<ClientResponseDTO> CreateClientAsync(ClientRequestDTO dto)
@@ -30,7 +33,7 @@ public sealed class ClientService : IClientService
         var client = Client.Create(
             dto.Name,
             PhoneNumber.Create(dto.PhoneNumber),
-            Cpf.Create(dto.Cpf));
+            _documentProtector.Protect(Document.Create(ClientTypes.Parse(dto.Type), dto.Document)));
 
         foreach (var v in dto.Vehicles ?? [])
             client.RegisterVehicle(Plate.Create(v.Plate));
@@ -53,6 +56,20 @@ public sealed class ClientService : IClientService
         return client is null ? null : ToResponse(client);
     }
 
+    /// <summary>Único caminho até o documento completo: só devolve depois de gravar quem o leu.</summary>
+    public async Task<ClientDocumentResponseDTO> RevealDocumentAsync(Guid clientId, Guid operatorId)
+    {
+        var client = await _repository.GetByIdAsync(clientId)
+            ?? throw new NotFoundException(nameof(Client), clientId);
+
+        var document = _documentProtector.Reveal(client.Document);
+
+        await _repository.AddDocumentAccessAsync(ClientDocumentAccess.Record(clientId, operatorId));
+        await _unitOfWork.SaveChangesAsync();
+
+        return new ClientDocumentResponseDTO(document.Type.ToString(), document.Value);
+    }
+
     public async Task<IEnumerable<ClientResponseDTO>> GetAllClientsAsync()
     {
         var clients = await _repository.GetAllAsync();
@@ -64,7 +81,7 @@ public sealed class ClientService : IClientService
         var client = await _repository.GetByIdAsync(clientId)
             ?? throw new NotFoundException(nameof(Client), clientId);
 
-        client.Update(dto.Name, dto.PhoneNumber, dto.Cpf);
+        client.Update(dto.Name, dto.PhoneNumber, DocumentForUpdate(client, dto));
         await _repository.UpdateAsync(client);
         await _unitOfWork.SaveChangesAsync(); 
         return ToResponse(client);
@@ -79,12 +96,26 @@ public sealed class ClientService : IClientService
         await _unitOfWork.SaveChangesAsync(); 
     }
 
-    private static ClientResponseDTO ToResponse(Client client) =>
+    // O tipo só muda junto com um documento desse tipo; sem tipo, vale o tipo atual do cliente.
+    private ProtectedDocument? DocumentForUpdate(Client client, ClientUpdateDTO dto)
+    {
+        var type = dto.Type is null ? client.Type : ClientTypes.Parse(dto.Type);
+
+        if (dto.Document is not null)
+            return _documentProtector.Protect(Document.Create(type, dto.Document));
+
+        return type == client.Type
+            ? null
+            : throw new DomainException("The document is required when the client type changes.");
+    }
+
+    private ClientResponseDTO ToResponse(Client client) =>
         new(
             client.Id,
             client.Name,
             client.PhoneNumber.Value,
-            client.Cpf.Document,
+            client.Type.ToString(),
+            _documentProtector.Reveal(client.Document).Masked,
             client.Vehicles
                 .Select(v => new VehicleResponseDTO(v.Id, v.Plate.Value))
                 .ToList());

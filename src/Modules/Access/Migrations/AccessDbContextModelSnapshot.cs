@@ -28,11 +28,17 @@ namespace NeoParking.Access.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("Cpf")
+                    b.Property<string>("DocumentEncrypted")
                         .IsRequired()
-                        .HasMaxLength(11)
-                        .HasColumnType("varchar(11)")
-                        .HasColumnName("cpf");
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)")
+                        .HasColumnName("document_encrypted");
+
+                    b.Property<string>("DocumentHmac")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("document_hmac");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -45,13 +51,45 @@ namespace NeoParking.Access.Migrations
                         .HasColumnType("varchar(20)")
                         .HasColumnName("phone_number");
 
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("type");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("Cpf")
+                    b.HasIndex("DocumentHmac")
                         .IsUnique()
-                        .HasDatabaseName("ux_clients_cpf");
+                        .HasDatabaseName("ux_clients_document_hmac");
 
                     b.ToTable("clients", (string)null);
+                });
+
+            modelBuilder.Entity("NeoParking.Access.Domain.ClientDocumentAccess", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("AccessedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("accessed_at");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("client_id");
+
+                    b.Property<Guid>("OperatorId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("operator_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId")
+                        .HasDatabaseName("ix_client_document_accesses_client_id");
+
+                    b.ToTable("client_document_accesses", (string)null);
                 });
 
             modelBuilder.Entity("NeoParking.Access.Domain.Ticket", b =>

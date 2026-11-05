@@ -54,6 +54,10 @@ public sealed class PricingPolicyService
         var current = await _repository.GetActiveAsync();
         if (current is not null)
         {
+            // Uma revisão concorrente pode ter começado depois do relógio lido acima; datetime(6) guarda microssegundos.
+            if (now <= current.EffectiveFrom)
+                now = current.EffectiveFrom.AddMicroseconds(1);
+
             current.Close(now);
             await _repository.UpdateAsync(current);
         }

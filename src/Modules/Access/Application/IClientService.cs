@@ -4,6 +4,7 @@ public interface IClientService
 {
     Task<ClientResponseDTO> CreateClientAsync(ClientRequestDTO dto);
     Task<ClientResponseDTO?> GetClientByIdAsync(Guid clientId);
+    Task<ClientDocumentResponseDTO> RevealDocumentAsync(Guid clientId, Guid operatorId);
     Task<IEnumerable<ClientResponseDTO>> GetAllClientsAsync();
     Task<ClientResponseDTO> UpdateClientAsync(Guid clientId, ClientUpdateDTO dto);
     Task DeleteClientAsync(Guid clientId);

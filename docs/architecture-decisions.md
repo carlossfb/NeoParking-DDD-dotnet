@@ -105,3 +105,23 @@ Outside Management, accept up to 60 minutes of token validity after an operator 
 - ✅ No database query on each request to other modules
 - ✅ Account administration always uses the current state
 - ❌ A deactivated or demoted operator can still operate Access and Billing until the token expires
+
+---
+
+## ADR-007: Client Document Protection
+
+**Status**: Accepted
+**Date**: 2026-11-04
+
+### Context
+Clients with a contract need a CPF or CNPJ, and the database should not expose it to anyone who can read it. Uniqueness must keep working without decrypting every row. MySQL has no AES-GCM, and a key cannot go into migration SQL.
+
+### Decision
+Encrypt the document in the application with AES-256-GCM and keep an HMAC-SHA256 with a separate key for the unique index. Both keys come from the environment. Migrate existing rows in three phases, expand, fill and verify, then remove the plain text, with the fill running in the application at boot.
+
+### Consequences
+- ✅ A database leak alone does not expose documents, and uniqueness stays in a database index
+- ✅ A failed migration keeps the plain text and can be run again
+- ❌ Losing the encryption key loses every document, so the keys need their own backup
+- ❌ Key rotation is not implemented: the value carries a key version, but rotating needs a new process
+- ❌ Older backups and binary logs still hold plain text until they expire

@@ -1,5 +1,6 @@
 namespace NeoParking.Api.Endpoints;
 
+using System.Security.Claims;
 using NeoParking.Access.Application;
 using NeoParking.Api.Extensions;
 
@@ -24,6 +25,16 @@ public static class ClientEndpoints
         })
         .WithName("GetClient")
         .RequireAuthorization(AuthorizationPolicies.AnyOperator);
+
+        // O documento completo só sai aqui. A resposta não fica em cache, e cada leitura é auditada.
+        group.MapGet("/{id:guid}/document", async (Guid id, ClaimsPrincipal user, HttpContext http, IClientService service) =>
+        {
+            var result = await service.RevealDocumentAsync(id, user.GetOperatorId());
+            http.Response.Headers.CacheControl = "no-store";
+            return Results.Ok(result);
+        })
+        .WithName("GetClientDocument")
+        .RequireAuthorization(AuthorizationPolicies.OwnerOrAdmin);
 
         group.MapGet("/", async (IClientService service) =>
         {

@@ -19,7 +19,7 @@ public static class ManagementModule
         connectionString = MySqlConnectionStrings.WithPassword(connectionString, configuration);
 
         services.AddDbContext<ManagementDbContext>(options =>
-            options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+            options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)).WithoutDatabaseErrorValuesInLogs());
 
         services.AddSingleton<IDatabaseProbe>(new MySqlDatabaseProbe(connectionString));
         services.AddScoped<IOperatorRepository, MySqlOperatorRepository>();

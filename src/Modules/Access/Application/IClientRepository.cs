@@ -9,4 +9,5 @@ public interface IClientRepository
     Task<Client?> GetByIdAsync(Guid clientId);
     Task<IEnumerable<Client>> GetAllAsync();
     Task DeleteAsync(Client client);
+    Task AddDocumentAccessAsync(ClientDocumentAccess access);
 }

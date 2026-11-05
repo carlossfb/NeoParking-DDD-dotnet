@@ -70,6 +70,20 @@ public class PricingPolicyServiceTests
     }
 
     [Fact]
+    public async Task DefineAsync_WhenTheActivePolicyStartedAfterThisRequestBegan_ShouldStillCloseIt()
+    {
+        // Requisição concorrente que capturou o relógio depois desta e já gravou sua revisão.
+        var current = PricingPolicy.Define(OwnerId, Money.Create(5m), Money.Create(2m),
+            effectiveFrom: DateTime.UtcNow.AddSeconds(1));
+        _mockRepository.Setup(r => r.GetActiveAsync()).ReturnsAsync(current);
+
+        var result = await _service.DefineAsync(OwnerId, MakeRequest());
+
+        current.EffectiveTo.Should().BeAfter(current.EffectiveFrom);
+        result.EffectiveFrom.Should().Be(current.EffectiveTo!.Value);
+    }
+
+    [Fact]
     public async Task DefineAsync_ShouldEnqueueOutboxMessage()
     {
         _mockRepository.Setup(r => r.GetActiveAsync()).ReturnsAsync((PricingPolicy?)null);

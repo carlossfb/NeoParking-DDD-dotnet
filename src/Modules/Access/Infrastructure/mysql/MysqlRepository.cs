@@ -57,6 +57,9 @@ public sealed class MySqlClientRepository : IClientRepository
 
     }
 
+    public async Task AddDocumentAccessAsync(ClientDocumentAccess access) =>
+        await _context.ClientDocumentAccesses.AddAsync(access);
+
     public Task DeleteAsync(Client client)
     {
         _context.Clients.Remove(client);

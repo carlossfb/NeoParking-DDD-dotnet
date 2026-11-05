@@ -87,7 +87,7 @@ public class ClientRepositoryTests : IClassFixture<MySqlFixture>
     public async Task AddAsync_WithValidClient_ShouldPersistClient()
     {
         var (ctx, repo) = CreateFresh();
-        var client = Client.Create("João Silva", PhoneNumber.Create("+5511999999999"), Cpf.Create("11144477735"));
+        var client = Client.Create("João Silva", PhoneNumber.Create("+5511999999999"), TestDocuments.Cpf("11144477735"));
 
         await AddAndSaveAsync(ctx, repo, client);
         var result = await repo.GetByIdAsync(client.Id);
@@ -101,8 +101,8 @@ public class ClientRepositoryTests : IClassFixture<MySqlFixture>
     public async Task GetAllAsync_WithMultipleClients_ShouldReturnAll()
     {
         var (ctx, repo) = CreateFresh();
-        await AddAndSaveAsync(ctx, repo, Client.Create("João", PhoneNumber.Create("+5511999999999"), Cpf.Create("11144477735")));
-        await AddAndSaveAsync(ctx, repo, Client.Create("Maria", PhoneNumber.Create("+5521987654321"), Cpf.Create("98765432100")));
+        await AddAndSaveAsync(ctx, repo, Client.Create("João", PhoneNumber.Create("+5511999999999"), TestDocuments.Cpf("11144477735")));
+        await AddAndSaveAsync(ctx, repo, Client.Create("Maria", PhoneNumber.Create("+5521987654321"), TestDocuments.Cpf("98765432100")));
 
         var result = await repo.GetAllAsync();
 
@@ -114,7 +114,7 @@ public class ClientRepositoryTests : IClassFixture<MySqlFixture>
     public async Task DeleteAsync_WithExistingClient_ShouldRemoveClient()
     {
         var (ctx1, repo1) = CreateFresh();
-        var client = Client.Create("João", PhoneNumber.Create("+5511999999999"), Cpf.Create("11144477735"));
+        var client = Client.Create("João", PhoneNumber.Create("+5511999999999"), TestDocuments.Cpf("11144477735"));
         await AddAndSaveAsync(ctx1, repo1, client);
         await ctx1.DisposeAsync();
 
@@ -131,7 +131,7 @@ public class ClientRepositoryTests : IClassFixture<MySqlFixture>
     public async Task UpdateAsync_WithNewVehicle_ShouldPersistVehicle()
     {
         var (ctx1, repo1) = CreateFresh();
-        var client = Client.Create("João", PhoneNumber.Create("+5511999999999"), Cpf.Create("11144477735"));
+        var client = Client.Create("João", PhoneNumber.Create("+5511999999999"), TestDocuments.Cpf("11144477735"));
         await AddAndSaveAsync(ctx1, repo1, client);
         await ctx1.DisposeAsync();
 
@@ -152,7 +152,7 @@ public class ClientRepositoryTests : IClassFixture<MySqlFixture>
     public async Task UpdateAsync_WithDuplicatePlate_ShouldThrowDomainException()
     {
         var (ctx1, repo1) = CreateFresh();
-        var client = Client.Create("João", PhoneNumber.Create("+5511999999999"), Cpf.Create("11144477735"));
+        var client = Client.Create("João", PhoneNumber.Create("+5511999999999"), TestDocuments.Cpf("11144477735"));
         await AddAndSaveAsync(ctx1, repo1, client);
         var saved = await repo1.GetByIdAsync(client.Id);
         saved!.RegisterVehicle(Plate.Create("ABC1234"));
@@ -167,8 +167,8 @@ public class ClientRepositoryTests : IClassFixture<MySqlFixture>
             await repo2.UpdateAsync(reloaded);
         };
 
-        await act.Should().ThrowAsync<NeoParking.Shared.Kernel.Exceptions.DomainException>()
-            .WithMessage("*ABC1234*");
+        (await act.Should().ThrowAsync<NeoParking.Shared.Kernel.Exceptions.DomainException>())
+            .Which.Message.Should().NotContain("ABC1234");
         await ctx2.DisposeAsync();
     }
 
@@ -176,7 +176,7 @@ public class ClientRepositoryTests : IClassFixture<MySqlFixture>
     public async Task UpdateAsync_WithRemovedVehicle_ShouldDeleteVehicle()
     {
         var (ctx1, repo1) = CreateFresh();
-        var client = Client.Create("João", PhoneNumber.Create("+5511999999999"), Cpf.Create("11144477735"));
+        var client = Client.Create("João", PhoneNumber.Create("+5511999999999"), TestDocuments.Cpf("11144477735"));
         await AddAndSaveAsync(ctx1, repo1, client);
         var saved = await repo1.GetByIdAsync(client.Id);
         saved!.RegisterVehicle(Plate.Create("ABC1234"));
@@ -199,7 +199,7 @@ public class ClientRepositoryTests : IClassFixture<MySqlFixture>
     public async Task UpdateAsync_WithExistingVehicleAndNewVehicle_ShouldPersistNewVehicle()
     {
         var (ctx1, repo1) = CreateFresh();
-        var client = Client.Create("João", PhoneNumber.Create("+5511999999999"), Cpf.Create("11144477735"));
+        var client = Client.Create("João", PhoneNumber.Create("+5511999999999"), TestDocuments.Cpf("11144477735"));
         await AddAndSaveAsync(ctx1, repo1, client);
         var saved = await repo1.GetByIdAsync(client.Id);
         saved!.RegisterVehicle(Plate.Create("ABC1234"));

@@ -21,7 +21,7 @@ public static class BillingModule
         connectionString = MySqlConnectionStrings.WithPassword(connectionString, configuration);
 
         services.AddDbContext<BillingDbContext>(options =>
-            options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+            options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)).WithoutDatabaseErrorValuesInLogs());
 
         services.AddSingleton<IDatabaseProbe>(new MySqlDatabaseProbe(connectionString));
         services.AddScoped<IPricingPolicyRepository, MySqlPricingPolicyRepository>();
