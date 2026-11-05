@@ -411,6 +411,125 @@ Aprovada pelo usuário em 2026-11-04. Vem antes de EVO-0, C1, C4 e C5, porque es
 - **Requisito:** definir prazo e base legal com o jurídico; só então implementar a anonimização. **Não implementar antes disso.**
 - **Aceite:** a definir com a regra.
 
+### Onda 7: Prontidão
+
+Aprovada pelo usuário em 2026-11-04. Reúne os pontos soltos encontrados na auditoria do README e o que falta no código antes de operar. Os itens de processo e ambiente não entram aqui: estão em [Fora da conta do código](#fora-da-conta-do-código).
+
+**Já concluídos:**
+
+**TD-701: Dependências sob vigilância (PR #20)**
+- **Evidência:** `README:369-370` prometia atualização mensal e correção de CVE alta ou crítica, sem nada que aplicasse isso.
+- **Requisito:** Dependabot mensal para NuGet e GitHub Actions; o CI falha em severidade alta ou crítica de produção.
+- **Aceite:** `scripts/ci/check-vulnerable-packages.sh` testado com 8 casos e executado no CI.
+
+**TD-702: Exigir `Management:ConnectionString` (PR #20)**
+- **Evidência:** `ManagementModule.cs` caía na connection string do Access, o mesmo problema do TD-408.
+- **Requisito:** sem a chave, o boot falha com mensagem clara.
+- **Aceite:** `ManagementModuleTests`.
+
+**TD-703: Rota de saúde (PR #20)**
+- **Evidência:** não havia rota de saúde na API, só o healthcheck do MySQL no compose.
+- **Requisito:** `GET`/`HEAD /health` anônimo, só com o status, 200 ou 503, checando os três bancos. Não mede disponibilidade.
+- **Aceite:** `HealthEndpointTests` e `DatabaseHealthCheckTests`, com banco no ar e fora do ar.
+
+**TD-704: Scripts em LF (PR #22)**
+- **Evidência:** com `core.autocrlf=true`, `entrypoint.sh` ficava em CRLF e a API não subia.
+- **Requisito:** `.gitattributes` com `*.sh text eol=lf`.
+- **Aceite:** clone novo no Windows e compose real sem conversão manual: `/health` 200 e nenhum reinício.
+
+**TD-705: Atualizar `MySqlConnector` (PR #22)**
+- **Evidência:** a versão 2.3.5 tinha o aviso GHSA-473q-m89c-ghf8.
+- **Requisito:** versão 2.6.1 em todos os projetos.
+- **Aceite:** aviso removido e testes em MySQL real com Pomelo 8.0.2.
+
+**TD-706: Provar que o CI fica vermelho (PR #21)**
+- **Evidência:** faltava o último aceite do TD-001.
+- **Requisito:** um teste quebrado deixa o check `ci` vermelho.
+- **Aceite:** executado no PR #21, fechado sem merge. O check só bloqueia o merge com proteção de branch, que depende do TD-503.
+
+**TD-707: Corrida ao definir tarifa (PR #23)**
+- **Evidência:** `PricingPolicyService` lia o relógio antes da política ativa, e uma revisão concorrente mais nova resultava em 422 intermitente.
+- **Requisito:** a política ativa é sempre encerrada em um momento válido.
+- **Aceite:** teste determinístico, visto falhando antes da correção, e 12 rodadas seguidas de E2E sem falha.
+
+**A fazer agora:**
+
+**TD-708: Tempo de login igual para e-mail inexistente**
+- **Evidência:** `OperatorService.cs:30` lança a exceção sem executar o BCrypt, então o tempo de resposta pode revelar se o e-mail existe.
+- **Requisito:** e-mail inexistente também executa o BCrypt, contra um hash fictício fixo com o mesmo custo dos hashes reais. Os corpos de resposta continuam idênticos.
+- **Aceite:** teste confirma a execução desse caminho, sem medir tempo.
+
+**TD-709: Falha de login sem stack trace e conflito sem e-mail**
+- **Evidência:** `UseExceptionHandler` registra `fail` com stack trace em toda falha de login; `OperatorService.cs:194` repete o e-mail na mensagem de conflito.
+- **Requisito:** falha de login esperada não gera `fail` nem stack trace, e a mensagem de conflito não traz o e-mail. Os demais erros continuam com log completo.
+- **Aceite:** teste com os logs reais da API cobre login recusado, conflito de e-mail e um erro inesperado.
+
+**TD-710: Criptografar nome e telefone do cliente**
+- **Evidência:** `clients.Name` e `clients.phone_number` ficam legíveis, e `ClientRegisteredIntegrationEvent` grava o nome no outbox, embora não tenha consumidor.
+- **Requisito:**
+  - Nome e telefone cifrados com a mesma chave do documento, sem índice cego, porque nada busca por esses campos. As respostas continuam trazendo os dois.
+  - O nome sai do evento e das mensagens já gravadas no outbox.
+  - Migração como no TD-605: expandir, preencher, verificar e só então remover o texto puro, de forma retomável e sem perda em caso de falha.
+- **Aceite:** com o usuário restrito, testes cobrem o banco do zero, dados da versão anterior e falha seguida de nova tentativa; nenhuma coluna guarda o texto, e o compose real confirma isso no banco.
+
+**TD-711: Rotação da chave de criptografia**
+- **Evidência:** só existe a versão `v1`, e não há como trocar a chave sem perder acesso aos dados.
+- **Requisito:** leitura pela versão gravada no valor, gravação pela versão atual e um processo documentado e retomável para recifrar. A troca de `DOCUMENT_HMAC_KEY` fica documentada como limitação.
+- **Aceite:** teste com chaves geradas na execução cobre rotação, interrupção seguida de nova tentativa, chave antiga ausente e unicidade preservada.
+
+**TD-712: Avisos altos em dependências de teste**
+- **Evidência:** o CI avisa sobre SSH.NET 2023.0.0, System.Net.Http 4.3.0 e System.Text.RegularExpressions 4.3.0.
+- **Requisito:** menor atualização que remova os avisos, mantendo os testes em MySQL real. O que não tiver correção é relatado.
+- **Aceite:** `dotnet list package --vulnerable --include-transitive` sem esses avisos e testes de integração aprovados.
+
+**TD-713: `NeoParking.Api.http` com autenticação**
+- **Evidência:** as requisições protegidas não enviam token e retornam 401.
+- **Requisito:** fluxo de login, com token nas requisições protegidas, conferido contra as rotas e a API atual de `/clients`.
+- **Aceite:** cada requisição corresponde a uma rota real, e as protegidas enviam o token.
+
+**TD-714: Medir o `ServerVersion.AutoDetect`**
+- **Evidência:** `AutoDetect` está no lambda de `AddDbContext` dos três módulos e parece abrir uma conexão a cada escopo. Com o banco fora do ar, resolver o `DbContext` pode lançar exceção.
+- **Requisito:** medir com contagem real. Se confirmado, detectar uma única vez, sem guardar falhas. Se não, registrar o resultado e não mudar.
+- **Aceite:** teste com a contagem de conexões do MySQL e teste do comportamento com o banco fora do ar.
+
+**TD-715: Rever a promessa de REST externo**
+- **Evidência:** `README:55` fala em REST para sistemas externos, mas não há consumidor externo definido.
+- **Requisito:** reescrever como premissa de estilo, sem prometer integração.
+- **Aceite:** o README descreve a API como é.
+
+**Depois, sem data:**
+
+**TD-716: Teste de carga repetível**
+- **Evidência:** `README:52` fala em 1000+ transações por dia sem nenhuma medição.
+- **Requisito:** teste repetível de entrada e saída de tickets que gere uma linha de base. **Não implementar agora.**
+- **Aceite:** a definir quando entrar.
+
+**Decisão do usuário: placa sem criptografia.** A placa é dado operacional, usado em busca, índice e eventos. A proteção vem de logs limpos (TD-601), controle de acesso (D2) e retenção (TD-606).
+
+#### Fora da conta do código
+
+Processo e ambiente não entram no percentual:
+
+- TD-503: método de merge e proteção de branch.
+- Ambiente de staging.
+- Deploy.
+- Promoção de `develop` para `main`.
+
+#### Progresso
+
+Regra: cada item implementado e testado conta como concluído, e todos valem o mesmo. Por isso, o número mostra a quantidade de itens, não o esforço: C3 e C4 pesam muito mais que um item de débito técnico.
+
+| Frente | Concluídos | Total | % | O que falta |
+|---|---:|---:|---:|---|
+| Produto (`product-evolution.md`) | 1 | 8 | 12,5% | EVO-0, C1, C3, C4, C5, C6, C7 |
+| Débito técnico (Ondas 0 a 7, sem TD-503) | 52 | 62 | 83,9% | TD-606, TD-708 a TD-716 |
+| Observabilidade (`observability.md`) | 0 | 21 | 0% | OBS-001 a OBS-603 |
+| **Total** | **53** | **91** | **58,2%** | |
+
+Cálculo: (1 + 52 + 0) / (8 + 62 + 21) = 53 / 91. Débito técnico: Onda 0 (5), Onda 1 (11), Onda 2 (4), Onda 3 (9), Onda 4 (8), Onda 5 (3, sem TD-503), Onda 6 (6) e Onda 7 (16).
+
+**Aguardando merge:** a Onda 6 e o TD-707 estão no PR #23. A spec `observability.md` está na branch `docs/observability-spec`, com status "Proposta".
+
 ## 5. Estratégia de testes e Definition of Done
 
 | Camada | O que cobre | Ferramenta |
