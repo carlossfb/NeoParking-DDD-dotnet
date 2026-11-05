@@ -213,3 +213,9 @@ Content-Type: application/json
 {
   "plate": "ABC1D23"
 }
+
+###
+
+### Dados do próprio operador
+GET {{baseUrl}}/operators/me
+Authorization: Bearer {{token}}

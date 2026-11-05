@@ -282,6 +282,7 @@ Management issues JWTs on successful login (`POST /operators/login`). Tokens car
 | `POST /operators/owner` | ✅ | | | |
 | `GET /health` (status only: `200` or `503`) | ✅ | | | |
 | `POST /operators` | | | ✅ Admin creates only Operator | |
+| `GET /operators/me` (role read from the database) | | ✅ | | |
 | `GET /operators?page=&pageSize=` (at most 100 per page) | | | ✅ | |
 | `GET /operators/{id}` | | | ✅ | |
 | `POST /operators/{targetId}/promote`, `/demote` | | | | ✅ |

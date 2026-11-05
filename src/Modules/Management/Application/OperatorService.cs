@@ -169,6 +169,9 @@ public sealed class OperatorService
         return ToResponse(user);
     }
 
+    public async Task<OperatorResponseDTO> GetCurrentAsync(Guid requesterId)
+        => ToResponse(await GetActiveRequesterAsync(requesterId));
+
     public async Task<PagedResult<OperatorResponseDTO>> ListAsync(Guid requesterId, PageRequest page)
     {
         var requester = await GetActiveRequesterAsync(requesterId);

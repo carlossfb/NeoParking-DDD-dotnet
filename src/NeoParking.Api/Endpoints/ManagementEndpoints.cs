@@ -47,6 +47,14 @@ public static class ManagementEndpoints
         .RequireAuthorization(AuthorizationPolicies.OwnerOrAdmin);
 
         // ── consulta ─────────────────────────────────────────────────────────
+        group.MapGet("/me", async (ClaimsPrincipal user, OperatorService service) =>
+        {
+            var result = await service.GetCurrentAsync(user.GetOperatorId());
+            return Results.Ok(result);
+        })
+        .WithName("GetCurrentOperator")
+        .RequireAuthorization(AuthorizationPolicies.AnyOperator);
+
         group.MapGet("/", async (
             ClaimsPrincipal user, OperatorService service, int page = 1, int pageSize = PageRequest.DefaultPageSize) =>
         {
