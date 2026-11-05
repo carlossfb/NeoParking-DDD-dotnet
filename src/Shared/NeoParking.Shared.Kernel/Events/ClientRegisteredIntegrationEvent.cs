@@ -7,5 +7,4 @@ namespace NeoParking.Shared.Kernel.Events;
 /// </summary>
 public record ClientRegisteredIntegrationEvent(
     Guid ClientId,
-    string Name,
     Guid CorrelationId) : IDomainEvent;

@@ -37,4 +37,15 @@ public class ClientTests
         var act = () => Client.Create(invalidName, PhoneNumber.Create("+5511999999999"), TestDocuments.Cpf("11144477735"));
         act.Should().Throw<DomainException>();
     }
+
+    [Fact]
+    public void Create_WithATooLongName_ShouldBeRefused()
+    {
+        var act = () => Client.Create(
+            new string('a', Client.NameMaxLength + 1),
+            PhoneNumber.Create("+5511999999999"),
+            TestDocuments.Cpf("11144477735"));
+
+        act.Should().Throw<DomainException>().WithMessage("*too long*");
+    }
 }

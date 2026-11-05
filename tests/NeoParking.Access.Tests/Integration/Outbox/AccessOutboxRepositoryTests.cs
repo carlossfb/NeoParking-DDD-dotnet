@@ -23,7 +23,7 @@ public class AccessOutboxRepositoryTests : IClassFixture<MySqlFixture>, IDisposa
             .UseMySql(fixture.ConnectionString, ServerVersion.AutoDetect(fixture.ConnectionString))
             .Options;
 
-        _context = new AccessDbContext(options);
+        _context = new AccessDbContext(options, TestDocuments.Protector);
         _repository = new AccessOutboxRepository(_context);
     }
 

@@ -30,7 +30,7 @@ public class MySqlFixture : IAsyncLifetime
             .UseMySql(ConnectionString, ServerVersion.AutoDetect(ConnectionString))
             .Options;
 
-        Context = new AccessDbContext(options);
+        Context = new AccessDbContext(options, TestDocuments.Protector);
         await Context.Database.MigrateAsync();
     }
 
@@ -60,7 +60,7 @@ public class ClientRepositoryTests : IClassFixture<MySqlFixture>
             .UseMySql(_fixture.ConnectionString, ServerVersion.AutoDetect(_fixture.ConnectionString))
             .Options;
 
-        var context = new AccessDbContext(options);
+        var context = new AccessDbContext(options, TestDocuments.Protector);
         return (context, new MySqlClientRepository(context));
     }
 

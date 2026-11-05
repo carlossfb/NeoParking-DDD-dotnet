@@ -5,6 +5,8 @@ using NeoParking.Shared.Kernel.Primitives;
 
 public sealed class Client : Entity
 {
+    public const int NameMaxLength = 200;
+
     public string Name { get; private set; }
     public PhoneNumber PhoneNumber { get; private set; }
     public ClientType Type { get; private set; }
@@ -92,5 +94,6 @@ public sealed class Client : Entity
     {
         if (string.IsNullOrWhiteSpace(name)) throw new DomainException("Name is required");
         if (name.Length < 3) throw new DomainException("Name is too short");
+        if (name.Length > NameMaxLength) throw new DomainException("Name is too long");
     }
 }

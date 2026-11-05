@@ -42,14 +42,15 @@ namespace NeoParking.Access.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
+                        .HasMaxLength(1200)
+                        .HasColumnType("varchar(1200)")
+                        .HasColumnName("name_encrypted");
 
                     b.Property<string>("PhoneNumber")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("varchar(20)")
-                        .HasColumnName("phone_number");
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)")
+                        .HasColumnName("phone_encrypted");
 
                     b.Property<string>("Type")
                         .IsRequired()

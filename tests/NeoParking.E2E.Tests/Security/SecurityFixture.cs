@@ -169,6 +169,13 @@ public sealed class SecurityFixture : IAsyncLifetime
         return string.Join('|', Enumerable.Range(0, reader.FieldCount).Select(i => reader.GetValue(i)));
     }
 
+    public async Task<string> ReadAccessOutboxPayloadsAsync()
+    {
+        using var scope = _api.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AccessDbContext>();
+        return string.Join('|', await context.OutboxMessages.AsNoTracking().Select(m => m.Payload).ToListAsync());
+    }
+
     /// <summary>Altera o banco do Access direto, para criar estados que a API não produz.</summary>
     public async Task ExecuteAccessSqlAsync(string sql)
     {

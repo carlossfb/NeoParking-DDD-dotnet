@@ -475,6 +475,8 @@ curl -H "Authorization: Bearer $TOKEN" $BASE_URL/clients
 
 ### Upgrading an existing database
 
+**Client names and phone numbers.** The first boot on this version encrypts them with `DOCUMENT_ENCRYPTION_KEY`: nothing changes until the API starts in an environment. Stop every running API and back up the database first. At boot, the API adds `name_encrypted` and `phone_encrypted`, encrypts each row and checks it against the plain text, removes the name from `ClientRegisteredIntegrationEvent` messages in the outbox, and only then drops `Name` and `phone_number`. It can be run again: rows already done are kept. If the keys cannot read a value already encrypted, the boot stops with the client ids and no personal data, and the plain-text columns stay. `dotnet ef database update` cannot encrypt, so it refuses to remove the columns while any row is unprotected. **Backups and binary logs from before this migration still contain them in plain text.** Reverting is refused when there are clients: restore a backup instead.
+
 **Client documents.** Stop every running API, back up the database, and add `DOCUMENT_ENCRYPTION_KEY` and `DOCUMENT_HMAC_KEY` to the environment. Keep a copy of both keys outside the database and its backups. At boot, the API then:
 
 1. Renames `clients.cpf` to `document`, marks existing clients as `Individual`, and adds the encrypted columns.
@@ -509,7 +511,7 @@ In the database, `document_encrypted` holds AES-256-GCM with a random nonce, in 
 
 **Losing `DOCUMENT_ENCRYPTION_KEY` makes every document unrecoverable, and a backup of the database does not help.** Changing `DOCUMENT_HMAC_KEY` makes uniqueness stop matching the existing rows. Key rotation is not implemented yet: the version in the value allows it, but changing either key today breaks reads or uniqueness.
 
-Name and phone number are still stored in plain text. How long to keep data of inactive clients is pending a legal definition.
+Name and phone number are stored in `name_encrypted` and `phone_encrypted`, with the same key and format and the field in the authenticated data. Responses still return both. There is no blind index, so the database cannot search or sort by them. Plates stay in plain text by decision: they are operational data, used in searches, indexes and events. How long to keep data of inactive clients is pending a legal definition.
 
 ### Outbox retries and replay
 

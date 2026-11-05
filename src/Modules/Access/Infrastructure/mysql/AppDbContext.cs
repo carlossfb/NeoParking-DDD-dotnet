@@ -2,18 +2,32 @@ namespace NeoParking.Access.Infrastructure;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using NeoParking.Access.Application;
 using NeoParking.Access.Domain;
 using NeoParking.Shared.Kernel.Outbox;
 
 public sealed class AccessDbContext : DbContext
 {
+    // 200 caracteres de até 4 bytes, mais nonce e tag, em base64 e com a versão da chave.
+    public const int NameEncryptedMaxLength = 1200;
+    public const int PhoneEncryptedMaxLength = 128;
+
+    private readonly IDocumentProtector _protector;
+
+    internal IDocumentProtector Protector => _protector;
+
     public DbSet<Client> Clients { get; set; }
     public DbSet<Vehicle> Vehicles { get; set; }
     public DbSet<Ticket> Tickets { get; set; }
     public DbSet<OutboxMessage> OutboxMessages { get; set; }
     public DbSet<ClientDocumentAccess> ClientDocumentAccesses { get; set; }
 
-    public AccessDbContext(DbContextOptions<AccessDbContext> options) : base(options) { }
+    public AccessDbContext(DbContextOptions<AccessDbContext> options, IDocumentProtector protector) : base(options) =>
+        _protector = protector;
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) =>
+        optionsBuilder.ReplaceService<IModelCacheKeyFactory, ProtectorModelCacheKeyFactory>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -21,7 +35,18 @@ public sealed class AccessDbContext : DbContext
         {
             builder.ToTable("clients");
             builder.HasKey(c => c.Id);
-            builder.Property(c => c.Name).HasMaxLength(200).IsRequired();
+
+            // A cifra fica no mapeamento: o domínio e o serviço continuam vendo o nome e o telefone.
+            // Comparar ou ordenar por essas colunas não funciona, porque cada gravação gera um valor diferente.
+            var protector = _protector;
+
+            builder.Property(c => c.Name)
+                .HasColumnName("name_encrypted")
+                .HasMaxLength(NameEncryptedMaxLength)
+                .IsRequired()
+                .HasConversion(
+                    name => protector.ProtectField(ClientField.Name, name),
+                    value => protector.RevealField(ClientField.Name, value));
 
             builder.Property(c => c.Type)
                 .HasColumnName("type")
@@ -42,12 +67,12 @@ public sealed class AccessDbContext : DbContext
             builder.Ignore(c => c.Document);
 
             builder.Property(c => c.PhoneNumber)
-                .HasColumnName("phone_number")
-                .HasMaxLength(20)
+                .HasColumnName("phone_encrypted")
+                .HasMaxLength(PhoneEncryptedMaxLength)
                 .IsRequired()
                 .HasConversion(
-                    phone => phone.Value,
-                    value => PhoneNumber.CreateBR(value))
+                    phone => protector.ProtectField(ClientField.PhoneNumber, phone.Value),
+                    value => PhoneNumber.CreateBR(protector.RevealField(ClientField.PhoneNumber, value)))
                 .Metadata.SetValueComparer(new ValueComparer<PhoneNumber>(
                     (a, b) => a!.Value == b!.Value,
                     c => c.Value.GetHashCode(),
@@ -186,4 +211,13 @@ public sealed class AccessDbContext : DbContext
                 .HasDatabaseName("ix_outbox_messages_published_at");
         });
     }
+}
+/// <summary>
+/// O EF guarda o modelo por processo, e o modelo guarda o protetor nas conversões.
+/// Sem separar por protetor, um contexto com outras chaves usaria as chaves do primeiro.
+/// </summary>
+internal sealed class ProtectorModelCacheKeyFactory : IModelCacheKeyFactory
+{
+    public object Create(DbContext context, bool designTime) =>
+        (context.GetType(), (context as AccessDbContext)?.Protector, designTime);
 }

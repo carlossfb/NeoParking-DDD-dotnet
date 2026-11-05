@@ -25,7 +25,7 @@ public class ClientServiceIntegrationTests : IClassFixture<MySqlFixture>, IDispo
             .UseMySql(fixture.ConnectionString, ServerVersion.AutoDetect(fixture.ConnectionString))
             .Options;
 
-        _context = new AccessDbContext(options);
+        _context = new AccessDbContext(options, TestDocuments.Protector);
 
         var mockCorrelation = new Mock<ICorrelationIdProvider>();
         mockCorrelation.Setup(c => c.GetCorrelationId()).Returns(Guid.NewGuid());
@@ -59,6 +59,7 @@ public class ClientServiceIntegrationTests : IClassFixture<MySqlFixture>, IDispo
         var pending = await outbox.GetPendingAsync();
         pending.Should().HaveCount(1);
         pending[0].Type.Should().Contain("ClientRegistered");
+        pending[0].Payload.Should().NotContain("João Silva").And.NotContain("\"Name\"");
     }
 
     [Fact]

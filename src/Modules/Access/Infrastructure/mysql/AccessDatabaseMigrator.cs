@@ -11,14 +11,16 @@ using NeoParking.Access.Domain;
 using NeoParking.Shared.Kernel.Exceptions;
 
 /// <summary>
-/// Aplica as migrations do Access com a proteção do documento em três fases: expandir, preencher
-/// e só então remover o texto puro. O MySQL não tem AES-GCM e a chave não pode entrar no SQL,
-/// por isso o preenchimento é feito aqui. Pode ser repetido sem efeito sobre o que já foi feito.
+/// Aplica as migrations do Access com a proteção do documento, e depois a do nome e do telefone, em três
+/// fases: expandir, preencher e só então remover o texto puro. O MySQL não tem AES-GCM e a chave não pode
+/// entrar no SQL, por isso o preenchimento é feito aqui. Pode ser repetido sem efeito sobre o que já foi feito.
 /// </summary>
 public sealed class AccessDatabaseMigrator
 {
     public const string ExpandMigration = "ExpandClientDocumentProtection";
     public const string ContractMigration = "ContractClientDocumentProtection";
+    public const string ExpandPersonalDataMigration = "ExpandClientPersonalDataProtection";
+    public const string ContractPersonalDataMigration = "ContractClientPersonalDataProtection";
 
     private const int BatchSize = 500;
     private const int MaxIdsInMessage = 20;
@@ -41,15 +43,126 @@ public sealed class AccessDatabaseMigrator
     {
         var applied = await _context.Database.GetAppliedMigrationsAsync(cancellationToken);
 
-        // Sem esta verificação, migrar para a fase de expansão desfaria a remoção já concluída.
+        var migrator = _context.GetService<IMigrator>();
+
+        // Sem estas verificações, migrar para a fase de expansão desfaria a remoção já concluída.
         if (!applied.Any(id => id.EndsWith($"_{ContractMigration}", StringComparison.Ordinal)))
         {
-            await _context.GetService<IMigrator>().MigrateAsync(ExpandMigration, cancellationToken);
+            await migrator.MigrateAsync(ExpandMigration, cancellationToken);
             await ProtectExistingDocumentsAsync(cancellationToken);
+            await migrator.MigrateAsync(ContractMigration, cancellationToken);
+        }
+
+        if (!applied.Any(id => id.EndsWith($"_{ContractPersonalDataMigration}", StringComparison.Ordinal)))
+        {
+            await migrator.MigrateAsync(ExpandPersonalDataMigration, cancellationToken);
+            await ProtectExistingPersonalDataAsync(cancellationToken);
         }
 
         await _context.Database.MigrateAsync(cancellationToken);
     }
+
+    private async Task ProtectExistingPersonalDataAsync(CancellationToken cancellationToken)
+    {
+        await _context.Database.OpenConnectionAsync(cancellationToken);
+        try
+        {
+            var connection = _context.Database.GetDbConnection();
+
+            // Uma remoção interrompida pode já ter tirado as colunas; a migration termina o resto.
+            if (!await ColumnExistsAsync(connection, "phone_number", cancellationToken))
+                return;
+
+            // Antes de preencher: com outra chave, uma nova tentativa misturaria duas chaves no banco.
+            ThrowIfAnyPersonalDataFailed(await VerifyPersonalDataAsync(connection, includeUnfilled: false, cancellationToken));
+
+            var filled = await FillPersonalDataAsync(connection, cancellationToken);
+
+            ThrowIfAnyPersonalDataFailed(await VerifyPersonalDataAsync(connection, includeUnfilled: true, cancellationToken));
+
+            _logger.LogInformation("Client names and phones protected: {Filled} newly encrypted, all verified.", filled);
+        }
+        finally
+        {
+            await _context.Database.CloseConnectionAsync();
+        }
+    }
+
+    private static void ThrowIfAnyPersonalDataFailed(List<string> failed)
+    {
+        if (failed.Count > 0)
+            throw new InvalidOperationException(
+                $"Cannot finish protecting client names and phones: {failed.Count} client(s) have a value that the "
+                + "configured keys cannot read. The plain-text columns were kept. Fix these rows or restore the "
+                + $"original keys, then start again. First ids: {string.Join(", ", failed.Take(MaxIdsInMessage))}");
+    }
+
+    private async Task<int> FillPersonalDataAsync(DbConnection connection, CancellationToken cancellationToken)
+    {
+        var filled = 0;
+
+        await foreach (var row in ReadPersonalDataAsync(connection, cancellationToken))
+        {
+            if (row.NameEncrypted is not null && row.PhoneEncrypted is not null)
+                continue;
+
+            await using var update = connection.CreateCommand();
+            update.CommandText = "UPDATE clients SET name_encrypted = @name, phone_encrypted = @phone WHERE Id = @id";
+            AddParameter(update, "@name", _protector.ProtectField(ClientField.Name, row.Name));
+            AddParameter(update, "@phone", _protector.ProtectField(ClientField.PhoneNumber, row.Phone));
+            AddParameter(update, "@id", row.Id);
+            await update.ExecuteNonQueryAsync(cancellationToken);
+
+            filled++;
+        }
+
+        return filled;
+    }
+
+    /// <summary>Confere cada linha contra o texto puro, inclusive as de uma execução anterior.</summary>
+    private async Task<List<string>> VerifyPersonalDataAsync(
+        DbConnection connection, bool includeUnfilled, CancellationToken cancellationToken)
+    {
+        var failed = new List<string>();
+
+        await foreach (var row in ReadPersonalDataAsync(connection, cancellationToken))
+        {
+            var isUnfilled = row.NameEncrypted is null && row.PhoneEncrypted is null;
+
+            if ((includeUnfilled || !isUnfilled) && !IsVerified(row))
+                failed.Add(row.Id);
+        }
+
+        return failed;
+    }
+
+    private bool IsVerified(PersonalDataRow row)
+    {
+        if (row.NameEncrypted is null || row.PhoneEncrypted is null)
+            return false;
+
+        try
+        {
+            return _protector.RevealField(ClientField.Name, row.NameEncrypted) == row.Name
+                && _protector.RevealField(ClientField.PhoneNumber, row.PhoneEncrypted) == row.Phone;
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
+    }
+
+    private static IAsyncEnumerable<PersonalDataRow> ReadPersonalDataAsync(DbConnection connection, CancellationToken cancellationToken) =>
+        ReadBatchesAsync(
+            connection,
+            "Name, phone_number, name_encrypted, phone_encrypted",
+            (id, reader) => new PersonalDataRow(
+                id,
+                reader.GetString(1),
+                reader.GetString(2),
+                reader.IsDBNull(3) ? null : reader.GetString(3),
+                reader.IsDBNull(4) ? null : reader.GetString(4)),
+            cancellationToken);
 
     private async Task ProtectExistingDocumentsAsync(CancellationToken cancellationToken)
     {
@@ -59,7 +172,7 @@ public sealed class AccessDatabaseMigrator
             var connection = _context.Database.GetDbConnection();
 
             // Uma remoção interrompida pode já ter tirado a coluna; a migration termina o resto.
-            if (!await PlainTextColumnExistsAsync(connection, cancellationToken))
+            if (!await ColumnExistsAsync(connection, "document", cancellationToken))
                 return;
 
             // Antes de preencher: com outra chave, uma nova tentativa misturaria duas chaves no banco.
@@ -161,33 +274,43 @@ public sealed class AccessDatabaseMigrator
         }
     }
 
+    private static IAsyncEnumerable<ClientRow> ReadAllAsync(DbConnection connection, CancellationToken cancellationToken) =>
+        ReadBatchesAsync(
+            connection,
+            "type, document, document_encrypted, document_hmac",
+            (id, reader) => new ClientRow(
+                id,
+                reader.GetString(1),
+                reader.GetString(2),
+                reader.IsDBNull(3) ? null : reader.GetString(3),
+                reader.IsDBNull(4) ? null : reader.GetString(4)),
+            cancellationToken);
+
     // Em lotes e ordenado por Id: a conexão fica livre para os UPDATEs entre um lote e outro.
-    private static async IAsyncEnumerable<ClientRow> ReadAllAsync(
+    private static async IAsyncEnumerable<T> ReadBatchesAsync<T>(
         DbConnection connection,
+        string columns,
+        Func<string, DbDataReader, T> map,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var lastId = string.Empty;
 
         while (true)
         {
-            var batch = new List<ClientRow>(BatchSize);
+            var batch = new List<T>(BatchSize);
+            var batchLastId = lastId;
 
             await using (var select = connection.CreateCommand())
             {
                 select.CommandText =
-                    "SELECT Id, type, document, document_encrypted, document_hmac FROM clients "
-                    + $"WHERE Id > @lastId ORDER BY Id LIMIT {BatchSize}";
+                    $"SELECT Id, {columns} FROM clients WHERE Id > @lastId ORDER BY Id LIMIT {BatchSize}";
                 AddParameter(select, "@lastId", lastId);
 
                 await using var reader = await select.ExecuteReaderAsync(cancellationToken);
                 while (await reader.ReadAsync(cancellationToken))
                 {
-                    batch.Add(new ClientRow(
-                        reader.GetValue(0).ToString()!,
-                        reader.GetString(1),
-                        reader.GetString(2),
-                        await reader.IsDBNullAsync(3, cancellationToken) ? null : reader.GetString(3),
-                        await reader.IsDBNullAsync(4, cancellationToken) ? null : reader.GetString(4)));
+                    batchLastId = reader.GetValue(0).ToString()!;
+                    batch.Add(map(batchLastId, reader));
                 }
             }
 
@@ -197,16 +320,17 @@ public sealed class AccessDatabaseMigrator
             if (batch.Count < BatchSize)
                 yield break;
 
-            lastId = batch[^1].Id;
+            lastId = batchLastId;
         }
     }
 
-    private static async Task<bool> PlainTextColumnExistsAsync(DbConnection connection, CancellationToken cancellationToken)
+    private static async Task<bool> ColumnExistsAsync(DbConnection connection, string column, CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
         command.CommandText =
             "SELECT COUNT(*) FROM information_schema.COLUMNS "
-            + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'clients' AND COLUMN_NAME = 'document'";
+            + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'clients' AND COLUMN_NAME = @column";
+        AddParameter(command, "@column", column);
         return Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken)) > 0;
     }
 
@@ -220,4 +344,6 @@ public sealed class AccessDatabaseMigrator
     }
 
     private sealed record ClientRow(string Id, string Type, string Plain, string? Encrypted, string? Hmac);
+
+    private sealed record PersonalDataRow(string Id, string Name, string Phone, string? NameEncrypted, string? PhoneEncrypted);
 }

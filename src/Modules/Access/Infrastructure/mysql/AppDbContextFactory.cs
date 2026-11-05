@@ -14,6 +14,8 @@ public sealed class AccessDbContextFactory : IDesignTimeDbContextFactory<AccessD
         var optionsBuilder = new DbContextOptionsBuilder<AccessDbContext>();
         optionsBuilder.UseMySql(connectionString, serverVersion);
 
-        return new AccessDbContext(optionsBuilder.Options);
+        return new AccessDbContext(
+            optionsBuilder.Options,
+            new AesGcmDocumentProtector(DocumentProtectionKeys.ForDesignTime()));
     }
 }

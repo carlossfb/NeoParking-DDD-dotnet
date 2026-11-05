@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
+using NeoParking.Access.Application;
 using NeoParking.Access.Domain;
 using NeoParking.Access.Infrastructure;
 
@@ -140,6 +141,38 @@ public class AesGcmDocumentProtectorTests
             encryption.Should().NotContain(invalid);
             hmac.Should().NotContain(invalid);
         }
+    }
+
+    [Theory]
+    [InlineData(ClientField.Name, "João da Silva")]
+    [InlineData(ClientField.PhoneNumber, "+5511999999999")]
+    public void Field_ShouldRoundTrip_WithARandomNonce_AndNotContainTheValue(ClientField field, string value)
+    {
+        var protector = Protector();
+
+        var first = protector.ProtectField(field, value);
+
+        first.Should().StartWith("v1.").And.NotContain(value);
+        first.Should().NotBe(protector.ProtectField(field, value));
+        protector.RevealField(field, first).Should().Be(value);
+    }
+
+    [Fact]
+    public void Field_ShouldNotBeReadableAsAnotherField()
+    {
+        var protector = Protector();
+        var name = protector.ProtectField(ClientField.Name, "Cliente");
+
+        FluentActions.Invoking(() => protector.RevealField(ClientField.PhoneNumber, name))
+            .Should().Throw<InvalidOperationException>().WithMessage("*could not be decrypted*");
+    }
+
+    [Fact]
+    public void Field_WithTheLongestName_ShouldFitTheColumn()
+    {
+        var name = string.Concat(Enumerable.Repeat("\U0001F600"[..2], Client.NameMaxLength / 2));
+
+        Protector().ProtectField(ClientField.Name, name).Length.Should().BeLessThanOrEqualTo(AccessDbContext.NameEncryptedMaxLength);
     }
 
     [Fact]

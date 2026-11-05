@@ -43,7 +43,6 @@ public sealed class ClientService : IClientService
         await _repository.AddAsync(client);
         await _outbox.AddAsync(OutboxMessage.Create(new ClientRegisteredIntegrationEvent(
             ClientId:      client.Id,
-            Name:          client.Name,
             CorrelationId: _correlationIdProvider.GetCorrelationId())));
 
         await _unitOfWork.SaveChangesAsync();

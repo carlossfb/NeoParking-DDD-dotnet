@@ -21,6 +21,11 @@ public sealed class DocumentProtectionKeys
         Hmac = hmac;
     }
 
+    /// <summary>Só para <c>dotnet ef</c>, que monta o modelo sem ler nem gravar clientes.</summary>
+    public static DocumentProtectionKeys ForDesignTime() =>
+        new(System.Security.Cryptography.RandomNumberGenerator.GetBytes(KeyBytes),
+            System.Security.Cryptography.RandomNumberGenerator.GetBytes(KeyBytes));
+
     public static DocumentProtectionKeys FromConfiguration(IConfiguration configuration)
     {
         var encryption = Read(EncryptionKeyName, configuration[EncryptionKeyName]);
