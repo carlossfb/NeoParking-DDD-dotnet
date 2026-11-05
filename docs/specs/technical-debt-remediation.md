@@ -525,13 +525,13 @@ Regra: cada item implementado e testado conta como concluído, e todos valem o m
 | Frente | Concluídos | Total | % | O que falta |
 |---|---:|---:|---:|---|
 | Produto (`product-evolution.md`) | 1 | 8 | 12,5% | EVO-0, C1, C3, C4, C5, C6, C7 |
-| Débito técnico (Ondas 0 a 8, sem TD-503) | 52 | 68 | 76,5% | TD-606, TD-708 a TD-716, TD-801 a TD-806 |
+| Débito técnico (Ondas 0 a 8, sem TD-503) | 58 | 68 | 85,3% | TD-606, TD-708 a TD-716 |
 | Observabilidade (`observability.md`) | 0 | 21 | 0% | OBS-001 a OBS-603 |
-| **Total** | **53** | **97** | **54,6%** | |
+| **Total** | **59** | **97** | **60,8%** | |
 
-Cálculo: (1 + 52 + 0) / (8 + 68 + 21) = 53 / 97. Débito técnico: Onda 0 (5), Onda 1 (11), Onda 2 (4), Onda 3 (9), Onda 4 (8), Onda 5 (3, sem TD-503), Onda 6 (6), Onda 7 (16) e Onda 8 (6).
+Cálculo: (1 + 58 + 0) / (8 + 68 + 21) = 59 / 97. Débito técnico: Onda 0 (5), Onda 1 (11), Onda 2 (4), Onda 3 (9), Onda 4 (8), Onda 5 (3, sem TD-503), Onda 6 (6), Onda 7 (16) e Onda 8 (6).
 
-**Aguardando merge:** a Onda 6 e o TD-707 estão no PR #23. A spec `observability.md` está na branch `docs/observability-spec`, com status "Proposta".
+**Aguardando merge:** a Onda 6 e o TD-707 estão no PR #23, e a Onda 8 está na branch `feature/wave-8-routes`, que depende dele. A spec `observability.md` está na branch `docs/observability-spec`, com status "Proposta".
 
 ### Onda 8: Rotas para a view
 
