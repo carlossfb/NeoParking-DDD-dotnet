@@ -60,12 +60,15 @@ Matriz aprovada:
 | `POST /operators/login` | ✅ | | | |
 | `POST /operators/owner` (ver D5) | ✅ | | | |
 | `POST /operators` | | | ✅ (Admin cria só Operator) | |
+| `GET /operators` (paginada) | | | ✅ | |
+| `GET /operators/me`, `POST /operators/me/password` | | ✅ | | |
 | `GET /operators/{id}` | | | ✅ | |
 | `POST /operators/{targetId}/promote` e `/demote` | | | | ✅ |
 | `POST /operators/{targetId}/activate` e `/deactivate` | | | ✅ (Admin só sobre Operator) | |
-| `POST`, `GET`, `PATCH /clients`; `POST` e `DELETE` de veículos | | ✅ | | |
+| `POST`, `GET`, `PATCH /clients`; `POST /clients/search`; `POST` e `DELETE` de veículos | | ✅ | | |
+| `GET /clients/{id}/document-accesses` | | | | ✅ |
 | `DELETE /clients/{id}` | | | ✅ | |
-| `POST /access/tickets`, `POST .../exit`, `GET /access/tickets...` | | ✅ | | |
+| `POST /access/tickets`, `POST .../exit`, `POST /access/tickets/open-by-plate`, `GET /access/tickets...` | | ✅ | | |
 | `GET /billing/pricing-policies/active` | | ✅ | | |
 | `GET /billing/pricing-policies/history` e `/effective-at` | | | ✅ | |
 | `POST /billing/pricing-policies` | | | | ✅ |
@@ -522,13 +525,51 @@ Regra: cada item implementado e testado conta como concluído, e todos valem o m
 | Frente | Concluídos | Total | % | O que falta |
 |---|---:|---:|---:|---|
 | Produto (`product-evolution.md`) | 1 | 8 | 12,5% | EVO-0, C1, C3, C4, C5, C6, C7 |
-| Débito técnico (Ondas 0 a 7, sem TD-503) | 52 | 62 | 83,9% | TD-606, TD-708 a TD-716 |
+| Débito técnico (Ondas 0 a 8, sem TD-503) | 52 | 68 | 76,5% | TD-606, TD-708 a TD-716, TD-801 a TD-806 |
 | Observabilidade (`observability.md`) | 0 | 21 | 0% | OBS-001 a OBS-603 |
-| **Total** | **53** | **91** | **58,2%** | |
+| **Total** | **53** | **97** | **54,6%** | |
 
-Cálculo: (1 + 52 + 0) / (8 + 62 + 21) = 53 / 91. Débito técnico: Onda 0 (5), Onda 1 (11), Onda 2 (4), Onda 3 (9), Onda 4 (8), Onda 5 (3, sem TD-503), Onda 6 (6) e Onda 7 (16).
+Cálculo: (1 + 52 + 0) / (8 + 68 + 21) = 53 / 97. Débito técnico: Onda 0 (5), Onda 1 (11), Onda 2 (4), Onda 3 (9), Onda 4 (8), Onda 5 (3, sem TD-503), Onda 6 (6), Onda 7 (16) e Onda 8 (6).
 
 **Aguardando merge:** a Onda 6 e o TD-707 estão no PR #23. A spec `observability.md` está na branch `docs/observability-spec`, com status "Proposta".
+
+### Onda 8: Rotas para a view
+
+Aprovada pelo usuário em 2026-11-04. Reúne as rotas que as telas do wireframe pedem e a API não tem. Depende da Onda 6 (PR #23), porque usa o documento cifrado e a auditoria.
+
+**TD-801: Listar operadores**
+- **Evidência:** só existe `GET /operators/{id}`, e nenhuma tela chega a um id sem uma lista.
+- **Requisito:** `GET /operators?page=&pageSize=`, para Owner e Admin, com papel e estado vindos do banco (D3). A resposta traz id, nome, e-mail, papel e estado, nunca o hash.
+- **Aceite:** testes cobrem paginação, limite de página, matriz D2 e ausência do hash no corpo.
+
+**TD-802: Paginação e busca de clientes**
+- **Evidência:** `GET /clients` devolve a lista inteira, sem filtro.
+- **Requisito:**
+  - `GET /clients?page=&pageSize=` responde com o envelope paginado, no máximo 100 itens por página. A ordem é por id, estável mas sem significado, porque nome e telefone serão cifrados (TD-710).
+  - `POST /clients/search` recebe no corpo a placa exata ou o tipo e o documento exato, usando o HMAC já existente, e devolve o cliente ou 404. Placa e documento não entram na URL, em logs nem em traces.
+- **Aceite:** testes cobrem as duas buscas, os critérios inválidos, a máscara do documento e a ausência dos valores nos logs.
+
+**Decisão do usuário: sem busca de clientes por nome.** Ela conflita com o TD-710, que cifra o nome. Fica de fora por enquanto, sem índice cego novo, e será revista quando a tela for usada de verdade.
+
+**TD-803: Conferir o ticket aberto sem placa na URL**
+- **Evidência:** `GET /access/tickets?plate=` leva a placa na query.
+- **Requisito:** `POST /access/tickets/open-by-plate` recebe a placa no corpo e devolve o ticket aberto ou 404. `GET /access/tickets?plate=` e `POST /access/tickets/by-plate/{plate}/exit` não mudam nesta onda.
+- **Aceite:** testes cobrem ticket aberto, ticket fechado, placa inválida e ausência da placa em logs e traces.
+
+**TD-804: Dados do próprio operador**
+- **Evidência:** a navegação precisaria ler o papel direto do JWT.
+- **Requisito:** `GET /operators/me`, para qualquer operador ativo, com id vindo do `sub` e papel vindo do banco (D3).
+- **Aceite:** testes cobrem cada papel, papel alterado depois da emissão do token e conta inativa.
+
+**TD-805: Consultar a auditoria de acesso ao documento**
+- **Evidência:** `client_document_accesses` só é gravada.
+- **Requisito:** `GET /clients/{id}/document-accesses?page=&pageSize=`, só para o Owner: o Admin também lê documentos e não deve auditar a si mesmo. A resposta traz operador e horário, nunca o documento. Como a auditoria sobrevive à exclusão do cliente, a rota também responde depois dela.
+- **Aceite:** testes cobrem a matriz D2, a ordem, a paginação, a ausência do documento e o cliente excluído.
+
+**TD-806: Trocar a própria senha**
+- **Evidência:** `UpdatePasswordRequest` e `OperatorUser.UpdatePassword` existem sem rota.
+- **Requisito:** `POST /operators/me/password` exige a senha atual e usa `UpdatePasswordRequest`. Senha atual errada ou senha nova vazia respondem 422 sem lançar exceção, para não gerar stack trace nem levar o e-mail ao log. Esta onda não cria revogação de token nem política de senha.
+- **Aceite:** testes cobrem senha trocada, senha atual errada, logs reais e o comportamento do token anterior, que continua válido até expirar (D3).
 
 ## 5. Estratégia de testes e Definition of Done
 
