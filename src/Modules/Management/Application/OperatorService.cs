@@ -188,6 +188,28 @@ public sealed class OperatorService
             result.TotalCount);
     }
 
+    // ── senha ─────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Recusas viram resultado, não exceção: o handler global registraria a exceção com stack trace,
+    /// e uma senha digitada errada é um caso esperado.
+    /// </summary>
+    public async Task<ChangePasswordResult> ChangePasswordAsync(Guid requesterId, UpdatePasswordRequest request)
+    {
+        var user = await GetActiveRequesterAsync(requesterId);
+
+        if (string.IsNullOrEmpty(request.CurrentPassword) || !_hasher.Verify(request.CurrentPassword, user.PasswordHash.Value))
+            return ChangePasswordResult.WrongCurrentPassword;
+
+        if (string.IsNullOrWhiteSpace(request.NewPassword))
+            return ChangePasswordResult.InvalidNewPassword;
+
+        user.UpdatePassword(PasswordHash.FromHash(_hasher.Hash(request.NewPassword)));
+        await _repo.UpdateAsync(user);
+        await _unitOfWork.SaveChangesAsync();
+        return ChangePasswordResult.Changed;
+    }
+
     // ── helpers ───────────────────────────────────────────────────────────────
 
     /// <summary>

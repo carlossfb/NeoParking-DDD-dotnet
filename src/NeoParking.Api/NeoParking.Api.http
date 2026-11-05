@@ -225,3 +225,15 @@ Authorization: Bearer {{token}}
 ### Auditoria de acesso ao documento (só Owner)
 GET {{baseUrl}}/clients/{{clientId}}/document-accesses?page=1&pageSize=20
 Authorization: Bearer {{token}}
+
+###
+
+### Trocar a própria senha. O token anterior continua válido até expirar.
+POST {{baseUrl}}/operators/me/password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "currentPassword": "senha-atual",
+  "newPassword": "senha-nova"
+}

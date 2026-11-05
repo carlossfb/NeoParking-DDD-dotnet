@@ -27,6 +27,8 @@ public class AuthorizationMatrixTests
             new { name = "E2E", email = SecurityFixture.UniqueEmail(), password = SecurityFixture.Password, role = "Operator" }))),
         ["GET /operators"] = new(Minimum.OwnerOrAdmin, HttpStatusCode.OK, _ => Task.FromResult(Get("/operators"))),
         ["GET /operators/me"] = new(Minimum.AnyOperator, HttpStatusCode.OK, _ => Task.FromResult(Get("/operators/me"))),
+        ["POST /operators/me/password"] = new(Minimum.AnyOperator, HttpStatusCode.NoContent, _ => Task.FromResult(Post("/operators/me/password",
+            new { currentPassword = SecurityFixture.Password, newPassword = SecurityFixture.Password }))),
         ["GET /operators/{id}"] = new(Minimum.OwnerOrAdmin, HttpStatusCode.OK, f => Task.FromResult(Get($"/operators/{f.Operator.Id}"))),
         ["POST /operators/{id}/promote"] = new(Minimum.Owner, HttpStatusCode.NoContent, async f =>
         {

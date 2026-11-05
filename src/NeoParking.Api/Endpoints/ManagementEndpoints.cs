@@ -55,6 +55,20 @@ public static class ManagementEndpoints
         .WithName("GetCurrentOperator")
         .RequireAuthorization(AuthorizationPolicies.AnyOperator);
 
+        group.MapPost("/me/password", async (
+            UpdatePasswordRequest request, ClaimsPrincipal user, OperatorService service) =>
+        {
+            var result = await service.ChangePasswordAsync(user.GetOperatorId(), request);
+            return result switch
+            {
+                ChangePasswordResult.Changed => Results.NoContent(),
+                ChangePasswordResult.WrongCurrentPassword => Rejected("The current password is incorrect."),
+                _ => Rejected("The new password is required.")
+            };
+        })
+        .WithName("ChangeOwnPassword")
+        .RequireAuthorization(AuthorizationPolicies.AnyOperator);
+
         group.MapGet("/", async (
             ClaimsPrincipal user, OperatorService service, int page = 1, int pageSize = PageRequest.DefaultPageSize) =>
         {
@@ -110,4 +124,7 @@ public static class ManagementEndpoints
         .WithName("ActivateOperator")
         .RequireAuthorization(AuthorizationPolicies.OwnerOrAdmin);
     }
+
+    private static IResult Rejected(string error) =>
+        Results.Json(new { status = StatusCodes.Status422UnprocessableEntity, error }, statusCode: StatusCodes.Status422UnprocessableEntity);
 }

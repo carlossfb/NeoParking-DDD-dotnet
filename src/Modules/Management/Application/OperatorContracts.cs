@@ -24,6 +24,13 @@ public sealed record LoginRequest(string Email, string Password);
 
 // ── responses ────────────────────────────────────────────────────────────────
 
+public enum ChangePasswordResult
+{
+    Changed,
+    WrongCurrentPassword,
+    InvalidNewPassword
+}
+
 public sealed record OperatorResponseDTO(Guid Id, string Name, string Email, string Role, bool IsActive);
 
 /// <summary>Nomes dos papéis, para quem fica fora do módulo e não usa o Domain.</summary>
