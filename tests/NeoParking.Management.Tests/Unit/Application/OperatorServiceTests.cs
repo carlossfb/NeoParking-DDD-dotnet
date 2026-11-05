@@ -5,6 +5,7 @@ using Moq;
 using NeoParking.Management.Application;
 using NeoParking.Management.Domain;
 using NeoParking.Management.Domain.Vo;
+using NeoParking.Management.Infrastructure;
 using NeoParking.Shared.Kernel.Exceptions;
 
 public class OperatorServiceTests
@@ -287,6 +288,26 @@ public class OperatorServiceTests
             (await act.Should().ThrowAsync<InvalidCredentialsException>()).Which.Message
                 .Should().Be("Invalid credentials.");
         }
+    }
+
+    [Fact]
+    public async Task LoginAsync_WithUnknownEmail_ShouldStillRunTheHasher()
+    {
+        _repo.Setup(r => r.GetByEmailAsync("unknown@neo.com")).ReturnsAsync((OperatorUser?)null);
+
+        var act = () => _service.LoginAsync(new LoginRequest("unknown@neo.com", "any-password"));
+
+        await act.Should().ThrowAsync<InvalidCredentialsException>();
+        _hasher.Verify(h => h.Verify("any-password", OperatorService.UnknownEmailHash), Times.Once);
+    }
+
+    [Fact]
+    public void UnknownEmailHash_ShouldHaveTheCostOfARealHash()
+    {
+        var hasher = new BcryptPasswordHasher();
+
+        OperatorService.UnknownEmailHash[..7].Should().Be(hasher.Hash("any-password")[..7]);
+        hasher.Verify("any-password", OperatorService.UnknownEmailHash).Should().BeFalse();
     }
 
     [Fact]

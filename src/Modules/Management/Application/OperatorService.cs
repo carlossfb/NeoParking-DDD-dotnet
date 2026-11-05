@@ -7,6 +7,12 @@ using NeoParking.Shared.Kernel.Primitives;
 
 public sealed class OperatorService
 {
+    /// <summary>
+    /// Hash BCrypt de um valor aleatório descartado, com o custo dos hashes reais. Comparar contra ele
+    /// faz o login de um e-mail inexistente gastar o mesmo tempo do login de um que existe.
+    /// </summary>
+    public const string UnknownEmailHash = "$2a$11$JohAx1QeM26pr4mnzLi40OrA76/cw5mWb97KHDt0dKOuVqckCfrHe";
+
     private readonly IOperatorRepository _repo;
     private readonly IPasswordHasher     _hasher;
     private readonly IUnitOfWork         _unitOfWork;
@@ -27,8 +33,13 @@ public sealed class OperatorService
     /// </summary>
     public async Task<OperatorResponseDTO> LoginAsync(LoginRequest request)
     {
-        var user = await _repo.GetByEmailAsync(request.Email)
-            ?? throw new InvalidCredentialsException();
+        var user = await _repo.GetByEmailAsync(request.Email);
+
+        if (user is null)
+        {
+            _hasher.Verify(request.Password, UnknownEmailHash);
+            throw new InvalidCredentialsException();
+        }
 
         if (!_hasher.Verify(request.Password, user.PasswordHash.Value) || !user.IsActive)
             throw new InvalidCredentialsException();
