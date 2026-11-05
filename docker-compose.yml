@@ -39,6 +39,8 @@ services:
       - MYSQL_PASSWORD
       - Jwt__Secret
       - DOCUMENT_ENCRYPTION_KEY
+      - DOCUMENT_ENCRYPTION_KEY_VERSION
+      - DOCUMENT_ENCRYPTION_PREVIOUS_KEYS
       - DOCUMENT_HMAC_KEY
       - Jwt__Issuer=neoparking
       - Jwt__Audience=neoparking

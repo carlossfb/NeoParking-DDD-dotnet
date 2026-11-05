@@ -509,7 +509,19 @@ Requests that lose a uniqueness race, or that break one of these rules, return `
 
 In the database, `document_encrypted` holds AES-256-GCM with a random nonce, in the format `v1.<base64>`, where `v1` is the key version. `document_hmac` holds an HMAC-SHA256 with its own key, including the type, and carries the unique index.
 
-**Losing `DOCUMENT_ENCRYPTION_KEY` makes every document unrecoverable, and a backup of the database does not help.** Changing `DOCUMENT_HMAC_KEY` makes uniqueness stop matching the existing rows. Key rotation is not implemented yet: the version in the value allows it, but changing either key today breaks reads or uniqueness.
+**Losing `DOCUMENT_ENCRYPTION_KEY` makes every document, name and phone number unrecoverable, and a backup of the database does not help.**
+
+**Rotating `DOCUMENT_ENCRYPTION_KEY`:**
+
+1. Stop every running API, back up the database, and generate a new key with `openssl rand -hex 32`.
+2. Set `DOCUMENT_ENCRYPTION_KEY` to the new key, `DOCUMENT_ENCRYPTION_KEY_VERSION` to the next version (the first key is version 1), and `DOCUMENT_ENCRYPTION_PREVIOUS_KEYS` to the old one, as `1:<old key>`. More than one is separated by commas.
+3. Start the API. The boot encrypts every row again with the new key, one row at a time. Reads use the version stored in each value, and new writes use the current one.
+4. If a row cannot be read, the boot stops with the client ids and no personal data. That row stays as it was and the others are done. Fix it or add the missing key, then start again: only what is left is processed.
+5. Once the API starts cleanly, remove the old key from `DOCUMENT_ENCRYPTION_PREVIOUS_KEYS` and restart. With a row still on a version that is not configured, the boot stops instead of starting with unreadable data.
+
+Keep the old key for as long as you keep backups taken before the rotation: restoring one needs it.
+
+**`DOCUMENT_HMAC_KEY` cannot be rotated.** The HMAC cannot be recomputed without decrypting and rewriting every document, and no process does that yet. Changing this key makes uniqueness stop matching the existing rows, so the same document could be registered twice, and `POST /clients/search` stop finding them.
 
 Name and phone number are stored in `name_encrypted` and `phone_encrypted`, with the same key and format and the field in the authenticated data. Responses still return both. There is no blind index, so the database cannot search or sort by them. Plates stay in plain text by decision: they are operational data, used in searches, indexes and events. How long to keep data of inactive clients is pending a legal definition.
 

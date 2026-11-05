@@ -60,6 +60,81 @@ public sealed class AccessDatabaseMigrator
         }
 
         await _context.Database.MigrateAsync(cancellationToken);
+        await RotateKeysAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Recifra com a chave atual as linhas gravadas com uma anterior. Cada linha muda inteira ou não muda, e só se
+    /// continuar igual ao que foi lido. As linhas ilegíveis ficam para o fim: as outras não precisam esperar, e uma
+    /// nova tentativa só pega o que sobrou. Sem nada para recifrar, é só uma consulta.
+    /// </summary>
+    private async Task RotateKeysAsync(CancellationToken cancellationToken)
+    {
+        await _context.Database.OpenConnectionAsync(cancellationToken);
+        try
+        {
+            var connection = _context.Database.GetDbConnection();
+            var current = $"{_protector.CurrentKeyVersion}.%";
+            var failed = new List<string>();
+            var rotated = 0;
+
+            await foreach (var row in ReadBatchesAsync(
+                connection,
+                "type, document_encrypted, document_hmac, name_encrypted, phone_encrypted",
+                (id, reader) => new RotationRow(
+                    id, reader.GetString(1), reader.GetString(2), reader.GetString(3), reader.GetString(4), reader.GetString(5)),
+                cancellationToken,
+                $"(document_encrypted NOT LIKE '{current}' OR name_encrypted NOT LIKE '{current}' OR phone_encrypted NOT LIKE '{current}')"))
+            {
+                if (!TryRotate(row, out var document, out var name, out var phone))
+                {
+                    failed.Add(row.Id);
+                    continue;
+                }
+
+                await using var update = connection.CreateCommand();
+                update.CommandText =
+                    "UPDATE clients SET document_encrypted = @document, name_encrypted = @name, phone_encrypted = @phone "
+                    + "WHERE Id = @id AND document_encrypted = @oldDocument AND name_encrypted = @oldName AND phone_encrypted = @oldPhone";
+                AddParameter(update, "@document", document);
+                AddParameter(update, "@name", name);
+                AddParameter(update, "@phone", phone);
+                AddParameter(update, "@id", row.Id);
+                AddParameter(update, "@oldDocument", row.Document);
+                AddParameter(update, "@oldName", row.Name);
+                AddParameter(update, "@oldPhone", row.Phone);
+                rotated += await update.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            if (rotated > 0)
+                _logger.LogInformation("Key rotation: {Rotated} clients encrypted again with {Version}.", rotated, _protector.CurrentKeyVersion);
+
+            if (failed.Count > 0)
+                throw new InvalidOperationException(
+                    $"Cannot finish rotating the client data key: {failed.Count} client(s) could not be read. Those rows were "
+                    + $"not changed, and the others are done. Add the old key to {DocumentProtectionKeys.PreviousKeysName} or "
+                    + $"fix these rows, then start again. First ids: {string.Join(", ", failed.Take(MaxIdsInMessage))}");
+        }
+        finally
+        {
+            await _context.Database.CloseConnectionAsync();
+        }
+    }
+
+    private bool TryRotate(RotationRow row, out string document, out string name, out string phone)
+    {
+        try
+        {
+            document = _protector.RotateDocument(new ProtectedDocument(ClientTypes.Parse(row.Type), row.Document, row.Hmac)).Encrypted;
+            name = _protector.ProtectField(ClientField.Name, _protector.RevealField(ClientField.Name, row.Name));
+            phone = _protector.ProtectField(ClientField.PhoneNumber, _protector.RevealField(ClientField.PhoneNumber, row.Phone));
+            return true;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or DomainException)
+        {
+            document = name = phone = string.Empty;
+            return false;
+        }
     }
 
     private async Task ProtectExistingPersonalDataAsync(CancellationToken cancellationToken)
@@ -291,7 +366,8 @@ public sealed class AccessDatabaseMigrator
         DbConnection connection,
         string columns,
         Func<string, DbDataReader, T> map,
-        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken,
+        string? filter = null)
     {
         var lastId = string.Empty;
 
@@ -303,7 +379,7 @@ public sealed class AccessDatabaseMigrator
             await using (var select = connection.CreateCommand())
             {
                 select.CommandText =
-                    $"SELECT Id, {columns} FROM clients WHERE Id > @lastId ORDER BY Id LIMIT {BatchSize}";
+                    $"SELECT Id, {columns} FROM clients WHERE Id > @lastId {(filter is null ? "" : $"AND {filter} ")}ORDER BY Id LIMIT {BatchSize}";
                 AddParameter(select, "@lastId", lastId);
 
                 await using var reader = await select.ExecuteReaderAsync(cancellationToken);
@@ -344,6 +420,8 @@ public sealed class AccessDatabaseMigrator
     }
 
     private sealed record ClientRow(string Id, string Type, string Plain, string? Encrypted, string? Hmac);
+
+    private sealed record RotationRow(string Id, string Type, string Document, string Hmac, string Name, string Phone);
 
     private sealed record PersonalDataRow(string Id, string Name, string Phone, string? NameEncrypted, string? PhoneEncrypted);
 }

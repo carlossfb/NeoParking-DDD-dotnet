@@ -28,7 +28,8 @@ public sealed class ModuleHost : IAsyncDisposable
     public static readonly string EncryptionKey = RandomNumberGenerator.GetHexString(64);
     public static readonly string HmacKey = RandomNumberGenerator.GetHexString(64);
 
-    public static ModuleHost Create(TestDatabases databases, string? encryptionKey = null)
+    public static ModuleHost Create(
+        TestDatabases databases, string? encryptionKey = null, int? keyVersion = null, string? previousKeys = null)
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -39,6 +40,8 @@ public sealed class ModuleHost : IAsyncDisposable
                 [MySqlConnectionStrings.PasswordKey] = MySqlFixture.RootPassword,
                 [DocumentProtectionKeys.EncryptionKeyName] = encryptionKey ?? EncryptionKey,
                 [DocumentProtectionKeys.HmacKeyName] = HmacKey,
+                [DocumentProtectionKeys.KeyVersionName] = keyVersion?.ToString(),
+                [DocumentProtectionKeys.PreviousKeysName] = previousKeys,
             })
             .Build();
 

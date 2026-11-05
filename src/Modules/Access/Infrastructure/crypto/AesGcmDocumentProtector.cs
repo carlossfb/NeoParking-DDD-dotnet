@@ -8,12 +8,12 @@ using NeoParking.Access.Domain;
 /// <summary>
 /// AES-256-GCM com nonce aleatório para guardar o documento, o nome e o telefone, e HMAC-SHA256 com outra chave
 /// para a unicidade do documento.
-/// Formato cifrado: <c>v1.base64(nonce + tag + texto)</c>; a versão indica a chave usada.
+/// Formato cifrado: <c>v1.base64(nonce + tag + texto)</c>; a versão indica a chave usada, então uma chave
+/// anterior continua lendo o que gravou enquanto a rotação não termina.
 /// O tipo entra no HMAC e nos dados autenticados, então um valor não serve para outro tipo.
 /// </summary>
 public sealed class AesGcmDocumentProtector : IDocumentProtector
 {
-    private const string CurrentKeyVersion = "v1";
     private const int NonceBytes = 12;
     private const int TagBytes = 16;
 
@@ -21,11 +21,16 @@ public sealed class AesGcmDocumentProtector : IDocumentProtector
 
     public AesGcmDocumentProtector(DocumentProtectionKeys keys) => _keys = keys;
 
+    public string CurrentKeyVersion => _keys.CurrentVersion;
+
     public ProtectedDocument Protect(Document document) =>
         new(document.Type, Encrypt(document.Value, Aad(document.Type)), ComputeHmac(document));
 
     public Document Reveal(ProtectedDocument document) =>
         Document.Create(document.Type, Decrypt(document.Encrypted, Aad(document.Type)));
+
+    public ProtectedDocument RotateDocument(ProtectedDocument document) =>
+        document with { Encrypted = Encrypt(Reveal(document).Value, Aad(document.Type)) };
 
     public string ProtectField(ClientField field, string value) => Encrypt(value, Aad(field));
 
@@ -47,15 +52,20 @@ public sealed class AesGcmDocumentProtector : IDocumentProtector
     private string Decrypt(string encrypted, byte[] aad)
     {
         var separator = encrypted.IndexOf('.');
-        if (separator < 0 || encrypted[..separator] != CurrentKeyVersion)
+        if (separator < 0 || !DocumentProtectionKeys.IsVersion(encrypted[..separator]))
             throw new InvalidOperationException("The value was protected with an unknown key version.");
+
+        var version = encrypted[..separator];
+        var key = _keys.ForVersion(version)
+            ?? throw new InvalidOperationException(
+                $"The value was protected with key version {version}, which is not configured. Add it to {DocumentProtectionKeys.PreviousKeysName}.");
 
         try
         {
             var payload = Convert.FromBase64String(encrypted[(separator + 1)..]);
             var plain = new byte[payload.Length - NonceBytes - TagBytes];
 
-            using var aes = new AesGcm(_keys.Encryption, TagBytes);
+            using var aes = new AesGcm(key, TagBytes);
             aes.Decrypt(payload.AsSpan(0, NonceBytes), payload.AsSpan(NonceBytes + TagBytes), payload.AsSpan(NonceBytes, TagBytes), plain, aad);
 
             return Encoding.UTF8.GetString(plain);

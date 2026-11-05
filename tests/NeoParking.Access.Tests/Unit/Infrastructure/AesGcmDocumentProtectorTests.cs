@@ -16,12 +16,14 @@ public class AesGcmDocumentProtectorTests
     private static readonly Document Cpf = Document.Create(ClientType.Individual, "11144477735");
     private static readonly Document Cnpj = Document.Create(ClientType.Company, "12ABC34501DE35");
 
-    private static DocumentProtectionKeys Keys(string? encryption, string? hmac) =>
+    private static DocumentProtectionKeys Keys(string? encryption, string? hmac, string? version = null, string? previous = null) =>
         DocumentProtectionKeys.FromConfiguration(new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 [DocumentProtectionKeys.EncryptionKeyName] = encryption,
                 [DocumentProtectionKeys.HmacKeyName] = hmac,
+                [DocumentProtectionKeys.KeyVersionName] = version,
+                [DocumentProtectionKeys.PreviousKeysName] = previous,
             })
             .Build());
 
@@ -173,6 +175,76 @@ public class AesGcmDocumentProtectorTests
         var name = string.Concat(Enumerable.Repeat("\U0001F600"[..2], Client.NameMaxLength / 2));
 
         Protector().ProtectField(ClientField.Name, name).Length.Should().BeLessThanOrEqualTo(AccessDbContext.NameEncryptedMaxLength);
+    }
+
+    [Fact]
+    public void Rotated_ShouldWriteTheCurrentVersion_AndReadThePreviousOne()
+    {
+        var oldProtector = Protector();
+        var other = RandomNumberGenerator.GetHexString(64);
+        var rotated = new AesGcmDocumentProtector(Keys(other, HmacKey, "2", $"1:{EncryptionKey}"));
+
+        var oldDocument = oldProtector.Protect(Cpf);
+        var oldName = oldProtector.ProtectField(ClientField.Name, "Cliente");
+
+        rotated.Reveal(oldDocument).Should().Be(Cpf);
+        rotated.RevealField(ClientField.Name, oldName).Should().Be("Cliente");
+        rotated.Protect(Cpf).Encrypted.Should().StartWith("v2.");
+        rotated.ProtectField(ClientField.Name, "Cliente").Should().StartWith("v2.");
+        rotated.CurrentKeyVersion.Should().Be("v2");
+    }
+
+    [Fact]
+    public void RotateDocument_ShouldChangeTheVersion_AndKeepTheStoredHmac()
+    {
+        var oldDocument = Protector().Protect(Cpf);
+        var rotated = new AesGcmDocumentProtector(Keys(RandomNumberGenerator.GetHexString(64), HmacKey, "2", $"1:{EncryptionKey}"));
+
+        var result = rotated.RotateDocument(oldDocument);
+
+        result.Encrypted.Should().StartWith("v2.");
+        result.Hmac.Should().Be(oldDocument.Hmac);
+        rotated.Reveal(result).Should().Be(Cpf);
+    }
+
+    [Fact]
+    public void Reveal_WithAMissingPreviousKey_ShouldNameTheVersionAndTheVariable_WithoutTheValue()
+    {
+        var oldDocument = Protector().Protect(Cpf);
+        var rotated = new AesGcmDocumentProtector(Keys(RandomNumberGenerator.GetHexString(64), HmacKey, "2"));
+
+        var message = FluentActions.Invoking(() => rotated.Reveal(oldDocument)).Should().Throw<InvalidOperationException>().Which.Message;
+
+        message.Should().Contain("v1").And.Contain(DocumentProtectionKeys.PreviousKeysName).And.NotContain(Cpf.Value);
+    }
+
+    [Theory]
+    [InlineData("0", null)]
+    [InlineData("abc", null)]
+    [InlineData("2", "1")]
+    [InlineData("2", "x:abcd")]
+    [InlineData("2", "1:abcd")]
+    public void Keys_WithAnInvalidRotationSetting_ShouldBeRefused_WithoutTheValue(string version, string? previous)
+    {
+        var message = FluentActions.Invoking(() => Keys(EncryptionKey, HmacKey, version, previous))
+            .Should().Throw<InvalidOperationException>().Which.Message;
+
+        message.Should().Match(m => m.Contains(DocumentProtectionKeys.KeyVersionName) || m.Contains(DocumentProtectionKeys.PreviousKeysName));
+        message.Should().NotContain("abcd");
+    }
+
+    [Fact]
+    public void Keys_WhenAPreviousVersionIsTheCurrentOne_ShouldBeRefused() =>
+        FluentActions.Invoking(() => Keys(EncryptionKey, HmacKey, "2", $"2:{RandomNumberGenerator.GetHexString(64)}"))
+            .Should().Throw<InvalidOperationException>().WithMessage("*current version*");
+
+    [Fact]
+    public void Keys_WhenAPreviousKeyRepeatsTheCurrentOrTheHmacKey_ShouldBeRefused()
+    {
+        FluentActions.Invoking(() => Keys(EncryptionKey, HmacKey, "2", $"1:{EncryptionKey}"))
+            .Should().Throw<InvalidOperationException>().WithMessage("*must be different*");
+        FluentActions.Invoking(() => Keys(EncryptionKey, HmacKey, "2", $"1:{HmacKey}"))
+            .Should().Throw<InvalidOperationException>().WithMessage("*must be different*");
     }
 
     [Fact]
