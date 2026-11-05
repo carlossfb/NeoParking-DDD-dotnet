@@ -1,6 +1,6 @@
 ---
 name: neoparking-wireframes
-description: Wireframes and low-fidelity prototypes of the NeoParking views. Use when asked to wireframe, prototype or plan a screen that consumes the API. For the visual design stage, use frontend-design instead.
+description: Wireframes and low-fidelity prototypes of the NeoParking views. Use when asked to wireframe, prototype or plan a screen that consumes the API. For the visual design stage, use neoparking-design-process instead.
 ---
 
 # NeoParking wireframes
