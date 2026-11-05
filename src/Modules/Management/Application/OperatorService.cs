@@ -244,7 +244,7 @@ public sealed class OperatorService
     private async Task EnsureEmailAvailableAsync(string email)
     {
         if (await _repo.GetByEmailAsync(email) is not null)
-            throw new ConflictException($"E-mail '{email}' is already in use.");
+            throw new ConflictException("This e-mail is already in use.");
     }
 
     private static OperatorRole ParseRole(string role)

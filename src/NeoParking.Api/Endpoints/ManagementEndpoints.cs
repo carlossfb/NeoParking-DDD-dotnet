@@ -3,6 +3,7 @@ namespace NeoParking.Api.Endpoints;
 using System.Security.Claims;
 using NeoParking.Api.Extensions;
 using NeoParking.Management.Application;
+using NeoParking.Shared.Kernel.Exceptions;
 using NeoParking.Shared.Kernel.Primitives;
 
 public static class ManagementEndpoints
@@ -17,9 +18,19 @@ public static class ManagementEndpoints
             OperatorService service,
             IJwtTokenGenerator tokenGenerator) =>
         {
-            var user  = await service.LoginAsync(request);
-            var token = tokenGenerator.Generate(user);
-            return Results.Ok(new { token });
+            // Recusa esperada: tratada aqui porque o handler global registra toda exceção com stack trace.
+            try
+            {
+                var user  = await service.LoginAsync(request);
+                var token = tokenGenerator.Generate(user);
+                return Results.Ok(new { token });
+            }
+            catch (InvalidCredentialsException ex)
+            {
+                return Results.Json(
+                    new { status = StatusCodes.Status401Unauthorized, error = ex.Message },
+                    statusCode: StatusCodes.Status401Unauthorized);
+            }
         })
         .WithName("Login");
 
