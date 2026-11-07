@@ -43,11 +43,11 @@ export default function App() {
   const View = views[page]
   return (
     <TooltipProvider>
-      <SidebarProvider style={{ "--sidebar-width": "16rem", "--header-height": "3.5rem" } as React.CSSProperties}>
+      <SidebarProvider style={{ "--sidebar-width": "calc(var(--spacing) * 72)", "--header-height": "calc(var(--spacing) * 12)" } as React.CSSProperties}>
         <AppSidebar variant="inset" current={page} role={session()?.role ?? ""} />
         <SidebarInset>
-          <SiteHeader title={pages.find((p) => p.id === page)!.title} />
-          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+          <SiteHeader group={pages.find((p) => p.id === page)!.group} title={pages.find((p) => p.id === page)!.title} />
+          <main className="@container/main flex flex-1 flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
             <View />
           </main>
         </SidebarInset>

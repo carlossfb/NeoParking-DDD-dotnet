@@ -1,10 +1,10 @@
 import { useState } from "react"
 
-import { ErrorText, SpecBadge } from "@/components/notice"
+import { ErrorAlert, SpecBadge } from "@/components/notice"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { api, ApiError, useApi, type Paged } from "@/lib/api"
@@ -48,14 +48,16 @@ export function Clients() {
           <CardDescription>Placa exata. O valor vai no corpo da requisição, nunca na URL.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={search} className="grid gap-2">
-            <Label htmlFor="plate">Placa</Label>
-            <div className="flex flex-wrap gap-2">
-              <Input id="plate" name="plate" required autoComplete="off" className="h-11 max-w-xs font-mono" aria-invalid={!!searchError} />
-              <Button type="submit" className="h-11">Buscar</Button>
-              {found && <Button type="button" variant="outline" className="h-11" onClick={() => setFound(undefined)}>Ver todos</Button>}
-            </div>
-            <ErrorText error={searchError} />
+          <form onSubmit={search}>
+            <Field data-invalid={!!searchError} className="max-w-md">
+              <FieldLabel htmlFor="plate">Placa</FieldLabel>
+              <div className="flex gap-2">
+                <Input id="plate" name="plate" required autoComplete="off" className="font-mono" aria-invalid={!!searchError} />
+                <Button type="submit">Buscar</Button>
+                {found && <Button type="button" variant="outline" onClick={() => setFound(undefined)}>Ver todos</Button>}
+              </div>
+              {searchError && <FieldError>{searchError}</FieldError>}
+            </Field>
           </form>
         </CardContent>
       </Card>
@@ -69,10 +71,10 @@ export function Clients() {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3">
-          <ErrorText error={list.error} />
-          <div className="overflow-x-auto rounded border">
+          <ErrorAlert error={list.error} />
+          <div className="overflow-hidden rounded-lg border">
             <Table>
-              <TableHeader>
+              <TableHeader className="bg-muted">
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>Tipo</TableHead>
@@ -104,8 +106,8 @@ export function Clients() {
           {!found && list.data && list.data.totalPages > 1 && (
             <div className="flex items-center justify-end gap-2 text-sm text-muted-foreground">
               Página {list.data.page} de {list.data.totalPages}
-              <Button variant="outline" className="h-11" disabled={page <= 1} onClick={() => setPage(page - 1)}>Anterior</Button>
-              <Button variant="outline" className="h-11" disabled={page >= list.data.totalPages} onClick={() => setPage(page + 1)}>Próxima</Button>
+              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>Anterior</Button>
+              <Button variant="outline" size="sm" disabled={page >= list.data.totalPages} onClick={() => setPage(page + 1)}>Próxima</Button>
             </div>
           )}
         </CardContent>

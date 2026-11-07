@@ -1,12 +1,14 @@
 import { useState } from "react"
 
-import { ErrorText } from "@/components/notice"
+import { ErrorAlert } from "@/components/notice"
+import { Plate } from "@/components/plate"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Spinner } from "@/components/ui/spinner"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { api, ApiError, fmtDate, fmtDuration, useApi, type Paged } from "@/lib/api"
@@ -15,6 +17,7 @@ export type Ticket = {
   id: string
   code: string
   plate: string
+  clientId: string | null
   entryAt: string
   exitAt: string | null
   status: "Open" | "Closed"
@@ -71,10 +74,10 @@ export function Access() {
           </Tabs>
         </CardHeader>
         <CardContent className="grid gap-3">
-          <ErrorText error={list.error} />
-          <div className="overflow-x-auto rounded border">
+          <ErrorAlert error={list.error} />
+          <div className="overflow-hidden rounded-lg border">
             <Table>
-              <TableHeader>
+              <TableHeader className="bg-muted">
                 <TableRow>
                   <TableHead>Placa</TableHead>
                   <TableHead>Código</TableHead>
@@ -94,13 +97,13 @@ export function Access() {
                     ))
                   : list.data?.items.map((t) => (
                       <TableRow key={t.id}>
-                        <TableCell className="font-mono">{t.plate}</TableCell>
+                        <TableCell><Plate value={t.plate} /></TableCell>
                         <TableCell className="font-mono text-xs">{t.code}</TableCell>
                         <TableCell>{fmtDate(t.entryAt)}</TableCell>
                         <TableCell>{fmtDate(t.exitAt)}</TableCell>
                         <TableCell>{fmtDuration(t.entryAt, t.exitAt)}</TableCell>
                         <TableCell>
-                          <Badge variant={t.status === "Open" ? "default" : "secondary"}>{t.status === "Open" ? "Aberto" : "Finalizado"}</Badge>
+                          <Badge variant={t.status === "Open" ? "default" : "secondary"} className={t.status === "Open" ? "bg-success-muted text-success" : undefined}>{t.status === "Open" ? "Aberto" : "Finalizado"}</Badge>
                         </TableCell>
                         <TableCell>{t.exitMethod ? exitLabel[t.exitMethod] ?? t.exitMethod : "—"}</TableCell>
                       </TableRow>
@@ -118,8 +121,8 @@ export function Access() {
           {list.data && list.data.totalPages > 1 && (
             <div className="flex items-center justify-end gap-2 text-sm text-muted-foreground">
               Página {list.data.page} de {list.data.totalPages}
-              <Button variant="outline" className="h-11" disabled={page <= 1} onClick={() => setPage(page - 1)}>Anterior</Button>
-              <Button variant="outline" className="h-11" disabled={page >= list.data.totalPages} onClick={() => setPage(page + 1)}>Próxima</Button>
+              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>Anterior</Button>
+              <Button variant="outline" size="sm" disabled={page >= list.data.totalPages} onClick={() => setPage(page + 1)}>Próxima</Button>
             </div>
           )}
         </CardContent>
@@ -169,25 +172,26 @@ function QuickForm<T>(props: {
         <CardDescription>{props.description}</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={onSubmit} className="grid gap-2">
-          <Label htmlFor={id}>{props.label}</Label>
-          <div className="flex gap-2">
-            <Input
-              id={id}
-              name={props.name}
-              required
-              autoComplete="off"
-              aria-invalid={msg && !msg.ok}
-              aria-describedby={msg ? `${id}-msg` : undefined}
-              className={`h-11 ${props.mono ? "font-mono" : ""}`}
-            />
-            <Button type="submit" className="h-11" disabled={busy}>{props.action}</Button>
-          </div>
-          {msg && (
-            <p id={`${id}-msg`} role={msg.ok ? "status" : "alert"} className={`text-sm ${msg.ok ? "text-primary" : "text-destructive"}`}>
-              {msg.text}
-            </p>
-          )}
+        <form onSubmit={onSubmit}>
+          <Field data-invalid={msg && !msg.ok}>
+            <FieldLabel htmlFor={id}>{props.label}</FieldLabel>
+            <div className="flex gap-2">
+              <Input
+                id={id}
+                name={props.name}
+                required
+                autoComplete="off"
+                aria-invalid={msg && !msg.ok}
+                className={`h-11 ${props.mono ? "font-mono" : ""}`}
+              />
+              <Button type="submit" className="h-11" disabled={busy}>
+                {busy && <Spinner />}
+                {props.action}
+              </Button>
+            </div>
+            {msg?.ok === false && <FieldError>{msg.text}</FieldError>}
+            {msg?.ok && <FieldDescription role="status">{msg.text}</FieldDescription>}
+          </Field>
         </form>
       </CardContent>
     </Card>

@@ -1,4 +1,4 @@
-import { ErrorText, Missing } from "@/components/notice"
+import { ErrorAlert, Missing } from "@/components/notice"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -19,14 +19,14 @@ export function Company() {
     <div className="grid gap-4 lg:grid-cols-2">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">Tarifa vigente {p && <Badge>Ativa</Badge>}</CardTitle>
+          <CardTitle className="flex items-center gap-2">Tarifa vigente {p && <Badge variant="secondary">Ativa</Badge>}</CardTitle>
           <CardDescription>Versionada: uma nova tarifa encerra a atual e o histórico fica guardado.</CardDescription>
         </CardHeader>
         <CardContent>
-          <ErrorText error={policy.error?.status === 404 ? "Nenhuma tarifa definida ainda. Só o Owner pode definir." : policy.error} />
+          <ErrorAlert error={policy.error?.status === 404 ? "Nenhuma tarifa definida ainda. Só o Owner pode definir." : policy.error} />
           {policy.loading && <Skeleton className="h-24 w-full" />}
           {p && (
-            <dl className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+            <dl className="grid grid-cols-2 gap-4">
               <Item label="Taxa inicial" value={fmtMoney(p.minimumFee)} hint={`cobre ${p.minimumFeeCoverageMinutes} min`} />
               <Item label="Valor por hora" value={fmtMoney(p.hourlyRate)} hint="depois da cobertura" />
               <Item label="Carência" value={`${p.gracePeriodMinutes} min`} hint="saída sem cobrança" />

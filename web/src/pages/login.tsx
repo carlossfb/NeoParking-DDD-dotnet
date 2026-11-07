@@ -1,9 +1,7 @@
 import { useState } from "react"
+import { SquareParkingIcon } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { LoginForm } from "@/components/login-form"
 import { api, setToken } from "@/lib/api"
 
 export function Login() {
@@ -29,27 +27,28 @@ export function Login() {
   }
 
   return (
-    <main className="flex min-h-svh items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-xl">NeoParking</CardTitle>
-          <CardDescription>Entre com sua conta de operador.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={submit} className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="email">E-mail</Label>
-              <Input id="email" name="email" type="email" autoComplete="username" required className="h-11" />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input id="password" name="password" type="password" autoComplete="current-password" required className="h-11" />
-            </div>
-            {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="h-11" disabled={busy}>Entrar</Button>
-          </form>
-        </CardContent>
-      </Card>
-    </main>
+    <div className="grid min-h-svh lg:grid-cols-2">
+      <div className="flex flex-col gap-4 p-6 md:p-10">
+        <div className="flex justify-center gap-2 md:justify-start">
+          <span className="flex items-center gap-2 font-medium">
+            <span className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
+              <SquareParkingIcon className="size-4" />
+            </span>
+            NeoParking
+          </span>
+        </div>
+        <div className="flex flex-1 items-center justify-center">
+          <div className="w-full max-w-xs">
+            <LoginForm onSubmit={submit} error={error} busy={busy} />
+          </div>
+        </div>
+      </div>
+      {/* login-02 shows a cover image here; the brand panel uses the sidebar tokens instead of a stock photo. */}
+      <div className="relative hidden flex-col justify-end gap-2 bg-sidebar p-10 text-sidebar-foreground lg:flex">
+        <SquareParkingIcon className="mb-auto size-10 text-sidebar-primary" />
+        <p className="text-2xl font-semibold text-sidebar-accent-foreground">Entradas, saídas e cobrança num só lugar.</p>
+        <p className="text-sm">Controle de acesso, clientes e tarifas do estacionamento.</p>
+      </div>
+    </div>
   )
 }

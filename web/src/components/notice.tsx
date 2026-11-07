@@ -1,24 +1,43 @@
+import { CircleAlertIcon, ConstructionIcon } from "lucide-react"
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import type { ApiError } from "@/lib/api"
 
 export function SpecBadge({ children = "Spec, não implementado" }: { children?: React.ReactNode }) {
-  return <Badge className="h-auto border-amber-300 bg-amber-100 whitespace-normal text-amber-900">{children}</Badge>
+  return <Badge className="bg-warning-muted text-warning">{children}</Badge>
 }
 
-export function ErrorText({ error }: { error?: ApiError | string }) {
+export function ErrorAlert({ error }: { error?: ApiError | string }) {
   if (!error) return null
-  return <p role="alert" className="text-sm text-destructive">{typeof error === "string" ? error : error.message}</p>
+  return (
+    <Alert variant="destructive">
+      <CircleAlertIcon />
+      <AlertTitle>{typeof error === "string" ? error : error.message}</AlertTitle>
+    </Alert>
+  )
+}
+
+export function InfoAlert({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <Alert>
+      <CircleAlertIcon />
+      <AlertTitle>{title}</AlertTitle>
+      <AlertDescription>{children}</AlertDescription>
+    </Alert>
+  )
 }
 
 export function Missing({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex flex-wrap items-center gap-2">{title} <SpecBadge /></CardTitle>
-        <CardDescription>{children}</CardDescription>
-      </CardHeader>
-      <CardContent />
-    </Card>
+    <Empty className="border">
+      <EmptyHeader>
+        <EmptyMedia variant="icon"><ConstructionIcon /></EmptyMedia>
+        <EmptyTitle>{title}</EmptyTitle>
+        <EmptyDescription>{children}</EmptyDescription>
+        <SpecBadge />
+      </EmptyHeader>
+    </Empty>
   )
 }

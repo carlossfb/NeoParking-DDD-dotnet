@@ -85,13 +85,19 @@ const dateTime = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyl
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
 export const fmtDate = (iso?: string | null) => (iso ? dateTime.format(utc(iso)) : "—")
 export const fmtMoney = (n?: number | null) => (n == null ? "—" : money.format(n))
+export const minutesBetween = (from: string, to?: string | null) =>
+  Math.max(0, Math.round(((to ? utc(to) : new Date()).getTime() - utc(from).getTime()) / 60000))
 export function fmtDuration(from: string, to?: string | null) {
-  const min = Math.max(0, Math.round(((to ? utc(to) : new Date()).getTime() - utc(from).getTime()) / 60000))
+  const min = minutesBetween(from, to)
   return min < 60 ? `${min}min` : `${Math.floor(min / 60)}h ${String(min % 60).padStart(2, "0")}min`
 }
 export const hourOf = (iso: string) => utc(iso).getHours()
-export const startOfToday = () => {
+// UTC wall time without "Z", the same form the API stores.
+export const apiTime = (d: Date) => d.toISOString().slice(0, -1)
+export const startOfDay = (daysAgo = 0) => {
   const d = new Date()
   d.setHours(0, 0, 0, 0)
-  return d.toISOString().slice(0, -1) // UTC wall time without "Z", the same form the API stores
+  d.setDate(d.getDate() - daysAgo)
+  return apiTime(d)
 }
+export const startOfToday = () => startOfDay(0)

@@ -1,6 +1,6 @@
 # NeoParking web
 
-React + Vite + shadcn/ui (bloco `dashboard-01`), direção de estilo C (`docs/wireframes/style-decision.md`).
+React + Vite + shadcn/ui (estilo Nova, blocos `dashboard-01` e `login-02`). O tema fica todo em `src/index.css`: paleta 60-30-10 em variáveis oklch, com modo claro e escuro.
 
 ## Rodar
 
