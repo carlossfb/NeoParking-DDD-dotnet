@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Direção A — Balcão claro</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FFFFFF}
+a{color:#1D4ED8}a:hover{color:#1E40AF}
+</style>
+</helmet>
+<div style="font-family: Inter, system-ui, sans-serif; color: #18181B; background: #FFFFFF; min-height: 800px; font-size: 18px; line-height: 1.5">
+<header style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 24px; border-bottom: 1px solid #E4E4E7">
+<div style="display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap">
+<span style="font-weight: 700; font-size: 20px">NeoParking</span>
+<h1 style="margin: 0; font-size: 18px; font-weight: 600; color: #52525B">Saída de veículo</h1>
+</div>
+<div style="display: flex; align-items: center; gap: 16px">
+<span style="font-size: 16px; color: #52525B">Operador: [NOME DO OPERADOR]</span>
+<button type="button" style="height: 48px; min-width: 64px; padding: 0 18px; border-radius: 12px; border: 1px solid #D4D4D8; background: #FFFFFF; color: #18181B; font: inherit; font-size: 16px; font-weight: 600">Sair</button>
+</div>
+</header>
+<main style="max-width: 720px; margin: 0 auto; padding: 32px 16px 48px; display: flex; flex-direction: column; gap: 24px">
+<form style="display: flex; flex-direction: column; gap: 8px">
+<label for="a-busca" style="font-size: 16px; font-weight: 600">Placa ou código do ticket</label>
+<div style="display: flex; gap: 12px; flex-wrap: wrap">
+<input id="a-busca" value="BRA2E19" style="flex: 1 1 260px; min-width: 0; height: 56px; padding: 0 16px; border-radius: 12px; border: 1px solid #D4D4D8; font: inherit; font-size: 20px; color: #18181B; box-sizing: border-box; outline: 2px solid #1D4ED8; outline-offset: 2px">
+<button type="submit" style="height: 56px; padding: 0 24px; border-radius: 12px; border: 0; background: #1D4ED8; color: #FFFFFF; font: inherit; font-weight: 600; display: flex; align-items: center; gap: 8px">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+Buscar</button>
+</div>
+<p style="margin: 0; font-size: 16px; color: #52525B">Leia o QR do ticket ou digite a placa.</p>
+</form>
+<section aria-label="Ticket encontrado" style="background: #FFFFFF; border: 1px solid #E4E4E7; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); padding: 24px; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap">
+<div>
+<div style="font-size: 16px; color: #52525B">Placa</div>
+<div style="font-size: 44px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; letter-spacing: 0.02em">BRA2E19</div>
+</div>
+<span style="display: inline-flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 999px; background: #F4F4F5; color: #18181B; font-size: 15px; font-weight: 600">Ticket aberto</span>
+</div>
+<dl style="margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px">
+<div><dt style="font-size: 16px; color: #52525B">Código</dt><dd style="margin: 0; font-variant-numeric: tabular-nums; word-break: break-all">7F3A9C21E04B5D86A1C2</dd></div>
+<div><dt style="font-size: 16px; color: #52525B">Cliente</dt><dd style="margin: 0">Avulso</dd></div>
+<div><dt style="font-size: 16px; color: #52525B">Entrada</dt><dd style="margin: 0; font-variant-numeric: tabular-nums">07/11/2026 08:42</dd></div>
+<div><dt style="font-size: 16px; color: #52525B">Permanência</dt><dd style="margin: 0; font-variant-numeric: tabular-nums">2h 18min</dd></div>
+</dl>
+</section>
+<section aria-label="Saída sem ticket" style="display: flex; flex-direction: column; gap: 16px">
+<div role="note" style="display: flex; gap: 12px; align-items: flex-start; background: #FEF3C7; color: #92400E; border-radius: 12px; padding: 16px">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; margin-top: 2px"><path d="M12 3l9 16H3z"></path><path d="M12 10v4"></path><path d="M12 17h.01"></path></svg>
+<p style="margin: 0; font-size: 17px">Encontrado pela placa. A saída sem o ticket exige um motivo e fica registrada com o seu usuário.</p>
+</div>
+<label for="a-motivo" style="font-size: 16px; font-weight: 600">Motivo</label>
+<textarea id="a-motivo" rows="3" style="padding: 12px 16px; border-radius: 12px; border: 1px solid #D4D4D8; font: inherit; color: #18181B; resize: vertical; box-sizing: border-box; width: 100%">Cliente perdeu o ticket</textarea>
+<div style="display: flex; gap: 12px; flex-wrap: wrap">
+<button type="button" style="flex: 1 1 240px; height: 56px; border-radius: 12px; border: 0; background: #1D4ED8; color: #FFFFFF; font: inherit; font-weight: 600">Registrar saída</button>
+<button type="button" style="flex: 0 1 180px; height: 56px; border-radius: 12px; border: 1px solid #D4D4D8; background: #FFFFFF; color: #18181B; font: inherit; font-weight: 600">Cancelar</button>
+</div>
+<p style="margin: 0; font-size: 16px; color: #52525B">A tarifa é calculada pelo Billing após a saída.</p>
+</section>
+<section aria-labelledby="a-ultimas" style="display: flex; flex-direction: column; gap: 8px">
+<h2 id="a-ultimas" style="margin: 0; font-size: 18px; font-weight: 600">Últimas saídas</h2>
+<ul style="margin: 0; padding: 0; list-style: none; border: 1px solid #E4E4E7; border-radius: 12px">
+<li style="padding: 14px 16px; border-bottom: 1px solid #E4E4E7; font-variant-numeric: tabular-nums">QRT4F51 · 10:58 · pelo código</li>
+<li style="padding: 14px 16px; border-bottom: 1px solid #E4E4E7; font-variant-numeric: tabular-nums">MHK0A77 · 10:41 · pela placa (motivo registrado)</li>
+<li style="padding: 14px 16px; font-variant-numeric: tabular-nums">PZS3C09 · 10:20 · pelo código</li>
+</ul>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

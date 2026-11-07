@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Estados — Gestão</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+body{margin:0;background:#F6F7F9}
+a{color:#0F766E}a:hover{color:#0B5D57}
+.shell{display:flex;flex-wrap:wrap;min-height:100vh;background:#F6F7F9;color:#0F172A;font-family:Inter,system-ui,sans-serif;font-size:14px;line-height:1.45}
+.side{flex:1 1 256px;box-sizing:border-box;background:#FFFFFF;border-right:1px solid #CBD5E1;padding:12px;display:flex;flex-direction:column;gap:18px}
+.brand{display:flex;align-items:center;gap:10px;padding:6px 8px;font-weight:600;font-size:16px}
+.mark{width:32px;height:32px;border-radius:4px;background:#0F766E;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px}
+.navlabel{font-size:12px;font-weight:500;color:#475569;padding:0 10px;margin:0 0 4px}
+.nav{display:flex;flex-direction:column;gap:2px;list-style:none;margin:0;padding:0}
+.nav a{display:flex;align-items:center;gap:10px;min-height:44px;padding:0 10px;border-radius:4px;color:#0F172A;text-decoration:none;font-size:14px}
+.nav a:hover{background:#EEF1F5;color:#0F172A}
+.nav a[aria-current=page]{background:#EEF1F5;font-weight:600}
+.nav svg,.btn svg,.badge svg,.alert svg{flex:none}
+.user{margin-top:auto;display:flex;align-items:center;gap:10px;padding:10px 8px 4px;border-top:1px solid #CBD5E1}
+.avatar{width:36px;height:36px;border-radius:4px;background:#EEF1F5;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 24px;border-bottom:1px solid #CBD5E1;background:#FFFFFF}
+.top h1{font-size:18px;font-weight:600;margin:0}
+.vsep{width:1px;height:20px;background:#CBD5E1}
+.grow{flex:1 1 auto}
+.content{padding:24px;display:flex;flex-direction:column;gap:20px;min-width:0}
+@media (max-width:767px){.side{display:none}.content{padding:16px}.top{padding:8px 16px}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:4px;font:inherit;font-size:14px;font-weight:500;cursor:pointer;border:1px solid transparent;text-decoration:none;box-sizing:border-box}
+.btn-primary{background:#0F766E;color:#FFFFFF}
+.btn-primary:hover{color:#FFFFFF;background:#0B5D57}
+.btn-outline{background:#FFFFFF;color:#0F172A;border-color:#CBD5E1}
+.btn-ghost{background:transparent;color:#0F172A}
+.btn-icon{width:44px;min-width:44px;flex:none;padding:0}
+.card{background:#FFFFFF;border:1px solid #CBD5E1;border-radius:4px;min-width:0}
+.card-h{padding:14px 20px;border-bottom:1px solid #CBD5E1;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.card-h h2{font-size:15px;font-weight:600;margin:0}
+.card-b{padding:16px 20px}
+.desc{font-size:13px;color:#475569;margin:2px 0 0}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:500;border:1px solid #CBD5E1;background:#FFFFFF;color:#0F172A;white-space:nowrap}
+.b-spec{white-space:normal;text-align:left}
+.b-code{font-family:'JetBrains Mono',ui-monospace,monospace;background:#0F172A;color:#FFFFFF;border-color:#0F172A}
+.b-plain{background:#EEF1F5;color:#334155}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:13px}
+.states{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:20px;align-items:start}
+.state{display:flex;flex-direction:column;gap:10px;min-width:0}
+.cap{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:#334155}
+.cap code{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;background:#EEF1F5;padding:1px 5px;border-radius:3px;color:#0F172A}
+.api{font-size:12px;color:#475569;margin:0}
+.api code{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;color:#0F172A}
+.sk{display:block;border-radius:3px;background:#E2E8F0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.kpi{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+label{font-size:13px;font-weight:500}
+input,select{font:inherit;font-size:14px;min-height:44px;box-sizing:border-box;padding:0 12px;border:1px solid #94A3B8;border-radius:4px;background:#FFFFFF;color:#0F172A;width:100%}
+.focus{outline:2px solid #0F766E;outline-offset:2px}
+.invalid{border:2px solid #B91C1C}
+.ferr{display:flex;gap:6px;align-items:flex-start;font-size:13px;font-weight:500;color:#B91C1C;margin:0}
+.hint{font-size:13px;color:#475569;margin:0}
+.alert{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:4px;border:1px solid #CBD5E1;background:#FFFFFF}
+.alert h3{font-size:14px;font-weight:600;margin:0}
+.alert p{margin:2px 0 0;font-size:13px;color:#334155}
+.a-warn{border-color:#E9C46A;background:#FEF3C7}
+.a-warn h3,.a-warn svg{color:#92400E}
+.a-info{border-color:#A7D7D1;background:#E6F4F2}
+.a-info h3,.a-info svg{color:#0F766E}
+.summary{border:2px solid #B91C1C;border-radius:4px;padding:12px 16px;background:#FFFFFF}
+.summary h3{font-size:14px;font-weight:600;margin:0 0 4px;color:#B91C1C}
+.summary ul{margin:0;padding-left:18px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:32px 20px}
+.empty .ico{width:48px;height:48px;border-radius:4px;background:#EEF1F5;display:flex;align-items:center;justify-content:center;color:#475569}
+.empty h3{font-size:15px;font-weight:600;margin:4px 0 0}
+.empty p{margin:0;font-size:13px;color:#475569;max-width:380px}
+.meta{font-size:13px;color:#475569;display:grid;gap:8px}
+.meta code{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;background:#EEF1F5;padding:1px 5px;border-radius:3px;color:#0F172A}
+.meta p{margin:0}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</helmet>
+<div class="shell">
+  <nav class="side" id="menu-lateral" aria-label="Menu principal">
+    <div class="brand"><span class="mark" aria-hidden="true">P</span>NeoParking</div>
+    <div>
+      <p class="navlabel">Operação</p>
+      <ul class="nav">
+        <li><a href="VisaoGeral.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"></rect><rect x="14" y="3" width="7" height="5" rx="1"></rect><rect x="14" y="12" width="7" height="9" rx="1"></rect><rect x="3" y="16" width="7" height="5" rx="1"></rect></svg>Visão geral</a></li>
+        <li><a href="Historico.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg>Histórico</a></li>
+        <li><a href="ControleAcesso.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle></svg>Controle de acesso</a></li>
+        <li><a href="Clientes.dc.html" aria-current="page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>Clientes</a></li>
+        <li><a href="FluxoCaixa.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"></path><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"></path></svg>Fluxo de caixa</a></li>
+        <li><a href="Empresa.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path><path d="M10 6h4"></path><path d="M10 10h4"></path><path d="M10 14h4"></path><path d="M10 18h4"></path></svg>Empresa</a></li>
+      </ul>
+    </div>
+    <div class="user">
+      <span class="avatar" aria-hidden="true">NO</span>
+      <div style="display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto">
+        <span style="font-weight: 600; font-size: 13px">[NOME DO OPERADOR]</span>
+        <span style="font-size: 12px; color: #475569">Admin</span>
+      </div>
+      <button class="btn btn-ghost btn-icon" type="button" aria-label="Sair"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path></svg></button>
+    </div>
+  </nav>
+
+  <div class="main">
+    <header class="top">
+      <button class="btn btn-ghost btn-icon" type="button" aria-label="Abrir menu" aria-controls="menu-lateral" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M9 3v18"></path></svg></button>
+      <span class="vsep" aria-hidden="true"></span>
+      <h1>Estados · Gestão</h1>
+      <span class="grow"></span>
+      <span class="badge b-plain">Clientes, Fluxo de caixa e Empresa</span>
+    </header>
+
+    <main class="content">
+      <p class="hint" style="margin: 0">Cada painel mostra a tela no estado, a rota e o que a API devolve. A interface traduz as mensagens da API, que vêm em inglês. Dados de exemplo.</p>
+
+      <div class="states">
+
+        <section class="state" aria-labelledby="g1">
+          <div class="cap"><span class="badge b-code">403</span><span id="g1">Operator abre Fluxo de caixa por link direto</span><code>GET /billing/tickets/fee-history</code></div>
+          <div class="card">
+            <div class="empty">
+              <span class="ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span>
+              <h3>Você não tem acesso ao Fluxo de caixa</h3>
+              <p>Esta área é de Owner e Admin. Se precisar dela, peça acesso a um deles.</p>
+              <div class="row" style="justify-content: center"><a class="btn btn-primary focus" href="VisaoGeral.dc.html">Voltar para a Visão geral</a></div>
+            </div>
+          </div>
+          <p class="api">A política <code>OwnerOrAdmin</code> devolve <code>403</code> sem corpo. É uma página de permissão, não um erro de campo. A sidebar também esconde o item para Operator.</p>
+        </section>
+
+        <section class="state" aria-labelledby="g2">
+          <div class="cap"><span class="badge b-code">403</span><span id="g2">Admin tenta salvar uma nova tarifa</span><code>POST /billing/pricing-policies</code></div>
+          <div class="card">
+            <div class="card-b" style="display: flex; flex-direction: column; gap: 12px">
+              <div class="alert a-warn" role="alert">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                <div class="grow"><h3>Só o Owner pode definir uma nova tarifa</h3><p>Os valores que você digitou não foram salvos. Envie a proposta ao Owner.</p></div>
+              </div>
+              <div class="row"><button class="btn btn-outline" type="button">Copiar valores</button><button class="btn btn-outline" type="button">Fechar</button></div>
+            </div>
+          </div>
+          <p class="api">Rota só para Owner: <code>403</code> sem corpo. O normal é o botão "Nova tarifa" nem aparecer para Admin; este estado cobre o caso de o papel mudar com a tela aberta.</p>
+        </section>
+
+        <section class="state" aria-labelledby="g3">
+          <div class="cap"><span class="badge b-code">404</span><span id="g3">Busca sem resultado</span><code>POST /clients/search</code></div>
+          <div class="card">
+            <div class="card-b" style="display: flex; flex-direction: column; gap: 12px">
+              <div class="grid2">
+                <div class="field"><label for="g3a">Buscar por</label><select id="g3a"><option>Placa</option></select></div>
+                <div class="field"><label for="g3b">Placa</label><input id="g3b" type="text" value="TST0Z99" class="mono focus"></div>
+              </div>
+              <div class="alert a-info" role="status">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+                <div class="grow"><h3>Nenhum cliente com a placa TST0Z99</h3><p>Confira a placa. Se for um cliente novo, cadastre com essa placa.</p></div>
+              </div>
+              <div class="row"><button class="btn btn-primary" type="button">Cadastrar com essa placa</button><button class="btn btn-outline" type="button">Limpar</button></div>
+            </div>
+          </div>
+          <p class="api">A rota devolve <code>404</code> sem corpo (<code>Results.NotFound()</code>). A placa fica no corpo da requisição e só aparece na tela.</p>
+        </section>
+
+        <section class="state" aria-labelledby="g4">
+          <div class="cap"><span class="badge b-code">409</span><span id="g4">Placa ou documento já cadastrado</span><code>POST /clients</code></div>
+          <div class="card">
+            <div class="card-b" style="display: flex; flex-direction: column; gap: 12px">
+              <div class="alert a-warn" role="alert">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+                <div class="grow"><h3>Já existe um cliente com essa placa ou esse documento</h3><p>Cada placa e cada documento pertencem a um único cliente. Busque o cadastro existente para conferir.</p></div>
+              </div>
+              <div class="grid2">
+                <div class="field"><label for="g4a">CPF</label><input id="g4a" type="text" value="***.456.789-**" class="mono"></div>
+                <div class="field"><label for="g4b">Placa</label><input id="g4b" type="text" value="TST2C34" class="mono"></div>
+              </div>
+              <div class="row"><button class="btn btn-primary focus" type="button">Buscar cadastro existente</button><button class="btn btn-outline" type="button">Voltar ao formulário</button></div>
+            </div>
+          </div>
+          <p class="api">O índice único vira <code>409</code> com <code>"The operation conflicts with existing data."</code>. A API não diz qual campo conflitou, então a tela não pode apontar o campo.</p>
+        </section>
+
+        <section class="state" aria-labelledby="g5">
+          <div class="cap"><span class="badge b-code">409</span><span id="g5">Tarifa alterada por outra operação</span><code>POST /billing/pricing-policies</code></div>
+          <div class="card">
+            <div class="card-b" style="display: flex; flex-direction: column; gap: 12px">
+              <div class="alert a-warn" role="alert">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path><path d="M16 16h5v5"></path></svg>
+                <div class="grow"><h3>A tarifa mudou enquanto você editava</h3><p>Recarregue para ver a tarifa vigente e salve de novo. Seus valores continuam no formulário.</p></div>
+              </div>
+              <div class="grid2">
+                <div class="field"><label for="g5a">Taxa inicial (R$)</label><input id="g5a" type="text" value="9,00"></div>
+                <div class="field"><label for="g5b">Valor por hora (R$)</label><input id="g5b" type="text" value="5,00"></div>
+              </div>
+              <div class="row"><button class="btn btn-primary focus" type="button">Recarregar tarifa vigente</button><button class="btn btn-outline" type="button">Cancelar</button></div>
+            </div>
+          </div>
+          <p class="api">Concorrência na gravação vira <code>409</code> com <code>"The data was changed by another operation."</code>.</p>
+        </section>
+
+        <section class="state" aria-labelledby="g6">
+          <div class="cap"><span class="badge b-code">422</span><span id="g6">Documento inválido no cadastro</span><code>POST /clients</code></div>
+          <div class="card">
+            <form class="card-b" style="display: flex; flex-direction: column; gap: 12px">
+              <div class="summary" role="alert" tabindex="-1">
+                <h3>Corrija para continuar</h3>
+                <ul><li><a href="#g6b">O CPF não é válido: confira os dígitos</a></li></ul>
+              </div>
+              <div class="grid2">
+                <div class="field"><label for="g6a">Tipo</label><select id="g6a"><option>Pessoa física</option></select></div>
+                <div class="field">
+                  <label for="g6b">CPF</label>
+                  <p class="ferr" id="g6b-err"><span class="sr">Erro:</span>O CPF não é válido: confira os dígitos</p>
+                  <input id="g6b" type="text" value="123.456.789-00" class="mono invalid focus" aria-invalid="true" aria-describedby="g6b-err">
+                </div>
+              </div>
+              <div class="row"><button class="btn btn-primary" type="submit">Salvar cliente</button></div>
+            </form>
+          </div>
+          <p class="api">API: <code>"Invalid CPF"</code>, <code>"CPF must contain 11 digits"</code>, <code>"Invalid CNPJ"</code>, <code>"CNPJ must contain 14 characters"</code> (<code>DomainException</code> → <code>422</code>). O valor fica no campo enquanto o usuário corrige. O documento só aparece inteiro aqui porque foi o próprio usuário que digitou.</p>
+        </section>
+
+        <section class="state" aria-labelledby="g7">
+          <div class="cap"><span class="badge b-plain">Vazio</span><span id="g7">Nenhum cliente cadastrado</span><code>GET /clients</code></div>
+          <div class="card">
+            <div class="empty">
+              <span class="ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M19 8v6"></path><path d="M22 11h-6"></path></svg></span>
+              <h3>Nenhum cliente cadastrado ainda</h3>
+              <p>Avulsos não precisam de cadastro. Cadastre quem tem placa fixa ou vai ser mensalista.</p>
+              <div class="row" style="justify-content: center"><button class="btn btn-primary" type="button">Novo cliente</button></div>
+            </div>
+          </div>
+          <p class="api"><code>200</code> com a página vazia.</p>
+        </section>
+
+        <section class="state" aria-labelledby="g8">
+          <div class="cap"><span class="badge b-plain">Carregando</span><span id="g8">Fluxo de caixa</span><code>GET /billing/tickets/fee-history</code></div>
+          <div class="card" aria-busy="true">
+            <div class="card-b" style="display: flex; flex-direction: column; gap: 12px">
+              <div class="kpis">
+                <div class="card kpi"><span class="sk" style="width: 60%; height: 10px"></span><span class="sk" style="width: 80%; height: 24px"></span></div>
+                <div class="card kpi"><span class="sk" style="width: 50%; height: 10px"></span><span class="sk" style="width: 70%; height: 24px"></span></div>
+                <div class="card kpi"><span class="sk" style="width: 55%; height: 10px"></span><span class="sk" style="width: 60%; height: 24px"></span></div>
+              </div>
+              <div class="card" style="padding: 16px">
+                <span class="sk" style="width: 160px; height: 12px"></span>
+                <span class="sk" style="width: 100%; height: 160px; margin-top: 12px"></span>
+              </div>
+              <p class="hint">Carregando receita estimada…</p>
+            </div>
+          </div>
+          <p class="api">Skeleton com o mesmo tamanho dos cards e do gráfico, para a tela não pular quando os dados chegam.</p>
+        </section>
+
+      </div>
+
+      <section class="card" aria-labelledby="rt-h">
+        <div class="card-h"><h2 id="rt-h">Lacunas que estes estados mostram</h2></div>
+        <div class="card-b meta">
+          <p>O <code>409</code> de cliente não diz se conflitou a placa ou o documento. Para apontar o campo, a API precisaria devolver qual índice violou.</p>
+          <p>A API devolve um erro por vez. O resumo de erros só lista vários campos se o front validar antes de enviar.</p>
+          <p>Componentes shadcn/ui: Alert, Empty, Field (FieldError), Input, Select, Button, Skeleton, Card.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
