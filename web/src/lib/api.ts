@@ -27,6 +27,7 @@ const known: Record<string, string> = {
   "No ticket was found for this code.": "Nenhum ticket com esse código. Leia o QR de novo ou busque pela placa.",
   "No open ticket was found for this plate.": "Nenhum ticket aberto para essa placa.",
   "The operation conflicts with existing data.": "Já existe um cadastro com essa placa ou esse documento.",
+  "Minimum fee and hourly rate must be greater than zero.": "A taxa inicial e o valor por hora precisam ser maiores que zero.",
   "The data was changed by another operation.": "Os dados mudaram enquanto você editava. Recarregue e tente de novo.",
 }
 const byStatus: Record<number, string> = {

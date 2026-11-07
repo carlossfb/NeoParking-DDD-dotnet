@@ -38,6 +38,16 @@ public class PricingPolicyTests
         act.Should().Throw<DomainException>().WithMessage("*coverage*");
     }
 
+    [Theory]
+    [InlineData(0, 4)]
+    [InlineData(10, 0)]
+    [InlineData(0, 0)]
+    public void Define_WithZeroFee_ShouldThrowDomainException(decimal minimumFee, decimal hourlyRate)
+    {
+        var act = () => PricingPolicy.Define(OwnerId, Money.Create(minimumFee), Money.Create(hourlyRate));
+        act.Should().Throw<DomainException>().WithMessage("*greater than zero*");
+    }
+
     [Fact]
     public void Define_WithNegativeGracePeriod_ShouldThrowDomainException()
     {

@@ -133,6 +133,10 @@ public sealed class PricingPolicy : Entity
         if (minimumFee is null || hourlyRate is null)
             throw new DomainException("Minimum fee and hourly rate are required.");
 
+        // Um corpo vazio no POST vira 0 e 0 pelo binding: sem isso, a tarifa vigente passava a ser grátis.
+        if (minimumFee.Value <= 0 || hourlyRate.Value <= 0)
+            throw new DomainException("Minimum fee and hourly rate must be greater than zero.");
+
         if (minimumFeeCoverageMinutes <= 0)
             throw new DomainException("Minimum fee coverage must be greater than zero minutes.");
 
